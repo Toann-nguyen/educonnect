@@ -4,20 +4,20 @@ namespace App\Repositories\Contracts;
 
 interface UserRepositoryInterface
 {
-    public function all(array $filters = []);
-    public function create(array $data);
-    public function update(int $id, array $data);
+    public function allUser(array $filters = []);
+    public function createUser(array $data);
+    public function updateUser(int $id, array $data);
 
     // xoa mem (dunng soft delete) tuc la tac dong vao delete_at
-    public function delete(int $id);
+    public function deleteUser(int $id);
 
     // reset lai nhung ban ghi ma da delete_at
-    public function restore(int $id);
+    public function restoreUser(int $id);
 
     // xoa cung ban ghi khong dung delete_at
-    public function forceDelete(int $id);
+    public function forceDeleteUser(int $id);
     public function find(int $id);
-    public function finByEmail(string $email);
+    public function finByEmailUser(string $email);
 
     public function paginate(int $perPage = 15, array $filters = []);
 }

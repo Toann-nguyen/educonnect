@@ -55,11 +55,10 @@ class UserRepository implements UserRepositoryInterface
      */
     public function createUser(array $data): User
     {
-        // (Code cho register, giữ nguyên để đầy đủ)
         return DB::transaction(function () use ($data) {
             $user = User::create([
                 'email' => $data['email'],
-                'password' => FacadesHash::make($data['password']),
+                'password' => Hash::make($data['password']), // Sửa từ FacadesHash thành Hash
             ]);
             $user->profile()->create(['full_name' => $data['full_name']]);
             return $user;

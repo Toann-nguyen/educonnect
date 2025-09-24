@@ -10,54 +10,49 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Student;
+use App\Models\User;
+use App\Models\Invoice;
+use App\Models\Grade;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
-    public function edit(Request $request): Response
+    public function index(Request $request)
     {
-        return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => session('status'),
-        ]);
-    }
-
-    /**
-     * Update the user's profile information.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
-    {
-        $request->user()->fill($request->validated());
-
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
-
-        return Redirect::route('profile.edit');
-    }
-
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
-
         $user = $request->user();
+        $dashboardData = [];
 
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
+        if ($user->hasRole('admin')) {
+            $dashboardData = [
+                'total_users' => User::count(),
+                'total_students' => Student::count(),
+                'pending_invoices' => Invoice::where('status', 'unpaid')->count(),
+                'recent_activities' => $this->getRecentActivities()
+            ];
+        } elseif ($user->hasRole('teacher')) {
+            $dashboardData = [
+                'my_classes' => $user->teachingSchedules()->with('schoolClass')->distinct('class_id')->count(),
+                'pending_grades' => $this->getPendingGrades($user),
+                'recent_disciplines' => $user->reportedDisciplines()->latest()->limit(5)->get()
+            ];
+        } elseif ($user->hasRole('student')) {
+            $student = $user->student;
+            $dashboardData = [
+                'my_grades' => $student?->grades()->with('subject')->latest()->limit(10)->get(),
+                'my_attendance' => $student?->attendances()->latest()->limit(10)->get(),
+                'pending_invoices' => $student?->invoices()->where('status', 'unpaid')->get()
+            ];
+        } elseif ($user->hasRole('parent')) {
+            $children = $user->guardianStudents()->with('user.profile', 'schoolClass')->get();
+            $dashboardData = [
+                'children' => $children,
+                'pending_invoices' => Invoice::whereIn('student_id', $children->pluck('id'))->where('status', 'unpaid')->get(),
+                'recent_grades' => Grade::whereIn('student_id', $children->pluck('id'))->with('subject', 'student.user.profile')->latest()->limit(10)->get()
+            ];
+        }
+        return response()->json([
+            'user' => $user,
+            'dashboard' => $dashboardData
+        ]);
     }
 }

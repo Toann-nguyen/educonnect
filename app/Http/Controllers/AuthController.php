@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\UserResource;
+use Illuminate\Support\Facades\Password;
 
 class AuthController extends Controller
 {
@@ -52,24 +54,20 @@ class AuthController extends Controller
                 'message' => 'Login successful!',
                 'access_token' => $result['token'],
                 'token_type' => 'Bearer',
-                'data' => new $result['user']
+                'data' => new UserResource($result['user'])
             ]);
-        } catch (Exception $e) {
-            // Lỗi này do Rate Limiter hoặc sai thông tin, không cần ghi log error
-            // Laravel sẽ tự động trả về response 422 hoặc 429
+        } catch (ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors' => $e->errors(),
-            ], $e->status);
-        } catch (Exception $e) {
-            // Người dùng đăng nhập thành công nhưng không có quyền
+            ], $e->status ?? 422);
+        } catch (AuthorizationException $e) {
             Log::warning('Authorization failed during login: ' . $e->getMessage(), [
                 'email' => $request->email,
                 'ip' => $request->ip()
             ]);
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (Exception $e) {
-            // Các lỗi không mong muốn khác
             Log::error('Login failed with unexpected error: ' . $e->getMessage(), [
                 'email' => $request->email,
                 'trace' => $e->getTraceAsString()
@@ -98,12 +96,7 @@ class AuthController extends Controller
         try {
             $status = $this->authService->forgotPassword($request->validated());
 
-            if ($status === Password::RESET_LINK_SENT) {
-                return response()->json([
-                    'message' => 'Password reset link sent successfully!',
-                    'status' => $status
-                ]);
-            }
+
 
             // Ghi log trường hợp không gửi được link mà không rõ lý do
             Log::warning('Failed to send password reset link.', ['email' => $request->email, 'status' => $status]);
@@ -120,10 +113,6 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->resetPassword($request->validated());
-
-            if ($status === Password::PASSWORD_RESET) {
-                return response()->json(['message' => 'Password reset successfully!', 'status' => $status]);
-            }
 
             // token không hợp lệ
             return response()->json(['message' => 'Failed to reset password. The token may be invalid or expired.', 'status' => $status], 400);

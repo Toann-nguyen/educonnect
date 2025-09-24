@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class AuthService implements AuthServiceInterface
 {
@@ -32,39 +33,33 @@ class AuthService implements AuthServiceInterface
 
     public function login(array $credentials)
     {
-        // Tạo một key duy nhất dựa trên email và địa chỉ IP
-        // 1. Chuẩn bị và kiểm tra Rate Limiter
         $key = strtolower($credentials['email']) . '|' . request()->ip();
 
-        if (RateLimiter::tooManyAttempts($key, 5)) { // 5 lần thử tối đa trong 1 phút
+        if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
-
-            // Ném ValidationException với mã lỗi 429 (Too Many Requests)
             throw ValidationException::withMessages([
                 'email' => "Too many login attempts. Please try again in {$seconds} seconds.",
-            ]);
+            ])->status(429); // Thêm status code
         }
 
-        // 2. Thử xác thực người dùng
         if (!Auth::attempt($credentials)) {
-            // Nếu thất bại, tăng bộ đếm Rate Limiter
             RateLimiter::hit($key);
-
-            // Ném ValidationException với mã lỗi 422 (Unprocessable Entity)
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'), // Sử dụng thông báo chuẩn của Laravel
-            ]);
+                'email' => __('auth.failed'),
+            ])->status(422); // Thêm status code
         }
 
-        // 3. Nếu xác thực thành công, xóa bộ đếm Rate Limiter
         RateLimiter::clear($key);
 
-        // Lấy thông tin người dùng
-        $user = $this->userRepository->findByEmail($credentials['email']);
+        // Sửa tên method từ findByEmail thành finByEmailUser theo interface
+        $user = $this->userRepository->finByEmailUser($credentials['email']);
 
+        if (!$user->hasAnyRole(['admin', 'teacher', 'student', 'parent', 'accountant', 'librarian'])) {
+            Auth::logout();
+            throw new \Illuminate\Auth\Access\AuthorizationException('Insufficient permissions.');
+        }
 
-        // 5. Tạo và trả về token
-        $user->tokens()->delete(); // Xóa token cũ để đảm bảo chỉ có 1 session
+        $user->tokens()->delete();
         $token = $user->createToken('auth_token_for_' . $user->id)->plainTextToken;
 
         return [
@@ -72,7 +67,6 @@ class AuthService implements AuthServiceInterface
             'token' => $token
         ];
     }
-
     public function logout($user)
     {
         return $user->currentAccessToken()->delete();

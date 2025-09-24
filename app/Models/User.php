@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Schedule;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -36,6 +37,24 @@ class User extends Authenticatable
     {
         return $this->hasOne(Student::class);
     }
-    // create user array data
+    public  function teacheringSchedules()
+    {
+        return $this->hasOne(Schedule::class, 'teacher_id');
+    }
+    public function reportedDisciplines()
+    {
+        return $this->hasMany(Discipline::class, 'reporter_user_id');
+    }
 
+    public function guardianStudents()
+    {
+        return $this->hasManyThrough(
+            Student::class,
+            StudentGuardian::class,
+            'guardian_user_id',
+            'id',
+            'id',
+            'student_id'
+        );
+    }
 }

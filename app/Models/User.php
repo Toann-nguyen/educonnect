@@ -20,9 +20,9 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasRoles;
 
-    protected $fillable = ['email', 'password'];
+
+    protected $fillable = ['email', 'password', 'status', 'email_verified_at', 'remember_token'];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['email_verified_at' => 'datetime', 'password' => 'hashed'];
     protected $dates = ['deleted_at'];

@@ -104,7 +104,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('my-grades', [\App\Http\Controllers\GradeController::class, 'myGrades']);
         Route::get('my-invoices', [\App\Http\Controllers\InvoiceController::class, 'myInvoices']);
     });
-
     // Parent only
     Route::middleware('role:parent')->group(function () {
         Route::get('my-children', [\App\Http\Controllers\StudentController::class, 'myChildren']);

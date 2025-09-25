@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Attendance;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\User;
 use App\Models\Event;
@@ -35,6 +36,7 @@ class TransactionDataSeeder extends Seeder
         $classes = SchoolClass::all();
 
         // 1. Tạo Thời khóa biểu
+        $schedules = collect();
         foreach ($classes as $class) {
             for ($day = 2; $day <= 6; $day++) { // T2 -> T6
                 for ($period = 1; $period <= 4; $period++) { // 4 tiết buổi sáng
@@ -48,8 +50,46 @@ class TransactionDataSeeder extends Seeder
                 }
             }
         }
+        // 2. Tạo Điểm danh cho các buổi học trong thời khóa biểu
+        $this->command->info('Creating attendance records...');
+        foreach ($schedules->take(100) as $schedule) { // Lấy 100 schedule đầu tiên
+            $classStudents = Student::where('class_id', $schedule->class_id)->get();
 
-        // 2. Tạo Điểm số
+            // Tạo điểm danh cho 10 ngày gần đây
+            for ($i = 0; $i < 10; $i++) {
+                $date = now()->subDays($i);
+
+                // Chỉ tạo điểm danh cho thứ trong tuần của schedule
+                if ($date->dayOfWeek + 1 == $schedule->day_of_week) {
+                    foreach ($classStudents as $student) {
+                        // 85% có mặt, 10% vắng, 5% trễ
+                        $statusChance = rand(1, 100);
+                        if ($statusChance <= 85) {
+                            Attendance::factory()->create([
+                                'student_id' => $student->id,
+                                'schedule_id' => $schedule->id,
+                                'date' => $date->format('Y-m-d'),
+                                'status' => 'present'
+                            ]);
+                        } elseif ($statusChance <= 95) {
+                            Attendance::factory()->absent()->create([
+                                'student_id' => $student->id,
+                                'schedule_id' => $schedule->id,
+                                'date' => $date->format('Y-m-d')
+                            ]);
+                        } else {
+                            Attendance::factory()->late()->create([
+                                'student_id' => $student->id,
+                                'schedule_id' => $schedule->id,
+                                'date' => $date->format('Y-m-d')
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Tạo Điểm số
         foreach ($students as $student) {
             foreach ($subjects->random(4) as $subject) { // Mỗi học sinh có điểm cho 4 môn ngẫu nhiên
                 Grade::factory()->count(3)->create([
@@ -60,7 +100,7 @@ class TransactionDataSeeder extends Seeder
             }
         }
 
-        // 3. Tạo Hóa đơn và Thanh toán
+        // 4. Tạo Hóa đơn và Thanh toán
         foreach ($students->random(floor($students->count() * 0.8)) as $student) { // 80% học sinh có hóa đơn
             $invoice = Invoice::factory()->create(['student_id' => $student->id]);
 
@@ -76,16 +116,24 @@ class TransactionDataSeeder extends Seeder
             }
         }
 
-        // 4. Tạo Sách và Giao dịch thư viện
+        // 5. Tạo Sách và Giao dịch thư viện
         $books = LibraryBook::factory()->count(100)->create();
         foreach ($students->random(50) as $student) { // 50 học sinh mượn sách
-            LibraryTransaction::factory()->create([
-                'book_id' => $books->random()->id,
-                'user_id' => $student->user_id,
-            ]);
+            // 70% đã trả sách, 30% vẫn đang mượn
+            if (rand(1, 10) <= 7) {
+                LibraryTransaction::factory()->returned()->create([
+                    'book_id' => $books->random()->id,
+                    'user_id' => $student->user_id,
+                ]);
+            } else {
+                LibraryTransaction::factory()->create([
+                    'book_id' => $books->random()->id,
+                    'user_id' => $student->user_id,
+                ]);
+            }
         }
 
-        // 5. Tạo Sự kiện và Đăng ký
+        // 6. Tạo Sự kiện và Đăng ký
         $events = Event::factory()->count(5)->create();
         foreach ($events as $event) {
             foreach ($students->random(rand(20, 50)) as $student) {
@@ -96,7 +144,7 @@ class TransactionDataSeeder extends Seeder
             }
         }
 
-        // 6. Tạo Vi phạm kỷ luật
+        // 7. Tạo Vi phạm kỷ luật
         foreach ($students->random(20) as $student) { // 20 học sinh có vi phạm
             Discipline::factory()->create([
                 'student_id' => $student->id,

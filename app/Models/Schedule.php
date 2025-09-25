@@ -28,4 +28,9 @@ class Schedule extends Model
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
+    /** THÊM: Lấy điểm danh của buổi học này */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
 }

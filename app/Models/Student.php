@@ -29,4 +29,34 @@ class Student extends Model
     {
         return $this->hasMany(StudentGuardian::class);
     }
+
+    /** THÊM: Lấy điểm số của học sinh */
+    public function grades()
+    {
+        return $this->hasMany(Grade::class);
+    }
+
+    /** THÊM: Lấy bản điểm danh */
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    /** THÊM: Lấy hóa đơn của học sinh */
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    /** THÊM: Lấy vi phạm kỷ luật */
+    public function disciplines()
+    {
+        return $this->hasMany(Discipline::class);
+    }
+
+    /** THÊM: Lấy đăng ký sự kiện */
+    public function eventRegistrations()
+    {
+        return $this->hasMany(EventRegistration::class);
+    }
 }

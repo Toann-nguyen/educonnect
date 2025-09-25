@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Services\Interface\UserServiceInterface;
+use Exception;
+use Log;
 use Spatie\Permission\Models\Role;
 
 class UserService implements UserServiceInterface
@@ -11,7 +13,9 @@ class UserService implements UserServiceInterface
     public function getAllUsers(array $filters)
     {
         return User::with('profile', 'roles')
-            ->when($filters['role'] ?? null, fn($q, $role) => $q->role($role))
+            ->when($filters['roles'] ?? null, function ($q) use ($filters) {
+                $q->whereHas('roles', fn($q) => $q->whereIn('name', $filters['roles']));
+            })
             ->when(
                 $filters['search'] ?? null,
                 fn($q, $search) =>
@@ -20,14 +24,13 @@ class UserService implements UserServiceInterface
             )
             ->paginate($filters['per_page'] ?? 15);
     }
-    public  function assignRoleToUser(User $user, string $roleName): User
+    public  function assignRoleToUser(User $user,  $roleName = []): User
     {
-        // Spatie's findByName throws an exception if not found, which is good
-        Role::findByName($roleName);
-
-        // syncRoles sẽ xóa các role cũ và chỉ gán role mới này
-        $user->syncRoles([$roleName]);
-
+        if (is_array($roleName)) {
+            $user->syncRoles($roleName); // Gán nhiều role nếu là mảng
+        } else {
+            $user->syncRoles([$roleName]); // Gán một role nếu là string
+        }
         return $user->load('roles', 'permissions');
     }
     public function removeRoleFromUser(User $user, string $roleName): User
@@ -37,6 +40,7 @@ class UserService implements UserServiceInterface
         }
         return $user->load('roles', 'permissions');
     }
+    // delete mem soft delete
 
     public function deactivateUser(User $user): bool
     {
@@ -51,5 +55,33 @@ class UserService implements UserServiceInterface
             return $user->load('profile', 'roles');
         }
         return null;
+    }
+    public function updateUser(User $user, array $data): ?User
+    {
+        try {
+            // Kiểm tra và cập nhật các trường cơ bản
+            if (!empty($data)) {
+                $user->fill($data);
+                $user->save();
+            }
+
+            // Cập nhật profile nếu có và là mảng hợp lệ
+            if (isset($data['profile']) && is_array($data['profile'])) {
+                $user->profile()->update($data['profile']);
+            } elseif (isset($data['profile'])) {
+                throw new \InvalidArgumentException('Profile data must be an array');
+            }
+
+            // Cập nhật role nếu có
+            if (isset($data['role'])) {
+                $this->assignRoleToUser($user, $data['role']);
+            }
+
+            return $user->load('profile', 'roles', 'permissions');
+        } catch (Exception $e) {
+            // Log the exception or handle it as needed
+            Log::info('cant not update user ' . $e->getMessage());
+            return null;
+        }
     }
 }

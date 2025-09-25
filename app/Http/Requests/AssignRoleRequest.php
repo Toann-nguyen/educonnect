@@ -11,7 +11,7 @@ class AssignRoleRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->hasRole('admin');
     }
 
     /**
@@ -22,7 +22,16 @@ class AssignRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => 'required|string|exists:roles,name'
+            'role' => 'sometimes|required|string|exists:roles,name',
+            'roles' => 'sometimes|array',
+            'roles.*' => 'sometimes|required|string|exists:roles,name',
+            'email' => 'sometimes|required|email|unique:users,email,' . $this->user->id,
+            'profile.full_name' => 'sometimes|required|string',
+            'profile.phone_number' => 'sometimes|required|string',
+            'profile.birthday' => 'sometimes|required|date',
+            'profile.gender' => 'sometimes|required|integer',
+            'profile.address' => 'sometimes|required|string',
+            'profile.avatar' => 'sometimes|nullable|string',
         ];
     }
 }

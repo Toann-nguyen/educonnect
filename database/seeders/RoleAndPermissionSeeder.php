@@ -18,22 +18,36 @@ class RoleAndPermissionSeeder extends Seeder
         // dung: Xóa bộ nhớ đệm quyền hạn để đảm bảo rằng các thay đổi được áp dụng ngay lập tức
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Tạo các quyền hạn
-        Permission::create(['name' => 'manage finances']);
-        Permission::create(['name' => 'manage library']);
-        Permission::create(['name' => 'record discipline']);
-        Permission::create(['name' => 'manage events']);
+        // Tạo quyền (nếu chưa có thì tạo, có rồi thì bỏ qua)
+        Permission::firstOrCreate(['name' => 'manage finances']);     // Quản lý tài chính
+        Permission::firstOrCreate(['name' => 'manage library']);      // Quản lý thư viện
+        Permission::firstOrCreate(['name' => 'record discipline']);   // Ghi nhận kỷ luật
+        Permission::firstOrCreate(['name' => 'manage events']);       // Quản lý sự kiện
+        Permission::firstOrCreate(['name' => 'manage school structure']);
+        Permission::firstOrCreate(['name' => 'manage users']);
 
-        // Tạo các vai trò và gán quyền
-        Role::create(['name' => 'student']);
-        Role::create(['name' => 'parent']);
-        $teacherRole = Role::create(['name' => 'teacher']);
+        // Tạo role
+        $studentRole   = Role::firstOrCreate(['name' => 'student']);
+        $parentRole    = Role::firstOrCreate(['name' => 'parent']);
+        $teacherRole   = Role::firstOrCreate(['name' => 'teacher']);
+        $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
+        $librarianRole = Role::firstOrCreate(['name' => 'librarian']);
+        $principalRole = Role::firstOrCreate(['name' => 'principal']);
+        $redScarfRole  = Role::firstOrCreate(['name' => 'red_scarf']);
+        $adminRole     = Role::firstOrCreate(['name' => 'admin']);
+
+        // Gán quyền
         $teacherRole->givePermissionTo(['record discipline', 'manage events']);
+        $accountantRole->givePermissionTo('manage finances');
+        $librarianRole->givePermissionTo('manage library');
+        $redScarfRole->givePermissionTo('record discipline');
 
-        Role::create(['name' => 'accountant'])->givePermissionTo('manage finances');
-        Role::create(['name' => 'librarian'])->givePermissionTo('manage library');
+        $principalRole->givePermissionTo([
+            'manage school structure',
+            'manage events',
+            'manage users'
+        ]);
 
-        $adminRole = Role::create(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all()); // Admin có tất cả các quyền
+        $adminRole->givePermissionTo(Permission::all());
     }
 }

@@ -25,6 +25,7 @@ class User extends Authenticatable
     protected $fillable = ['email', 'password'];
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['email_verified_at' => 'datetime', 'password' => 'hashed'];
+    protected $dates = ['deleted_at'];
 
     /** Mối quan hệ 1-1 với Profile */
     public function profile()
@@ -56,5 +57,16 @@ class User extends Authenticatable
             'id',
             'student_id'
         );
+    }
+    /** Lấy điểm số do giáo viên này chấm */
+    public function gradedScores()
+    {
+        return $this->hasMany(Grade::class, 'teacher_id');
+    }
+
+    /** Lấy các lớp học mà user này làm GVCN */
+    public function homeroomClasses()
+    {
+        return $this->hasMany(SchoolClass::class, 'homeroom_teacher_id');
     }
 }

@@ -52,3 +52,14 @@ students (Debtor)
 | events |----->| event_registrations |
 | (1-N) | | (N-N) |
 +--------+ +---------------------+
+
+## cac role
+
+Quản trị viên admin ✅ Có
+Hiệu trưởng principal ✅ Có
+Giáo viên teacher ✅ Có
+Phụ huynh parent ✅ Có
+Học sinh student ✅ Có
+Cờ đỏ red_scarf ✅ Có
+Kế toán accountant ✅ Có
+Thủ thư librarian ✅ Có

@@ -3,7 +3,6 @@
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AcademicYearController;
 use App\Http\Controllers\SchoolClassController;
@@ -18,6 +17,7 @@ use App\Http\Controllers\LibraryTransactionController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\DashBoardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,11 +58,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::put('/', [ProfileController::class, 'update']);
-        Route::post('avatar', [ProfileController::class, 'uploadAvatar']);
+        // Route::post('avatar', [ProfileController::class, 'uploadAvatar']);
     });
 
     // Dashboard chung
-    Route::get('dashboard', [DashboardController::class, 'index']);
+    Route::get('dashboard', [DashBoardController::class, 'index']);
 
     // Admin only - sử dụng middleware Spatie
     Route::middleware('role:admin')->prefix('admin')->group(function () {
@@ -79,6 +79,35 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::apiResource('grades', \App\Http\Controllers\GradeController::class);
         Route::apiResource('schedules', \App\Http\Controllers\ScheduleController::class);
         Route::get('my-classes', [\App\Http\Controllers\ScheduleController::class, 'myClasses']);
+    });
+
+    // =============================================================
+    // == SCHEDULE ROUTES (Thời khóa biểu)
+    // =============================================================
+    Route::prefix('schedules')->group(function () {
+        // Xem TKB theo lớp - tất cả user có thể xem (có phân quyền trong service)
+        Route::get('class/{class}', [ScheduleController::class, 'getByClass']);
+        Route::get('class/{class}/week', [ScheduleController::class, 'getWeeklySchedule']);
+
+        // TKB cá nhân - Teacher và Student
+        Route::middleware(['role:teacher|student'])->group(function () {
+            Route::get('my', [ScheduleController::class, 'mySchedule']);
+        });
+
+        // Xem danh sách lớp dạy - chỉ dành cho giáo viên
+        Route::middleware(['role:teacher'])->group(function () {
+            Route::get('my-classes', [ScheduleController::class, 'getTeacherClasses']);
+        });
+
+        // Quản lý TKB - Admin và Principal
+        Route::middleware(['role:admin|principal'])->group(function () {
+            Route::get('/', [ScheduleController::class, 'index']);
+            Route::post('/', [ScheduleController::class, 'store']);
+            Route::get('/{schedule}', [ScheduleController::class, 'show']);
+            Route::put('/{schedule}', [ScheduleController::class, 'update']);
+            Route::patch('/{schedule}', [ScheduleController::class, 'update']);
+            Route::delete('/{schedule}', [ScheduleController::class, 'destroy']);
+        });
     });
 
     // Permission specific - discipline records

@@ -21,10 +21,12 @@ class UserSeeder extends Seeder
     {
         $user = User::firstOrCreate(
             ['email' => $email],
-            array_merge(
-                User::factory()->make()->toArray(),
-                ['password' => $this->defaultPassword]
-            )
+            [
+                'password' => $this->defaultPassword,
+                'email_verified_at' => now(),
+                'status' => 1,
+                'remember_token' => \Str::random(10)
+            ]
         );
 
         if (!$user->profile) {
@@ -39,6 +41,9 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('Creating core users...');
+
+        // Clear permission cache
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Create core system users
         $this->createCoreUser('admin@educonnect.com', 'Admin User', 'admin');

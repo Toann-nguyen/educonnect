@@ -22,12 +22,15 @@ class StoreScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'class_id' => 'required|integer|exists:classes,id',
+            'class_id' => 'required|integer|exists:school_classes,id',
             'subject_id' => 'required|integer|exists:subjects,id',
             'teacher_id' => 'required|integer|exists:users,id',
-            'day_of_week' => 'required|integer|between:2,8', // 2: Monday, 8: Sunday
-            'period' => 'required|integer|min:1|max:16', // Tiết học
-            'room' => 'nullable|string|max:255',
+            'day_of_week' => 'required|integer|between:1,7', // 1: Monday, 7: Sunday
+            'period' => 'required|integer|between:1,10', // Tiết học từ 1-10
+            'room' => 'required|string|max:10',
+            'date' => 'required|date',
+            'academic_year_id' => 'required|exists:academic_years,id',
+            'semester' => 'required|integer|in:1,2',
         ];
     }
 }

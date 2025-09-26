@@ -13,7 +13,8 @@ class SchedulePolicy
      */
     public function viewAny(User $user)
     {
-        //
+        return $user->hasRole(['admin', 'teacher'])
+            || $user->hasPermission('view schedules');
     }
 
     /**
@@ -21,7 +22,10 @@ class SchedulePolicy
      */
     public function view(User $user, Schedule $schedule)
     {
-        //
+        return $user->hasRole(['admin', 'teacher'])
+            || $user->hasPermission('view schedules')
+            || $schedule->teacher_id === $user->id
+            || $schedule->class_id === $user->student?->class_id;
     }
 
     /**
@@ -29,7 +33,8 @@ class SchedulePolicy
      */
     public function create(User $user)
     {
-        //
+        return $user->hasRole(['admin', 'teacher'])
+            || $user->hasPermission('manage schedules');
     }
 
     /**
@@ -37,7 +42,9 @@ class SchedulePolicy
      */
     public function update(User $user, Schedule $schedule)
     {
-        //
+        return $user->hasRole('admin')
+            || $user->hasPermission('manage schedules')
+            || ($user->hasRole('teacher') && $schedule->teacher_id === $user->id);
     }
 
     /**
@@ -45,7 +52,8 @@ class SchedulePolicy
      */
     public function delete(User $user, Schedule $schedule)
     {
-        //
+        return $user->hasRole('admin')
+            || $user->hasPermission('manage schedules');
     }
 
     /**

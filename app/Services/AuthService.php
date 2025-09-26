@@ -54,7 +54,7 @@ class AuthService implements AuthServiceInterface
         // Sửa tên method từ findByEmail thành finByEmailUser theo interface
         $user = $this->userRepository->finByEmailUser($credentials['email']);
 
-        if (!$user->hasAnyRole(['admin', 'teacher', 'student', 'parent', 'accountant', 'librarian'])) {
+        if (!$user->hasAnyRole(['admin', 'teacher', 'student', 'parent', 'accountant', 'librarian', 'red_scarf', 'principal'])) {
             Auth::logout();
             throw new \Illuminate\Auth\Access\AuthorizationException('Insufficient permissions.');
         }

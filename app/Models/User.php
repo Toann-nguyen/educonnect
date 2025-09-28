@@ -49,12 +49,10 @@ class User extends Authenticatable
 
     public function guardianStudents()
     {
-        return $this->hasManyThrough(
+        return $this->belongsToMany(
             Student::class,
-            StudentGuardian::class,
-            'guardian_user_id',
-            'id',
-            'id',
+            'student_guardians',    // Tên bảng trung gian
+            'guardian_user_id',     // Khóa ngoại trên bảng trung gian trỏ về User (phụ huynh)
             'student_id'
         );
     }

@@ -39,20 +39,19 @@ class AuthService implements AuthServiceInterface
             $seconds = RateLimiter::availableIn($key);
             throw ValidationException::withMessages([
                 'email' => "Too many login attempts. Please try again in {$seconds} seconds.",
-            ])->status(429); // Thêm status code
+            ])->status(429);
         }
 
         if (!Auth::attempt($credentials)) {
             RateLimiter::hit($key);
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
-            ])->status(422); // Thêm status code
+            ])->status(422);
         }
 
         RateLimiter::clear($key);
 
-        // Sửa tên method từ findByEmail thành finByEmailUser theo interface
-        $user = $this->userRepository->finByEmailUser($credentials['email']);
+        $user = $this->userRepository->findByEmailUser($credentials['email']);
 
         if (!$user->hasAnyRole(['admin', 'teacher', 'student', 'parent', 'accountant', 'librarian', 'red_scarf', 'principal'])) {
             Auth::logout();

@@ -38,17 +38,19 @@ class ScheduleService implements ScheduleServiceInterface
         return $this->formatScheduleGrid($schedules);
     }
 
-    public function getPersonalSchedule(User $user): array
+    public function getPersonalSchedule(User $user): Collection
     {
-        if ($user->hasRole('teacher')) {
-            $schedules = $this->scheduleRepository->getByTeacher($user);
-        } elseif ($user->hasRole('student') && $user->student) {
-            $schedules = $this->scheduleRepository->getByClass($user->student->schoolClass);
-        } else {
-            return [];
-        }
+        // Sử dụng match statement để code gọn gàng và dễ đọc hơn
+        return match (true) {
+            // Nếu user có vai trò 'teacher'
+            $user->hasRole('teacher') => $this->scheduleRepository->getByTeacher($user),
 
-        return $this->formatScheduleGrid($schedules);
+            // Nếu user có vai trò 'student' VÀ có thông tin student liên kết
+            $user->hasRole('student') && $user->student => $this->scheduleRepository->getByClass($user->student->schoolClass),
+
+            // Đối với tất cả các trường hợp còn lại (Admin, Parent, etc.)
+            default => new Collection(), // Trả về một Collection rỗng
+        };
     }
 
     public function getWeeklySchedule(SchoolClass $schoolClass, string $date, User $user): array
@@ -102,10 +104,24 @@ class ScheduleService implements ScheduleServiceInterface
         $grid = array_fill(0, 7, array_fill(0, 10, null));
 
         foreach ($schedules as $schedule) {
+
+            //  LẤY THÔNG TIN GIÁO VIÊN
+
+            $teacherName = null;
+            $teacherId = $schedule->teacher_id; // Luôn lấy được ID từ chính bản ghi schedule
+
+            // Chỉ xử lý nếu có giáo viên được liên kết
+            if ($schedule->teacher) {
+                // Ưu tiên lấy tên từ profile, nếu không có thì lấy email
+                $teacherName = $schedule->teacher->profile?->full_name ?? $schedule->teacher->email;
+            }
+
+
             $grid[$schedule->day_of_week - 1][$schedule->period - 1] = [
                 'id' => $schedule->id,
-                'subject' => $schedule->subject->name,
-                'teacher' => $schedule->teacher->name,
+                'subject' => $schedule->subject?->name,
+                'teacher' => $teacherName, // Dùng biến đã được xử lý an toàn
+                'teacher_id' => $teacherId,
                 'room' => $schedule->room,
             ];
         }
@@ -126,11 +142,21 @@ class ScheduleService implements ScheduleServiceInterface
             $weekSchedule[$date][$schedule->period - 1] = [
                 'id' => $schedule->id,
                 'subject' => $schedule->subject->name,
-                'teacher' => $schedule->teacher->name,
+                'teacher' => $schedule->teacher->profile->full_name ?? $schedule->teacher->email,
+                'teacher_id' => $schedule->teacher_id,
                 'room' => $schedule->room,
             ];
         }
 
         return $weekSchedule;
+    }
+    public function restoreSchedule(int $scheduleId): ?Schedule
+    {
+        $restored = $this->scheduleRepository->restore($scheduleId);
+        if ($restored) {
+            // Trả về bản ghi đã được khôi phục để hiển thị lại
+            return Schedule::find($scheduleId);
+        }
+        return null;
     }
 }

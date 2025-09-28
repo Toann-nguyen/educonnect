@@ -6,8 +6,17 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
 
+
 class InvoiceController extends Controller
 {
+
+    public function myInvoices(Request $request)
+    {
+        // Giả sử Parent cũng có quyền xem hóa đơn
+        // Service sẽ xử lý logic lấy hóa đơn của con cái họ
+        $invoices = $this->invoiceService->getInvoicesForParent($request->user());
+        return $invoices;
+    }
     /**
      * Display a listing of the resource.
      */

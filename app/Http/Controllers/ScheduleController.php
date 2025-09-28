@@ -36,6 +36,7 @@ class ScheduleController extends Controller
         ));
     }
 
+
     /**
      * Store a newly created resource in storage.
      */
@@ -72,15 +73,41 @@ class ScheduleController extends Controller
         $this->scheduleService->deleteSchedule($schedule);
         return response()->json(null, 204);
     }
+    /**
+     * restore schedule with id in schedules
+     * @param mixed $id
+     * @return JsonResponse
+     */
+    public function restore($id): JsonResponse
+    {
+        $this->authorize('restore', Schedule::withTrashed()->find($id)); // Kiểm tra quyền restore
+
+        $schedule = $this->scheduleService->restoreSchedule($id);
+
+        if ($schedule) {
+            return response()->json([
+                'message' => 'Schedule restored successfully.',
+                'data' => new ScheduleResource($schedule)
+            ]);
+        }
+
+        return response()->json(['message' => 'Schedule not found in trash.'], 404);
+    }
+
+
+
+
 
     /**
      * Get schedule by class
      */
-    public function getByClass(SchoolClass $class): JsonResponse
+    public function getByClass(SchoolClass $class, Request $request): JsonResponse
     {
+
         $schedules = $this->scheduleService->getScheduleForClass($class, auth()->user());
         return response()->json([
-            'data' => ScheduleResource::collection($schedules)
+            'message' => 'Schedule in format Resource',
+            'data' => $schedules
         ]);
     }
 
@@ -91,7 +118,7 @@ class ScheduleController extends Controller
     {
         $schedules = $this->scheduleService->getPersonalSchedule(auth()->user());
         return response()->json([
-            'data' => ScheduleResource::collection($schedules)
+            'data' => ScheduleResource::collection($schedules),
         ]);
     }
 
@@ -100,12 +127,14 @@ class ScheduleController extends Controller
      */
     public function getWeeklySchedule(SchoolClass $class, Request $request): JsonResponse
     {
-        $date = $request->get('date', Carbon::now()->format('Y-m-d'));
-        $schedule = $this->scheduleService->getWeeklySchedule($class, $date, auth()->user());
+        // // dd($class, $request);
+        // $date = $request->get('date', Carbon::now()->format('Y-m-d'));
+        // $schedule = $this->scheduleService->getWeeklySchedule($class, $date, auth()->user());
 
-        return response()->json([
-            'data' => $schedule
-        ]);
+        // return response()->json([
+        //     'data' => $schedule
+        // ]);
+        return $this->getByClass($class, $request);
     }
 
     /**

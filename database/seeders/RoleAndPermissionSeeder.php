@@ -25,6 +25,8 @@ class RoleAndPermissionSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'manage events']);       // Quản lý sự kiện
         Permission::firstOrCreate(['name' => 'manage school structure']);
         Permission::firstOrCreate(['name' => 'manage users']);
+        Permission::firstOrCreate(['name' => 'view schedules']);      // Xem thời khóa biểu
+        Permission::firstOrCreate(['name' => 'manage schedules']);    // Quản lý thời khóa biểu
 
         // Tạo role
         $studentRole   = Role::firstOrCreate(['name' => 'student']);
@@ -37,15 +39,19 @@ class RoleAndPermissionSeeder extends Seeder
         $adminRole     = Role::firstOrCreate(['name' => 'admin']);
 
         // Gán quyền
-        $teacherRole->givePermissionTo(['record discipline', 'manage events']);
+        $teacherRole->givePermissionTo(['record discipline', 'manage events', 'view schedules', 'manage schedules']);
         $accountantRole->givePermissionTo('manage finances');
         $librarianRole->givePermissionTo('manage library');
         $redScarfRole->givePermissionTo('record discipline');
+        $studentRole->givePermissionTo('view schedules');
+        $parentRole->givePermissionTo('view schedules');
 
         $principalRole->givePermissionTo([
             'manage school structure',
             'manage events',
-            'manage users'
+            'manage users',
+            'view schedules',
+            'manage schedules'
         ]);
 
         $adminRole->givePermissionTo(Permission::all());

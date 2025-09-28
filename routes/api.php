@@ -58,107 +58,106 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::put('/', [ProfileController::class, 'update']);
-        // Route::post('avatar', [ProfileController::class, 'uploadAvatar']);
     });
 
     // Dashboard chung
     Route::get('dashboard', [DashBoardController::class, 'index']);
 
-    // Admin only - sử dụng middleware Spatie
+    // Admin only
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::apiResource('users', UserController::class);
         Route::apiResource('academic-years', AcademicYearController::class);
         Route::apiResource('classes', SchoolClassController::class);
         Route::apiResource('subjects', SubjectController::class);
-        Route::post('users/{id}/restore', [UserController::class, 'restore'])
-            ->name('users.restore');
-    });
-
-    // Teacher hoặc Admin - sử dụng RoleOrPermission middleware
-    Route::middleware('role_or_permission:teacher|admin')->group(function () {
-        Route::apiResource('grades', \App\Http\Controllers\GradeController::class);
-        Route::apiResource('schedules', \App\Http\Controllers\ScheduleController::class);
-        Route::get('my-classes', [\App\Http\Controllers\ScheduleController::class, 'myClasses']);
+        Route::post('users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
     });
 
     // =============================================================
     // == SCHEDULE ROUTES (Thời khóa biểu)
     // =============================================================
     Route::prefix('schedules')->group(function () {
-        // Xem TKB theo lớp - tất cả user có thể xem (có phân quyền trong service)
-        Route::get('class/{class}', [ScheduleController::class, 'getByClass']);
-        Route::get('class/{class}/week', [ScheduleController::class, 'getWeeklySchedule']);
 
-        // TKB cá nhân - Teacher và Student
-        Route::middleware(['role:teacher|student'])->group(function () {
-            Route::get('my', [ScheduleController::class, 'mySchedule']);
-        });
+        // Public (tất cả user đăng nhập, phân quyền chi tiết trong service)
+        Route::get('class/{class}', [ScheduleController::class, 'getByClass'])->name('schedules.by-class');
+        Route::get('class/{class}/week', [ScheduleController::class, 'getWeeklySchedule'])->name('schedules.by-class.week');
 
-        // Xem danh sách lớp dạy - chỉ dành cho giáo viên
-        Route::middleware(['role:teacher'])->group(function () {
-            Route::get('my-classes', [ScheduleController::class, 'getTeacherClasses']);
-        });
+        // My schedule - Teacher, Student
+        Route::get('my', [ScheduleController::class, 'mySchedule'])
+            ->middleware('role:teacher|student')
+            ->name('schedules.my');
 
-        // Quản lý TKB - Admin và Principal
+        // My classes - Teacher only
+        Route::get('my-classes', [ScheduleController::class, 'getTeacherClasses'])
+            ->middleware('role:teacher')
+            ->name('schedules.my-classes');
+
+        // CRUD cho admin & principal
         Route::middleware(['role:admin|principal'])->group(function () {
             Route::get('/', [ScheduleController::class, 'index']);
             Route::post('/', [ScheduleController::class, 'store']);
-            Route::get('/{schedule}', [ScheduleController::class, 'show']);
-            Route::put('/{schedule}', [ScheduleController::class, 'update']);
-            Route::patch('/{schedule}', [ScheduleController::class, 'update']);
-            Route::delete('/{schedule}', [ScheduleController::class, 'destroy']);
+            Route::get('{schedule}', [ScheduleController::class, 'show']);
+            Route::put('{schedule}', [ScheduleController::class, 'update']);
+            Route::patch('{schedule}', [ScheduleController::class, 'update']);
+            Route::delete('{schedule}', [ScheduleController::class, 'destroy']);
+            Route::post('{id}/restore', [ScheduleController::class, 'restore'])->name('schedules.restore');
         });
     });
 
-    // Permission specific - discipline records
+    // Grades (Teacher/Admin)
+    Route::middleware('role_or_permission:teacher|admin')->group(function () {
+        Route::apiResource('grades', GradeController::class);
+    });
+
+    // Discipline records
     Route::middleware('permission:record discipline')->group(function () {
-        Route::apiResource('disciplines', \App\Http\Controllers\DisciplineController::class);
+        Route::apiResource('disciplines', DisciplineController::class);
     });
 
-    // Financial management - permission hoặc admin role
+    // Financial management
     Route::middleware('role_or_permission:admin|manage finances')->group(function () {
-        Route::apiResource('invoices', \App\Http\Controllers\InvoiceController::class);
-        Route::apiResource('payments', \App\Http\Controllers\PaymentController::class);
-        Route::get('financial-reports', [\App\Http\Controllers\PaymentController::class, 'reports']);
+        Route::apiResource('invoices', InvoiceController::class);
+        Route::apiResource('payments', PaymentController::class);
+        Route::get('financial-reports', [PaymentController::class, 'reports']);
     });
 
-    // Library management
+    // Library
     Route::middleware('role_or_permission:admin|manage library')->group(function () {
-        Route::apiResource('library-books', \App\Http\Controllers\LibraryBookController::class);
-        Route::apiResource('library-transactions', \App\Http\Controllers\LibraryTransactionController::class);
+        Route::apiResource('library-books', LibraryBookController::class);
+        Route::apiResource('library-transactions', LibraryTransactionController::class);
     });
 
-    // Student và Parent routes
-    Route::middleware('role:student,parent')->group(function () {
-        Route::get('my-grades', [\App\Http\Controllers\GradeController::class, 'myGrades']);
-        Route::get('my-invoices', [\App\Http\Controllers\InvoiceController::class, 'myInvoices']);
+    // Student & Parent
+    Route::middleware('role:student|parent')->group(function () {
+        Route::get('my-grades', [GradeController::class, 'myGrades']);
+        Route::get('my-invoices', [InvoiceController::class, 'myInvoices']);
     });
+
     // Parent only
     Route::middleware('role:parent')->group(function () {
-        Route::get('my-children', [\App\Http\Controllers\StudentController::class, 'myChildren']);
+        Route::get('my-children', [StudentController::class, 'myChildren']);
     });
 
-    // Events - public viewing, permission-based management
-    Route::get('events', [\App\Http\Controllers\EventController::class, 'index']);
-    Route::get('events/{event}', [\App\Http\Controllers\EventController::class, 'show']);
-    Route::post('events/{event}/register', [\App\Http\Controllers\EventController::class, 'register']);
+    // Events
+    Route::get('events', [EventController::class, 'index']);
+    Route::get('events/{event}', [EventController::class, 'show']);
+    Route::post('events/{event}/register', [EventController::class, 'register']);
 
     Route::middleware('role_or_permission:admin|manage events')->group(function () {
-        Route::post('events', [\App\Http\Controllers\EventController::class, 'store']);
-        Route::put('events/{event}', [\App\Http\Controllers\EventController::class, 'update']);
-        Route::delete('events/{event}', [\App\Http\Controllers\EventController::class, 'destroy']);
+        Route::post('events', [EventController::class, 'store']);
+        Route::put('events/{event}', [EventController::class, 'update']);
+        Route::delete('events/{event}', [EventController::class, 'destroy']);
     });
 
-    // Attendance - viewing và managing
+    // Attendance
     Route::middleware('role:teacher,admin')->group(function () {
-        Route::post('attendances', [\App\Http\Controllers\AttendanceController::class, 'store']);
-        Route::put('attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'update']);
-        Route::delete('attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'destroy']);
+        Route::post('attendances', [AttendanceController::class, 'store']);
+        Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
+        Route::delete('attendances/{attendance}', [AttendanceController::class, 'destroy']);
     });
 
     Route::middleware('role:student,parent,teacher,admin')->group(function () {
-        Route::get('attendances', [\App\Http\Controllers\AttendanceController::class, 'index']);
-        Route::get('attendances/{attendance}', [\App\Http\Controllers\AttendanceController::class, 'show']);
-        Route::get('attendances/student/{student}', [\App\Http\Controllers\AttendanceController::class, 'byStudent']);
+        Route::get('attendances', [AttendanceController::class, 'index']);
+        Route::get('attendances/{attendance}', [AttendanceController::class, 'show']);
+        Route::get('attendances/student/{student}', [AttendanceController::class, 'byStudent']);
     });
 });

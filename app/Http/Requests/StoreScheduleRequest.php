@@ -22,7 +22,7 @@ class StoreScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'class_id' => 'required|integer|exists:school_classes,id',
+            'class_id' => 'required|integer|exists:classes,id',
             'subject_id' => 'required|integer|exists:subjects,id',
             'teacher_id' => 'required|integer|exists:users,id',
             'day_of_week' => 'required|integer|between:1,7', // 1: Monday, 7: Sunday

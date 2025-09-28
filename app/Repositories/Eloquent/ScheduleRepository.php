@@ -35,6 +35,21 @@ class ScheduleRepository implements ScheduleRepositoryInterface
             ->get();
     }
 
+    public function findTrashed(int $scheduleId): ?Schedule
+    {
+        // onlyTrashed() chỉ tìm trong các bản ghi đã bị xóa mềm
+        return Schedule::onlyTrashed()->find($scheduleId);
+    }
+
+    public function restore(int $scheduleId): bool
+    {
+        $schedule = $this->findTrashed($scheduleId);
+        if ($schedule) {
+            return $schedule->restore();
+        }
+        return false;
+    }
+
     public function create(array $data): Schedule
     {
         return $this->model->create($data);

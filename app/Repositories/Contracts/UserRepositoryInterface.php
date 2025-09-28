@@ -17,7 +17,7 @@ interface UserRepositoryInterface
     // xoa cung ban ghi khong dung delete_at
     public function forceDeleteUser(int $id);
     public function find(int $id);
-    public function finByEmailUser(string $email);
+    public function findByEmailUser(string $email);
 
     public function paginate(int $perPage = 15, array $filters = []);
 }

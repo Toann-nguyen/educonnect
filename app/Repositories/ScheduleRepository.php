@@ -32,7 +32,7 @@ class ScheduleRepository implements ScheduleRepositoryInterface
     public function findByClass($classId)
     {
         return $this->model
-            ->with(['subject', 'teacher'])
+            ->with(['subject', 'teacher.profile'])
             ->where('class_id', $classId)
             ->orderBy('day_of_week')
             ->orderBy('period')

@@ -132,6 +132,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('my-grades', [GradeController::class, 'myGrades']);
         Route::get('my-invoices', [InvoiceController::class, 'myInvoices']);
     });
+    // Standard CRUD
+    Route::apiResource('invoices', InvoiceController::class);
+
+    // === FEE TYPES ROUTES ===
+    Route::apiResource('fee-types', FeeTypeController::class);
+    Route::patch('fee-types/{feeType}/toggle-active', [FeeTypeController::class, 'toggleActive']);
+
 
     // Parent only
     Route::middleware('role:parent')->group(function () {
@@ -161,4 +168,17 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('attendances/{attendance}', [AttendanceController::class, 'show']);
         Route::get('attendances/student/{student}', [AttendanceController::class, 'byStudent']);
     });
+    // === PAYMENT ROUTES ===
+
+    // Special endpoints
+    Route::get('payments/statistics', [PaymentController::class, 'statistics']);
+
+    // Invoice-specific payments
+    Route::get('invoices/{invoiceId}/payments', [PaymentController::class, 'getByInvoice']);
+
+    // Standard CRUD (no update for payments)
+    Route::get('payments', [PaymentController::class, 'index']);
+    Route::post('payments', [PaymentController::class, 'store']);
+    Route::get('payments/{payment}', [PaymentController::class, 'show']);
+    Route::delete('payments/{id}', [PaymentController::class, 'destroy']);
 });

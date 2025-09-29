@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use App\Models\User;
 use App\Models\Event;
+use App\Models\FeeType;
 use App\Models\Grade;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -19,6 +20,7 @@ use App\Models\EventRegistration;
 use App\Models\LibraryTransaction;
 use Illuminate\Database\Seeder;
 
+
 class TransactionDataSeeder extends Seeder
 {
     /**
@@ -26,7 +28,7 @@ class TransactionDataSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('Seeding transactional data (Schedules, Grades, Invoices, etc.)...');
+        $this->command->info('Seeding transactional data (Schedules, Grades, Invoices, Payments etc.)...');
 
         // Lấy dữ liệu nền tảng đã có
         $students = Student::with('guardians')->get();
@@ -34,6 +36,7 @@ class TransactionDataSeeder extends Seeder
         $accountants = User::role('accountant')->get();
         $subjects = Subject::all();
         $classes = SchoolClass::all();
+        $feeTypes = FeeType::all(); // Lấy tất cả các loại phí đã được seed
 
         // 1. Tạo Thời khóa biểu
         $schedules = collect();
@@ -110,11 +113,11 @@ class TransactionDataSeeder extends Seeder
                 if ($guardian) {
                     Payment::factory()->create([
                         'invoice_id' => $invoice->id,
-                        'amount_paid' => $invoice->amount,
+                        'amount_paid' => $invoice->total_amount,
                         'payer_user_id' => $guardian->guardian_user_id,
                         'created_by_user_id' => $accountants->random()->id,
                     ]);
-                    $invoice->update(['status' => 'paid']);
+                    $invoice->update(['status' => 'paid',  'paid_amount' => $invoice->total_amount]);
                 }
             }
         }
@@ -154,7 +157,64 @@ class TransactionDataSeeder extends Seeder
                 'reporter_user_id' => $teachers->random()->id,
             ]);
         }
+        // 8. Tạo Hóa đơn với FeeTypes
+        $this->command->info('Creating invoices with fee types...');
+        $issuer = $accountants->first() ?? User::role('admin')->first();
 
+        foreach ($students->random(floor($students->count() * 0.8)) as $student) {
+            // Tạo invoice cho tháng hiện tại
+            $invoice = Invoice::create([
+                'invoice_number' => Invoice::generateInvoiceNumber(),
+                'student_id' => $student->id,
+                'notes' => 'Học phí tháng ' . now()->format('m/Y'),
+                'total_amount' => 0, // Sẽ tính sau
+                'paid_amount' => 0,
+                'due_date' => now()->addDays(15),
+                'status' => 'unpaid',
+                'issued_by' => $issuer->id,
+            ]);
+
+            // Gắn 2-4 loại phí ngẫu nhiên
+            $selectedFeeTypes = $feeTypes->random(rand(2, 4));
+            $totalAmount = 0;
+            $feeTypeData = [];
+
+            foreach ($selectedFeeTypes as $feeType) {
+                $amount = $feeType->default_amount * (rand(80, 120) / 100); // Biến động ±20%
+                $totalAmount += $amount;
+                $feeTypeData[$feeType->id] = [
+                    'amount' => $amount,
+                    'note' => null,
+                ];
+            }
+
+            $invoice->feeTypes()->sync($feeTypeData);
+            $invoice->update([
+                'total_amount' => $totalAmount,
+                'amount' => $totalAmount,
+            ]);
+
+            // 90% hóa đơn được thanh toán
+            if (rand(1, 10) <= 9 && $student->guardians->isNotEmpty()) {
+                $guardian = $student->guardians->random();
+                if ($guardian && $guardian->guardian) {
+                    // Thanh toán toàn bộ hoặc một phần
+                    $paymentAmount = rand(1, 10) <= 8
+                        ? $totalAmount  // 80% thanh toán đủ
+                        : $totalAmount * (rand(50, 90) / 100); // 20% thanh toán một phần
+
+                    Payment::factory()->create([
+                        'invoice_id' => $invoice->id,
+                        'amount_paid' => $paymentAmount,
+                        'payer_user_id' => $guardian->guardian_user_id,
+                        'created_by_user_id' => $issuer->id,
+                    ]);
+
+                    $invoice->paid_amount = $paymentAmount;
+                    $invoice->updatePaymentStatus();
+                }
+            }
+        }
 
         $this->command->info('Transactional data seeded successfully.');
     }

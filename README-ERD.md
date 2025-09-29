@@ -169,3 +169,52 @@ GET /api/payments - Danh sách thanh toán
 POST /api/payments - Tạo thanh toán mới
 GET /api/payments/reports/financial - Báo cáo tài chính
 GET /api/payments/dashboard/stats - Thống kê dashboard
+
+# Invoice & Payment System - Hướng Dẫn Sử Dụng
+
+## 📋 Tổng Quan
+
+Hệ thống quản lý hóa đơn và thanh toán với đầy đủ chức năng phân quyền theo role.
+
+## 🔑 Phân Quyền Theo Role
+
+### Admin / Principal / Accountant (Kế toán)
+
+-   ✅ Tạo, sửa, xóa hóa đơn
+-   ✅ Xem tất cả hóa đơn
+-   ✅ Tạo, xóa thanh toán
+-   ✅ Xem thống kê tài chính
+-   ✅ Quản lý loại phí (Fee Types)
+-   ✅ Xem hóa đơn quá hạn
+
+### Homeroom Teacher (GVCN)
+
+-   ✅ Xem hóa đơn của học sinh trong lớp chủ nhiệm
+-   ✅ Xem lịch sử thanh toán
+-   ❌ Không được tạo/sửa/xóa
+
+### Parent (Phụ huynh)
+
+-   ✅ Xem hóa đơn của con
+-   ✅ Thực hiện thanh toán cho con
+-   ✅ Xem lịch sử thanh toán
+-   ❌ Không thể xem hóa đơn của học sinh khác
+
+### Student (Học sinh)
+
+-   ✅ Xem hóa đơn của bản thân
+-   ✅ Xem lịch sử thanh toán
+-   ❌ Không được thanh toán (do phụ huynh thanh toán)
+
+## 📊 Cấu Trúc Database
+
+### Bảng `fee_types` (Loại Phí)
+
+```sql
+- id
+- code (TUITION, BUS, MEAL, ...)
+- name (Học phí chính quy, Tiền xe, ...)
+- default_amount
+- description
+- is_active
+```

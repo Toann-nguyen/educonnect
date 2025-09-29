@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             $this->call([
                 RoleAndPermissionSeeder::class,
                 SubjectSeeder::class,
+                FeeTypeSeeder::class,
             ]);
 
             // BƯỚC 2: TẠO NĂM HỌC
@@ -47,6 +48,10 @@ class DatabaseSeeder extends Seeder
             // BƯỚC 4: TẠO CẤU TRÚC TRƯỜNG HỌC (Lớp, Học sinh, Phụ huynh)
             $this->command->info('🏫 Step 4: Setting up school structure...');
             $this->call(StructureSeeder::class);
+
+            // BƯỚC 5: TẠO DỮ LIỆU HÓA ĐƠN VÀ THANH TOÁN
+            $this->command->info('💰 Step 5: Creating invoices and payments...');
+            $this->call(InvoiceAndPaymentSeeder::class);
 
             // BƯỚC 5: TẠO CÁC DỮ LIỆU GIAO DỊCH (Điểm, Hóa đơn, Thư viện, Sự kiện...)
             $this->command->info('📊 Step 5: Creating transactional data...');

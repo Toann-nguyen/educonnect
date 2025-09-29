@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('library_books', function (Blueprint $table) {
+        Schema::create('invoice_fee_types', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('invoice_id')->constrained()->onDelete('cascade');
+            $table->foreignId('fee_type_id')->constrained()->onDelete('cascade');
+            $table->decimal('amount', 15, 2)->comment('Số tiền cụ thể');
+            $table->text('note')->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('library_books');
+        Schema::dropIfExists('invoice_fee_types');
     }
 };

@@ -21,9 +21,10 @@ class PaymentFactory extends Factory
         return [
             'payment_date' => fake()->dateTimeThisMonth(),
             'payment_method' => $method,
+            'amount_paid' => fake()->randomFloat(2, 100000, 5000000), // Random amount between 100,000 and 5,000,000
             'transaction_code' => $method === 'banking' ? strtoupper(fake()->bothify('??######')) : null,
             'note' => fake()->optional()->sentence(),
-            // 'invoice_id', 'payer_user_id', 'created_by_user_id', 'amount_paid' will be set in the Seeder
+            // 'invoice_id', 'payer_user_id', 'created_by_user_id' will be set in the Seeder
         ];
     }
 }

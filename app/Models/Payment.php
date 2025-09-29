@@ -19,6 +19,16 @@ class Payment extends Model
         'transaction_code',
         'note'
     ];
+    protected $casts = [
+        'amount_paid' => 'decimal:2',
+        'payment_date' => 'date'
+    ];
+
+    /** Lấy người tạo bản ghi thanh toán (thường là kế toán) */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
     /** Lấy hóa đơn được thanh toán */
     public function invoice()
     {

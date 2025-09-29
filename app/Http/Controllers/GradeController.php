@@ -23,7 +23,6 @@ class GradeController extends Controller
     {
         $user = $request->user();
         $personalGradesData = $this->gradeService->getPersonalGrades($user);
-        dd($personalGradesData);
         // Kiểm tra nếu không có dữ liệu trả về (ví dụ: user là student nhưng chưa có record student)
         if (is_null($personalGradesData) || empty($personalGradesData)) {
             return response()->json(['data' => []]); // Trả về mảng rỗng
@@ -56,9 +55,10 @@ class GradeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $grades = $this->gradeService->getAllGrades($request->all(), $request->user());
+        return $grades;
     }
 
     /**
@@ -74,23 +74,19 @@ class GradeController extends Controller
      */
     public function store(StoreGradeRequest $request)
     {
-        //
+        $grade = $this->gradeService->createGrade($request->validated(), $request->user());
+        return (new GradeResource($grade))
+            ->response()
+            ->setStatusCode(201);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Grade $grade)
+    public function show(Request $request, Grade $grade)
     {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Grade $grade)
-    {
-        //
+        $this->gradeService->checkViewPermission($grade, $request->user());
+        return new GradeResource($grade->load(['student.user.profile', 'subject', 'teacher.profile']));
     }
 
     /**
@@ -98,14 +94,34 @@ class GradeController extends Controller
      */
     public function update(UpdateGradeRequest $request, Grade $grade)
     {
-        //
+        $updatedGrade = $this->gradeService->updateGrade($grade, $request->validated(), $request->user());
+        return new GradeResource($updatedGrade);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Grade $grade)
+    public function destroy(Request $request, Grade $grade)
     {
-        //
+        $this->gradeService->deleteGrade($grade, $request->user());
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Get grades by class (Teacher/Admin only)
+     */
+    public function getByClass(Request $request, $classId)
+    {
+        $grades = $this->gradeService->getGradesByClass($classId, $request->all(), $request->user());
+        return GradeResource::collection($grades);
+    }
+
+    /**
+     * Get grade statistics for a student
+     */
+    public function getStudentStats(Request $request, $studentId)
+    {
+        $stats = $this->gradeService->getStudentGradeStats($studentId, $request->user());
+        return response()->json($stats);
     }
 }

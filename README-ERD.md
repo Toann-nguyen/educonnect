@@ -142,3 +142,30 @@ manage events Quản lý Sự kiện POST, PUT, DELETE /api/events, /api/events/
     Student	Chỉ xem (Read-only): Xem thời khóa biểu của lớp mình đang học.
     Parent	Chỉ xem (Read-only): Xem thời khóa biểu của lớp học của con mình.
 ```
+
+## Grades (Điểm số):
+
+GET /api/grades/my - Xem điểm của mình (Student/Parent)
+GET /api/grades - Danh sách điểm (Teacher/Admin)  
+POST /api/grades - Tạo điểm mới
+GET /api/grades/{grade} - Chi tiết điểm
+PUT /api/grades/{grade} - Cập nhật điểm
+DELETE /api/grades/{grade} - Xóa điểm
+GET /api/grades/class/{class} - Điểm theo lớp
+GET /api/grades/student/{student}/stats - Thống kê điểm học sinh
+
+## Invoice Hoa don
+
+GET /api/invoices/my - Hóa đơn của mình (Student/Parent)
+GET /api/invoices - Danh sách hóa đơn (Admin/Accountant)
+POST /api/invoices - Tạo hóa đơn
+POST /api/invoices/bulk-create - Tạo hóa đơn hàng loạt
+GET /api/invoices/statistics - Thống kê hóa đơn
+POST /api/invoices/update-overdue - Cập nhật trạng thái quá hạn
+
+## Payment
+
+GET /api/payments - Danh sách thanh toán
+POST /api/payments - Tạo thanh toán mới
+GET /api/payments/reports/financial - Báo cáo tài chính
+GET /api/payments/dashboard/stats - Thống kê dashboard

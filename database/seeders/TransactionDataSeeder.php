@@ -90,9 +90,10 @@ class TransactionDataSeeder extends Seeder
         }
 
         // 3. Tạo Điểm số
+        $this->command->info('Creating grades...');
         foreach ($students as $student) {
-            foreach ($subjects->random(4) as $subject) { // Mỗi học sinh có điểm cho 4 môn ngẫu nhiên
-                Grade::factory()->count(3)->create([
+            foreach ($subjects->random(rand(3, 5)) as $subject) {
+                Grade::factory()->count(rand(2, 4))->create([
                     'student_id' => $student->id,
                     'subject_id' => $subject->id,
                     'teacher_id' => $teachers->random()->id,
@@ -101,18 +102,20 @@ class TransactionDataSeeder extends Seeder
         }
 
         // 4. Tạo Hóa đơn và Thanh toán
-        foreach ($students->random(floor($students->count() * 0.8)) as $student) { // 80% học sinh có hóa đơn
+        $this->command->info('Creating invoices and payments...');
+        foreach ($students->random(floor($students->count() * 0.8)) as $student) {
             $invoice = Invoice::factory()->create(['student_id' => $student->id]);
-
-            // 90% các hóa đơn được thanh toán
             if (rand(1, 10) <= 9 && $student->guardians->isNotEmpty()) {
-                Payment::factory()->create([
-                    'invoice_id' => $invoice->id,
-                    'amount_paid' => $invoice->amount,
-                    'payer_user_id' => $student->guardians->random()->guardian_user_id,
-                    'created_by_user_id' => $accountants->random()->id,
-                ]);
-                $invoice->update(['status' => 'paid']);
+                $guardian = $student->guardians->random();
+                if ($guardian) {
+                    Payment::factory()->create([
+                        'invoice_id' => $invoice->id,
+                        'amount_paid' => $invoice->amount,
+                        'payer_user_id' => $guardian->guardian_user_id,
+                        'created_by_user_id' => $accountants->random()->id,
+                    ]);
+                    $invoice->update(['status' => 'paid']);
+                }
             }
         }
 
@@ -151,6 +154,7 @@ class TransactionDataSeeder extends Seeder
                 'reporter_user_id' => $teachers->random()->id,
             ]);
         }
+
 
         $this->command->info('Transactional data seeded successfully.');
     }

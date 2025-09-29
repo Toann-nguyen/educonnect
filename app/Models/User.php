@@ -24,7 +24,7 @@ class User extends Authenticatable
 
     protected $fillable = ['email', 'password', 'status', 'email_verified_at', 'remember_token'];
     protected $hidden = ['password', 'remember_token'];
-    protected $casts = ['email_verified_at' => 'datetime', 'password' => 'hashed'];
+    protected $casts = ['email_verified_at' => 'datetime', 'password' => 'hashed',  'amount' => 'decimal:2',  'due_date' => 'date'];
     protected $dates = ['deleted_at'];
 
     /** Mối quan hệ 1-1 với Profile */
@@ -38,6 +38,12 @@ class User extends Authenticatable
     {
         return $this->hasOne(Student::class);
     }
+    /** Các thanh toán cho hóa đơn này */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public  function teacheringSchedules()
     {
         return $this->hasOne(Schedule::class, 'teacher_id');
@@ -66,5 +72,38 @@ class User extends Authenticatable
     public function homeroomClasses()
     {
         return $this->hasMany(SchoolClass::class, 'homeroom_teacher_id');
+    }
+    /** Scope lọc hóa đơn quá hạn */
+    public function scopeOverdue($query)
+    {
+        return $query->where('due_date', '<', now()->format('Y-m-d'))
+            ->whereIn('status', ['unpaid', 'partially_paid']);
+    }
+
+    /** Scope lọc theo lớp học */
+    public function scopeByClass($query, $classId)
+    {
+        return $query->whereHas('student', function ($q) use ($classId) {
+            $q->where('class_id', $classId);
+        });
+    }
+
+    /** Tính tổng số tiền đã thanh toán */
+    public function getTotalPaidAttribute()
+    {
+        return $this->payments()->sum('amount_paid');
+    }
+
+    /** Tính số tiền còn lại */
+    public function getRemainingAmountAttribute()
+    {
+        return $this->amount - $this->total_paid;
+    }
+
+    /** Kiểm tra có quá hạn không */
+    public function getIsOverdueAttribute()
+    {
+        return $this->due_date < now()->format('Y-m-d') &&
+            in_array($this->status, ['unpaid', 'partially_paid']);
     }
 }

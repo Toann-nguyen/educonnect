@@ -92,7 +92,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             ->name('schedules.my-classes');
 
         // CRUD cho admin & principal
-        Route::middleware(['role:admin|principal'])->group(function () {
+        Route::middleware(['role:admin|principal|teacher'])->group(function () {
             Route::get('/', [ScheduleController::class, 'index']);
             Route::post('/', [ScheduleController::class, 'store']);
             Route::get('{schedule}', [ScheduleController::class, 'show']);
@@ -126,7 +126,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::apiResource('library-transactions', LibraryTransactionController::class);
     });
 
-    // Student & Parent
+    // Student & Parent thi se hien thong thong tin cho dung voi role do
+    // vi du role == student thi se hien thi thong tin cua dung 1 student do thoi
     Route::middleware('role:student|parent')->group(function () {
         Route::get('my-grades', [GradeController::class, 'myGrades']);
         Route::get('my-invoices', [InvoiceController::class, 'myInvoices']);

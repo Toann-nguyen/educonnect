@@ -110,6 +110,7 @@ class InvoiceService implements InvoiceServiceInterface
             // Thêm issued_by
             $data['issued_by'] = $creator->id;
 
+
             // Tính total_amount từ fee_types nếu có
             if (isset($data['fee_types']) && is_array($data['fee_types'])) {
                 $totalAmount = array_sum(array_column($data['fee_types'], 'amount'));

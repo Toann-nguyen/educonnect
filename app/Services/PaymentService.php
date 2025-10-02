@@ -58,6 +58,8 @@ class PaymentService implements PaymentServiceInterface
         // Kiểm tra quyền tạo payment
         // Parent có thể tạo payment cho con (payer_user_id = parent_id)
         // Accountant/Admin có thể tạo payment cho bất kỳ ai
+        // dd($data['payer_user_id'], $creator->id, $data);
+
         $canCreate = match (true) {
             $creator->hasRole(['admin', 'principal', 'accountant']) => true,
             $creator->hasRole('parent') && isset($data['payer_user_id'])

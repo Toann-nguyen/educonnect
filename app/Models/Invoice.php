@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Invoice extends Model
 {
@@ -13,52 +14,47 @@ class Invoice extends Model
     protected $fillable = [
         'invoice_number',
         'student_id',
+        'issued_by',
         'title',
-        'amount', // Giữ để backward compatibility
+        'notes',
         'total_amount',
         'paid_amount',
         'due_date',
         'status',
-        'note',
-        'issued_by'
+        'amount' // Backward compatibility
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
+        'amount' => 'decimal:2',
         'due_date' => 'date'
     ];
-    protected $appends = ['remaining_amount', 'is_overdue'];
 
-    //  Realationships
+    protected $appends = ['is_overdue', 'remaining_amount'];
 
+    /** Học sinh nhận hóa đơn */
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
     /**
-     * Một hóa đơn có nhiều mục chi tiết.
+     * Các mục chi tiết trong hóa đơn.
+     * Đây là mối quan hệ Một-Nhiều (One-to-Many).
+     * ĐÂY LÀ PHƯƠNG THỨC BẠN CÒN THIẾU.
      */
     public function items()
     {
         return $this->hasMany(InvoiceItem::class);
     }
 
-    /** Lấy thông tin học sinh của hóa đơn */
-    public function student()
-    {
-        return $this->belongsTo(Student::class);
-    }
-
-    /** Lấy lịch sử thanh toán */
-    public function payments()
-    {
-        return $this->hasMany(Payment::class);
-    }
-    /** Người tạo hóa đơn */
+    /** Người phát hành hóa đơn (kế toán/admin) */
     public function issuer()
     {
         return $this->belongsTo(User::class, 'issued_by');
     }
 
-    /** Các loại phí trong hóa đơn */
+    /** Các loại phí trong hóa đơn (Many-to-Many) */
     public function feeTypes()
     {
         return $this->belongsToMany(FeeType::class, 'invoice_fee_types')
@@ -66,20 +62,36 @@ class Invoice extends Model
             ->withTimestamps();
     }
 
-
-    /** Tính số tiền còn lại */
-    public function getRemainingAmountAttribute()
+    /** Các thanh toán cho hóa đơn này */
+    public function payments()
     {
-        return $this->total_amount - $this->paid_amount;
+        return $this->hasMany(Payment::class);
     }
 
-    /** Kiểm tra có quá hạn không */
-    public function getIsOverdueAttribute()
+    /** Tạo mã hóa đơn tự động */
+    public static function generateInvoiceNumber(): string
     {
-        return $this->due_date < now()->format('Y-m-d') &&
-            in_array($this->status, ['unpaid', 'partially_paid']);
+        $prefix = 'INV';
+        $date = now()->format('Ymd');
+        $random = strtoupper(Str::random(4));
+
+        return "{$prefix}-{$date}-{$random}";
     }
-    // end relationships
+
+    /** Cập nhật trạng thái thanh toán dựa trên paid_amount */
+    public function updatePaymentStatus(): void
+    {
+        if ($this->paid_amount <= 0) {
+            $this->status = 'unpaid';
+        } elseif ($this->paid_amount >= $this->total_amount) {
+            $this->status = 'paid';
+        } else {
+            $this->status = 'partially_paid';
+        }
+
+        $this->save();
+    }
+
     /** Scope lọc hóa đơn quá hạn */
     public function scopeOverdue($query)
     {
@@ -101,40 +113,16 @@ class Invoice extends Model
         return $query->where('status', $status);
     }
 
-    /** Cập nhật trạng thái thanh toán */
-    public function updatePaymentStatus()
+    /** Accessor: Kiểm tra có quá hạn không */
+    public function getIsOverdueAttribute(): bool
     {
-        if ($this->paid_amount >= $this->total_amount) {
-            $this->status = 'paid';
-        } elseif ($this->paid_amount > 0) {
-            $this->status = 'partially_paid';
-        } else {
-            $this->status = 'unpaid';
-        }
-        $this->save();
+        return $this->due_date < now()->startOfDay() &&
+            in_array($this->status, ['unpaid', 'partially_paid']);
     }
-    /**
-     * Generate a unique invoice number
-     * Format: INV-YYYYMM-XXXX where XXXX is a sequential number
-     */
-    public static function generateInvoiceNumber(): string
+
+    /** Accessor: Số tiền còn lại */
+    public function getRemainingAmountAttribute(): float
     {
-        $prefix = 'INV-' . date('Ym') . '-';
-
-        // Get the last invoice number for this month
-        $lastInvoice = self::where('invoice_number', 'like', $prefix . '%')
-            ->orderBy('invoice_number', 'desc')
-            ->first();
-
-        if (!$lastInvoice) {
-            // If no invoice exists for this month, start with 0001
-            $nextNumber = '0001';
-        } else {
-            // Extract the numeric part and increment it
-            $lastNumber = intval(substr($lastInvoice->invoice_number, -4));
-            $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-        }
-
-        return $prefix . $nextNumber;
+        return (float) ($this->total_amount - $this->paid_amount);
     }
 }

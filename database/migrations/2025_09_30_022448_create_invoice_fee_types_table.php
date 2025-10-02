@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
             $table->foreignId('fee_type_id')->constrained('fee_types')->onDelete('cascade');
-            $table->decimal('amount', 15, 2)->comment('Số tiền cụ thể cho loại phí này');
+            $table->decimal('amount', 15, 2); // Số tiền cụ thể cho hóa đơn này
             $table->text('note')->nullable();
             $table->timestamps();
-
+            $table->softDeletes();
             // Đảm bảo không trùng lặp
             $table->unique(['invoice_id', 'fee_type_id']);
         });

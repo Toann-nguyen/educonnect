@@ -40,20 +40,23 @@ class InvoiceService implements InvoiceServiceInterface
         if (!$user->hasRole(['admin', 'principal', 'accountant'])) {
             throw new AuthorizationException('You do not have permission to view all invoices.');
         }
-        dd($user->all());
 
         return $this->invoiceRepository->getAll($filters);
     }
 
     public function getInvoiceById(int $invoiceId, User $user): Invoice
     {
-        $invoice = Invoice::with(['student.user.profile', 'feeTypes', 'payments.payer.profile'])
+        $invoice = Invoice::with([
+            'student.user.profile',
+            'feeTypes',
+            'payments.payer.profile',
+            'student.guardians.guardian.profile',
+        ])
             ->findOrFail($invoiceId);
 
         if (!$this->canView($invoice, $user)) {
             throw new AuthorizationException('You are not authorized to view this invoice.');
         }
-
 
         return $invoice;
     }
@@ -109,7 +112,6 @@ class InvoiceService implements InvoiceServiceInterface
         try {
             // Thêm issued_by
             $data['issued_by'] = $creator->id;
-
 
             // Tính total_amount từ fee_types nếu có
             if (isset($data['fee_types']) && is_array($data['fee_types'])) {
@@ -184,12 +186,6 @@ class InvoiceService implements InvoiceServiceInterface
         if (!$this->canManage($invoice, $deleter)) {
             throw new AuthorizationException('You do not have permission to delete this invoice.');
         }
-
-        // Không được xóa hóa đơn đã có thanh toán
-        if ($invoice->paid_amount > 0) {
-            throw new \Exception('Cannot delete invoice with existing payments.');
-        }
-
         DB::beginTransaction();
         try {
             $result = $this->invoiceRepository->delete($invoiceId);

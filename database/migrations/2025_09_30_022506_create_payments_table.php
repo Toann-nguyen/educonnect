@@ -22,6 +22,7 @@ return new class extends Migration
             $table->string('transaction_code')->nullable();
             $table->text('note')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -2,124 +2,108 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreFeeTypeRequest;
-use App\Http\Requests\UpdateFeeTypeRequest;
-use App\Http\Resources\FeeTypeResource;
 use App\Models\FeeType;
+use App\Services\Interface\FeeTypeServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Http\Resources\FeeTypeResource;
+use App\Http\Requests\StoreFeeTypeRequest;
+use App\Http\Requests\UpdateFeeTypeRequest;
 
 class FeeTypeController extends Controller
 {
+    protected $feeTypeService;
+
+    public function __construct(FeeTypeServiceInterface $feeTypeService)
+    {
+        $this->feeTypeService = $feeTypeService;
+    }
     /**
      * Display a listing of fee types
-     * Endpoint: GET /api/fee-types
-     * All authenticated users can view
+     * GET /api/fee-types
      */
     public function index(Request $request): JsonResponse
     {
-        $query = FeeType::query();
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
-        // Search by name or code
-        if ($request->has('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
-            });
-        }
-
-        $feeTypes = $query->orderBy('name')->get();
-
-        return response()->json([
-            'data' => FeeTypeResource::collection($feeTypes)
-        ]);
+        $feeTypes = $this->feeTypeService->getAllFeeTypes($request->all());
+        return response()->json($feeTypes);
     }
 
     /**
      * Store a newly created fee type
-     * Endpoint: POST /api/fee-types
-     * Only Admin/Principal/Accountant
+     * POST /api/fee-types
      */
     public function store(StoreFeeTypeRequest $request): JsonResponse
     {
-        if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
-            throw new AuthorizationException('You do not have permission to create fee types.');
-        }
-
-        $feeType = FeeType::create($request->validated());
-
-        return response()->json(new FeeTypeResource($feeType), 201);
+        $feeType = $this->feeTypeService->createFeeType($request->validated());
+        return response()->json($feeType, 201);
     }
 
     /**
      * Display the specified fee type
-     * Endpoint: GET /api/fee-types/{id}
+     * GET /api/fee-types/{id}
      */
     public function show(FeeType $feeType): JsonResponse
     {
-        return response()->json(new FeeTypeResource($feeType));
+
+        return response()->json($feeType);
     }
 
     /**
      * Update the specified fee type
-     * Endpoint: PUT/PATCH /api/fee-types/{id}
-     * Only Admin/Principal/Accountant
+     * PUT /api/fee-types/{id}
      */
     public function update(UpdateFeeTypeRequest $request, FeeType $feeType): JsonResponse
     {
-        if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
-            throw new AuthorizationException('You do not have permission to update fee types.');
-        }
-
-        $feeType->update($request->validated());
-
-        return response()->json(new FeeTypeResource($feeType));
+        $updatedFeeType = $this->feeTypeService->updateFeeType($feeType, $request->validated());
+        return response()->json($updatedFeeType);
     }
 
     /**
      * Remove the specified fee type
-     * Endpoint: DELETE /api/fee-types/{id}
-     * Only Admin/Principal
+     * DELETE /api/fee-types/{id}
      */
-    public function destroy(Request $request, FeeType $feeType): JsonResponse
+    public function destroy(FeeType $feeType): JsonResponse
     {
-        if (!$request->user()->hasRole(['admin', 'principal'])) {
-            throw new AuthorizationException('You do not have permission to delete fee types.');
+        try {
+            $this->feeTypeService->deleteFeeType($feeType);
+            return response()->json(null, 204);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        // Check if fee type is used in any invoices
-        if ($feeType->invoices()->exists()) {
-            return response()->json([
-                'message' => 'Cannot delete fee type that is used in invoices. Consider deactivating it instead.'
-            ], 422);
-        }
-
-        $feeType->delete();
-
-        return response()->json(null, 204);
     }
 
     /**
-     * Toggle active status
-     * Endpoint: PATCH /api/fee-types/{id}/toggle-active
-     * Only Admin/Principal/Accountant
+     * Toggle active status of fee type
+     * PATCH /api/fee-types/{id}/toggle-active
      */
-    public function toggleActive(Request $request, FeeType $feeType): JsonResponse
+    public function toggleActive(FeeType $feeType): JsonResponse
     {
-        if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
-            throw new AuthorizationException('You do not have permission to modify fee types.');
+        // Thêm Policy check cho action tùy chỉnh
+        $this->authorize('update', $feeType);
+
+        $updatedFeeType = $this->feeTypeService->toggleActiveStatus($feeType);
+        return response()->json($updatedFeeType);
+    }
+    /**
+     * Restore a soft-deleted fee type.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function restore($id): JsonResponse
+    {
+        // Tìm bản ghi đã xóa để kiểm tra quyền
+        $feeType = FeeType::withTrashed()->findOrFail($id);
+
+        // Sử dụng Policy để kiểm tra quyền 'restore'
+        $this->authorize('restore', $feeType);
+
+        $restoredFeeType = $this->feeTypeService->restoreFeeType($id);
+
+        if ($restoredFeeType) {
+            return response()->json($restoredFeeType); // Hoặc dùng FeeTypeResource
         }
 
-        $feeType->is_active = !$feeType->is_active;
-        $feeType->save();
-
-        return response()->json(new FeeTypeResource($feeType));
+        return response()->json(['message' => 'Fee Type not found in trash or could not be restored.'], 404);
     }
 }

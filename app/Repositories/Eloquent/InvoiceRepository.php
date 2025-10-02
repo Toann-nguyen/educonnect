@@ -12,7 +12,13 @@ class InvoiceRepository implements InvoiceRepositoryInterface
 {
     public function getAll(array $filters)
     {
-        $query = Invoice::with(['student.user.profile', 'student.schoolClass', 'feeTypes', 'issuer.profile']);
+        $query = Invoice::with([
+            'student.user.profile',
+            'student.schoolClass',
+            'student.guardians.guardian.profile',
+            'feeTypes',
+            'issuer.profile'
+        ]);
 
         // Filters
         if (isset($filters['status'])) {
@@ -56,21 +62,32 @@ class InvoiceRepository implements InvoiceRepositoryInterface
     public function getByStudentIds(array $studentIds)
     {
         return Invoice::whereIn('student_id', $studentIds)
-            ->with(['feeTypes', 'payments'])
+            ->with([
+                'student.user.profile',
+                'student.guardians.guardian.profile',
+                'feeTypes',
+                'payments'
+            ])
             ->orderBy('due_date', 'desc')
             ->get();
     }
 
     public function getByClassId(int $classId, array $filters)
     {
-        $query = Invoice::byClass($classId)
-            ->with(['student.user.profile', 'feeTypes', 'payments']);
+        return Invoice::whereHas('student', fn($query) => $query->where('class_id', $classId))
+            ->with([
+                // Tải các mối quan hệ hiện có
+                'student.user.profile',
+                'student.schoolClass', // Tên mối quan hệ trong Student Model
+                'items.feeType',
+                'issuer.profile',
 
-        if (isset($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+                // TẢI THÊM CÁC MỐI QUAN HỆ SAU:
+                'payments.payer.profile', // Lấy thanh toán -> người trả -> profile người trả
+                'student.guardians.user.profile', // Lấy học sinh -> người giám hộ -> user người giám hộ -> profile người giám hộ
+            ])
+            ->get(); // Hoặc paginate(...)
 
-        return $query->orderBy('due_date', 'desc')->get();
     }
 
     public function create(array $data)

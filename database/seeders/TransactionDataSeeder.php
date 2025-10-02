@@ -191,7 +191,7 @@ class TransactionDataSeeder extends Seeder
             $invoice->feeTypes()->sync($feeTypeData);
             $invoice->update([
                 'total_amount' => $totalAmount,
-                'amount' => $totalAmount,
+                // 'amount' => $totalAmount,
             ]);
 
             // 90% hóa đơn được thanh toán

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePaymentRequest extends FormRequest
 {
@@ -25,7 +26,6 @@ class StorePaymentRequest extends FormRequest
             'invoice_id' => 'required|integer|exists:invoices,id',
             'payer_user_id' => 'required|integer|exists:users,id',
             'amount_paid' => 'required|numeric|min:0',
-            'payment_date' => 'required|date',
             'payment_method' => ['required', 'string', Rule::in(['cash', 'banking'])],
             'transaction_code' => 'nullable|string|max:255',
             'note' => 'nullable|string',

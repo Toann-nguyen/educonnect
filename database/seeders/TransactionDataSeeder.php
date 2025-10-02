@@ -150,13 +150,13 @@ class TransactionDataSeeder extends Seeder
             }
         }
 
-        // 7. Tạo Vi phạm kỷ luật
-        foreach ($students->random(20) as $student) { // 20 học sinh có vi phạm
-            Discipline::factory()->create([
-                'student_id' => $student->id,
-                'reporter_user_id' => $teachers->random()->id,
-            ]);
-        }
+        // // 7. Tạo Vi phạm kỷ luật
+        // foreach ($students->random(20) as $student) { // 20 học sinh có vi phạm
+        //     Discipline::factory()->create([
+        //         'student_id' => $student->id,
+        //         'reporter_user_id' => $teachers->random()->id,
+        //     ]);
+        // }
         // 8. Tạo Hóa đơn với FeeTypes
         $this->command->info('Creating invoices with fee types...');
         $issuer = $accountants->first() ?? User::role('admin')->first();

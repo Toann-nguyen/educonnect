@@ -37,6 +37,10 @@ use App\Repositories\Contracts\ScheduleRepositoryInterface;
 use App\Repositories\Eloquent\ScheduleRepository;
 use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
 use \App\Repositories\Eloquent\FeeTypeRepository;
+use App\Services\Interface\DisciplineServiceInterface;
+use App\Services\DisciplineService;
+use App\Services\Interface\ConductScoreServiceInterface;
+use App\Services\ConductScoreService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -52,6 +56,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GradeRepositoryInterface::class, GradeRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         $this->app->bind(FeeTypeRepositoryInterface::class, FeeTypeRepository::class);
+
+        $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
+        $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
         //bind service
         $this->app->bind(UserServiceInterface::class, UserService::class);
         $this->app->bind(AuthServiceInterface::class, AuthService::class);

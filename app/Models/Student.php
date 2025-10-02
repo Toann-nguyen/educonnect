@@ -59,4 +59,31 @@ class Student extends Model
     {
         return $this->hasMany(EventRegistration::class);
     }
+
+    /** THÊM: Lấy điểm hạnh kiểm */
+    public function conductScores()
+    {
+        return $this->hasMany(StudentConductScore::class);
+    }
+
+    /** THÊM: Lấy điểm hạnh kiểm theo học kỳ và năm học */
+    public function getConductScore($semester, $academicYearId)
+    {
+        return $this->conductScores()
+            ->where('semester', $semester)
+            ->where('academic_year_id', $academicYearId)
+            ->first();
+    }
+
+    /** THÊM: Lấy tổng điểm trừ trong học kỳ hiện tại */
+    public function getCurrentSemesterPenaltyPoints()
+    {
+        $activeYear = \App\Models\AcademicYear::where('is_active', true)->first();
+        if (!$activeYear) return 0;
+
+        $currentSemester = now() < $activeYear->start_date->copy()->addMonths(5) ? 1 : 2;
+
+        $conductScore = $this->getConductScore($currentSemester, $activeYear->id);
+        return $conductScore ? $conductScore->total_penalty_points : 0;
+    }
 }

@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
                 RoleAndPermissionSeeder::class,
                 SubjectSeeder::class,
                 FeeTypeSeeder::class,
+                DisciplineTypeSeeder::class,
             ]);
 
             // BƯỚC 2: TẠO NĂM HỌC
@@ -57,6 +58,9 @@ class DatabaseSeeder extends Seeder
             $this->command->info('📊 Step 5: Creating transactional data...');
             $this->call(TransactionDataSeeder::class);
 
+            // BƯỚC 6: TẠO DỮ LIỆU KỶ LUẬT VÀ ĐIỂM HẠNH KIỂM
+            $this->command->info('⚖️ Step 6: Creating discipline records and conduct scores...');
+            $this->call(DisciplineDataSeeder::class);
             // HIỂN THỊ THỐNG KÊ CUỐI CÙNG
             $this->displayFinalStats();
             $this->command->info('✅ Database seeding completed successfully!');

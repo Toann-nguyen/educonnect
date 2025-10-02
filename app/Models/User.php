@@ -106,4 +106,34 @@ class User extends Authenticatable
         return $this->due_date < now()->format('Y-m-d') &&
             in_array($this->status, ['unpaid', 'partially_paid']);
     }
+
+    /** THÊM: Các khiếu nại do user này tạo */
+    public function disciplineAppeals()
+    {
+        return $this->hasMany(DisciplineAppeal::class, 'appellant_user_id');
+    }
+
+    /** THÊM: Các khiếu nại mà user này xem xét */
+    public function reviewedAppeals()
+    {
+        return $this->hasMany(DisciplineAppeal::class, 'reviewed_by_user_id');
+    }
+
+    /** THÊM: Các bản ghi kỷ luật mà user này duyệt */
+    public function reviewedDisciplines()
+    {
+        return $this->hasMany(Discipline::class, 'reviewed_by_user_id');
+    }
+
+    /** THÊM: Các hành động xử lý do user này thực hiện */
+    public function executedDisciplineActions()
+    {
+        return $this->hasMany(DisciplineAction::class, 'executed_by_user_id');
+    }
+
+    /** THÊM: Các điểm hạnh kiểm do user này phê duyệt */
+    public function approvedConductScores()
+    {
+        return $this->hasMany(StudentConductScore::class, 'approved_by_user_id');
+    }
 }

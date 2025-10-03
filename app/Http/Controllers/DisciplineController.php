@@ -35,7 +35,12 @@ class DisciplineController extends Controller
      */
     public function my(Request $request): JsonResponse
     {
-        $disciplines = $this->disciplineService->getMyDisciplines($request->user());
+        $filters = [];
+        if ($request->has('student_id')) {
+            $filters['student_id'] = $request->input('student_id');
+        }
+
+        $disciplines = $this->disciplineService->getMyDisciplines($request->user(), $filters);
         return response()->json(DisciplineResource::collection($disciplines)->response()->getData());
     }
 

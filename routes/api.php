@@ -198,20 +198,66 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('payments/{id}', [PaymentController::class, 'destroy'])
         ->middleware('role:admin|accountant');
 
-    // ------------------------------------------------------------------------
-    // DISCIPLINE ROUTES
-    // ------------------------------------------------------------------------
-    Route::middleware('permission:record discipline')->group(function () {
-        Route::apiResource('disciplines', DisciplineController::class);
+    // =================================================================
+    // == DISCIPLINE ROUTES (Phân hệ Kỷ luật & Hạnh kiểm)
+    // =================================================================
+
+    // --- DISCIPLINE MANAGEMENT (Quản lý các vụ việc vi phạm) ---
+    Route::prefix('disciplines')->name('disciplines.')->group(function () {
+
+        // **Xem (Read)**
+        Route::get('/', [DisciplineController::class, 'index'])->name('index'); // Ai cũng có thể gọi, Service sẽ lọc
+        Route::get('/my', [DisciplineController::class, 'my'])->middleware('role:student|parent')->name('my');
+        Route::get('/class/{classId}', [DisciplineController::class, 'byClass'])->middleware('role:admin|principal|teacher')->name('by-class');
+        Route::get('/student/{studentId}', [DisciplineController::class, 'byStudent'])->middleware('role:admin|principal|teacher')->name('by-student');
+        Route::get('/{discipline}', [DisciplineController::class, 'show'])->name('show'); // Policy sẽ kiểm tra quyền xem chi tiết
+
+        // **Thống kê & Xuất file (Admin/Principal)**
+        Route::get('/statistics', [DisciplineController::class, 'statistics'])->middleware('role:admin|principal')->name('statistics');
+        Route::get('/export', [DisciplineController::class, 'export'])->middleware('role:admin|principal')->name('export');
+
+        // **Tạo (Create)** - Yêu cầu quyền 'record discipline'
+        Route::post('/', [DisciplineController::class, 'store'])->middleware('permission:record discipline')->name('store');
+
+        // **Cập nhật (Update)** - Logic quyền phức tạp, xử lý trong Policy
+        Route::put('/{discipline}', [DisciplineController::class, 'update'])->name('update');
+
+        // **Xóa (Delete)** - Chỉ Admin/Principal
+        Route::delete('/{discipline}', [DisciplineController::class, 'destroy'])->middleware('role:admin|principal')->name('destroy');
+
+        // **Hành động xử lý (Approve, Reject, Appeal)**
+        Route::post('/{discipline}/approve', [DisciplineController::class, 'approve'])->middleware('role:admin|principal')->name('approve');
+        Route::post('/{discipline}/reject', [DisciplineController::class, 'reject'])->middleware('role:admin|principal')->name('reject');
+        Route::post('/{discipline}/appeal', [DisciplineController::class, 'appeal'])->middleware('role:student|parent')->name('appeal');
     });
 
-    // ------------------------------------------------------------------------
-    // LIBRARY ROUTES
-    // ------------------------------------------------------------------------
-    Route::middleware('role_or_permission:admin|manage library')->group(function () {
-        Route::apiResource('library-books', LibraryBookController::class);
-        Route::apiResource('library-transactions', LibraryTransactionController::class);
+    // --- DISCIPLINE TYPES MANAGEMENT (Quản lý các loại vi phạm) ---
+    // Chỉ Admin/Principal mới có toàn quyền
+    Route::prefix('discipline-types')->name('discipline-types.')->middleware('role:admin|principal')->group(function () {
+        Route::get('/', [DisciplineTypeController::class, 'index'])->withoutMiddleware('role:admin|principal'); // Cho phép mọi người xem
+        Route::get('/{disciplineType}', [DisciplineTypeController::class, 'show'])->withoutMiddleware('role:admin|principal'); // Cho phép mọi người xem
+
+        Route::post('/', [DisciplineTypeController::class, 'store'])->name('store');
+        Route::put('/{disciplineType}', [DisciplineTypeController::class, 'update'])->name('update');
+        Route::delete('/{disciplineType}', [DisciplineTypeController::class, 'destroy'])->name('destroy');
     });
+
+    // --- CONDUCT SCORES MANAGEMENT (Quản lý điểm hạnh kiểm) ---
+    Route::prefix('conduct-scores')->name('conduct-scores.')->group(function () {
+
+        // **Xem (Read)**
+        Route::get('/my', [ConductScoreController::class, 'my'])->middleware('role:student|parent')->name('my');
+        Route::get('/class/{classId}', [ConductScoreController::class, 'byClass'])->middleware('role:admin|principal|teacher')->name('by-class');
+        Route::get('/student/{studentId}', [ConductScoreController::class, 'byStudent'])->middleware('role:admin|principal|teacher')->name('by-student');
+
+        // **Cập nhật & Phê duyệt**
+        Route::put('/{conductScore}', [ConductScoreController::class, 'update'])->middleware('role:teacher')->name('update'); // GVCN nhập nhận xét
+        Route::post('/{conductScore}/approve', [ConductScoreController::class, 'approve'])->middleware('role:admin|principal')->name('approve');
+
+        // **Tính toán lại**
+        Route::post('/recalculate', [ConductScoreController::class, 'recalculate'])->middleware('role:admin|principal')->name('recalculate');
+    });
+
 
     // ------------------------------------------------------------------------
     // STUDENT & PARENT ROUTES

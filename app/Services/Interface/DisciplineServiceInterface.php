@@ -16,7 +16,13 @@ interface DisciplineServiceInterface
     /**
      * Lấy kỷ luật của học sinh/con của phụ huynh
      */
-    public function getMyDisciplines(User $user): LengthAwarePaginator;
+    /**
+     * Lấy kỷ luật của học sinh/con của phụ huynh
+     *
+     * @param User $user
+     * @param array $filters Optional filters (e.g. 'student_id')
+     */
+    public function getMyDisciplines(User $user, array $filters = []): LengthAwarePaginator;
 
     /**
      * Lấy kỷ luật theo lớp

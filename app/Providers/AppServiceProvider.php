@@ -2,10 +2,15 @@
 
 namespace App\Providers;
 
+use App\Repositories\Contracts\ConductScoreRepositoryInterface;
+use App\Repositories\Contracts\DisciplineRepositoryInterface;
+use App\Repositories\Contracts\DisciplineTypeRepositoryInterface;
 use App\Repositories\Contracts\FeeTypeRepositoryInterface;
 use App\Repositories\Contracts\GradeRepositoryInterface;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\Eloquent\ConductScoreRepository;
+use App\Repositories\Eloquent\DisciplineRepository;
 use App\Repositories\Eloquent\GradeRepository;
 use App\Repositories\Eloquent\InvoiceRepository;
 use App\Repositories\Eloquent\PaymentRepository;
@@ -56,10 +61,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GradeRepositoryInterface::class, GradeRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         $this->app->bind(FeeTypeRepositoryInterface::class, FeeTypeRepository::class);
+        $this->app->bind(DisciplineRepositoryInterface::class, DisciplineRepository::class);
+        $this->app->bind(DisciplineTypeRepositoryInterface::class, DisciplineRepository::class);
+        $this->app->bind(ConductScoreRepositoryInterface::class, ConductScoreRepository::class);
 
-        $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
-        $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
         //bind service
+        $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
+        $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
         $this->app->bind(UserServiceInterface::class, UserService::class);
         $this->app->bind(AuthServiceInterface::class, AuthService::class);
         $this->app->bind(DashBoardServiceInterface::class, DashBoardService::class);

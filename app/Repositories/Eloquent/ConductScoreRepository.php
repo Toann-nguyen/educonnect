@@ -100,6 +100,30 @@ class ConductScoreRepository implements ConductScoreRepositoryInterface
             ->with(['student.user.profile', 'academicYear', 'approver.profile'])
             ->first();
     }
+    /**
+     * Lấy tất cả conduct scores của một học sinh (có filter tùy chọn)
+     */
+    public function findAllByStudent(
+        int $studentId,
+        ?int $semester = null,
+        ?int $academicYearId = null
+    ) {
+        $query = $this->model->where('student_id', $studentId)
+            ->with(['student.user.profile', 'academicYear', 'approver.profile']);
+
+        if ($semester) {
+            $query->where('semester', $semester);
+        }
+
+        if ($academicYearId) {
+            $query->where('academic_year_id', $academicYearId);
+        }
+
+        return $query->orderBy('academic_year_id', 'desc')
+            ->orderBy('semester', 'desc')
+            ->get();
+    }
+
 
     public function createOrUpdate(array $data): StudentConductScore
     {

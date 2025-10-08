@@ -47,4 +47,13 @@ interface ConductScoreRepositoryInterface
      * Lấy điểm hạnh kiểm của tất cả học sinh trong lớp theo semester
      */
     public function getClassConductScores(int $classId, int $semester, int $academicYearId): Collection;
+
+    /**
+     * Lấy tất cả conduct scores của một học sinh (có filter tùy chọn)
+     */
+    public function findAllByStudent(
+        int $studentId,
+        ?int $semester = null,
+        ?int $academicYearId = null
+    );
 }

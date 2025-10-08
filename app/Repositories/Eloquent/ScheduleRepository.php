@@ -66,4 +66,27 @@ class ScheduleRepository implements ScheduleRepositoryInterface
     {
         return $this->model->destroy($scheduleId);
     }
+
+    public function getTeacherClasses(User $user): Collection
+    {
+        // Lớp giáo viên là GVCN hoặc có dạy bất kỳ môn nào trong lớp đó
+        return \App\Models\SchoolClass::query()
+            ->where('homeroom_teacher_id', $user->id)
+            ->orWhereHas('schedules', function ($q) use ($user) {
+                $q->where('teacher_id', $user->id);
+            })
+            ->with([
+                'academicYear:id,name',
+                'homeroomTeacher.profile:id,user_id,full_name',
+                'schedules' => function ($q) use ($user) {
+                    // Chỉ load các tiết do giáo viên này dạy để hiển thị đúng
+                    $q->where('teacher_id', $user->id)
+                        ->with(['subject:id,name'])
+                        ->orderBy('day_of_week')
+                        ->orderBy('period');
+                }
+            ])
+            ->orderBy('name')
+            ->get();
+    }
 }

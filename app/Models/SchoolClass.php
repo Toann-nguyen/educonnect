@@ -28,4 +28,10 @@ class SchoolClass extends Model
     {
         return $this->belongsTo(AcademicYear::class);
     }
+
+    /** Lấy thời khóa biểu (schedules) của lớp */
+    public function schedules()
+    {
+        return $this->hasMany(Schedule::class, 'class_id');
+    }
 }

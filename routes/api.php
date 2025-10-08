@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DisciplineTypeController;
 use App\Http\Controllers\FeeTypeController;
 use App\Http\Controllers\QrController;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ use App\Http\Controllers\LibraryTransactionController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\ConductScoreController;
 use App\Http\Controllers\DashBoardController;
 
 /*
@@ -142,30 +144,47 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // INVOICE ROUTES
     // ------------------------------------------------------------------------
 
-    // Special endpoints MUST come BEFORE resource routes to avoid conflicts
+    // ⚠️ IMPORTANT: Special endpoints MUST come BEFORE resource routes to avoid conflicts
 
-    // My invoices (Student/Parent)
+    // My invoices (Student/Parent/Teacher) - FIX: Use array syntax for multiple roles
     Route::get('my-invoices', [InvoiceController::class, 'myInvoices'])
-        ->middleware('role:student|parent');
+        ->middleware(['role:student|parent|teacher']); // ✅ Wrap in array
 
-    // Overdue invoices (Admin/Principal/Accountant)
+    // OR better: Remove middleware and handle in controller
+    Route::get('my-invoices', [InvoiceController::class, 'myInvoices']);
+
+    // Overdue invoices (MUST be before {id})
     Route::get('invoices/overdue', [InvoiceController::class, 'getOverdue'])
-        ->middleware('role:admin|principal|accountant');
+        ->middleware(['role:admin|principal|accountant']);
 
-    // Statistics (Admin/Principal/Accountant)
+    // Statistics (MUST be before {id})
     Route::get('invoices/statistics', [InvoiceController::class, 'statistics'])
-        ->middleware('role:admin|principal|accountant');
+        ->middleware(['role:admin|principal|accountant']);
 
-    // Invoices by class (Admin/Principal/Accountant/Teacher)
+    // Bulk create (MUST be before {id})
+    Route::post('invoices/bulk-create', [InvoiceController::class, 'bulkCreate'])
+        ->middleware(['role:admin|principal|accountant']);
+
+    // Update overdue (MUST be before {id})
+    Route::post('invoices/update-overdue', [InvoiceController::class, 'updateOverdueStatuses'])
+        ->middleware(['role:admin|principal|accountant']);
+
+    // Class invoices (MUST be before {id})
     Route::get('invoices/class/{classId}', [InvoiceController::class, 'getByClass'])
-        ->middleware('role:admin|principal|accountant|teacher');
+        ->middleware(['role:admin|principal|accountant|teacher']);
 
-    // Standard CRUD - View endpoints (all authenticated, authorization in service)
+    // List all invoices
     Route::get('invoices', [InvoiceController::class, 'index']);
-    Route::get('invoices/{id}', [InvoiceController::class, 'show']);
 
-    // Create/Update/Delete (Admin/Principal/Accountant only)
-    Route::middleware('role:admin|principal|accountant')->group(function () {
+    // Payments for invoice (MUST be before invoices/{id})
+    Route::get('invoices/{invoiceId}/payments', [PaymentController::class, 'getByInvoice']);
+
+    // Show single invoice (MUST be LAST among GET routes)
+    Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])
+        ->where('invoice', '[0-9]+');
+
+    // CRUD operations (Admin/Principal/Accountant only)
+    Route::middleware(['role:admin|principal|accountant'])->group(function () {
         Route::post('invoices', [InvoiceController::class, 'store']);
         Route::put('invoices/{id}', [InvoiceController::class, 'update']);
         Route::patch('invoices/{id}', [InvoiceController::class, 'update']);
@@ -179,9 +198,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Statistics (Admin/Principal/Accountant)
     Route::get('payments/statistics', [PaymentController::class, 'statistics'])
         ->middleware('role:admin|principal|accountant');
-
-    // Payments by invoice (all authenticated, authorization in service)
-    Route::get('invoices/{invoiceId}/payments', [PaymentController::class, 'getByInvoice']);
 
     // List payments (Admin/Principal/Accountant)
     Route::get('payments', [PaymentController::class, 'index'])
@@ -197,7 +213,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Delete payment (Admin/Accountant only)
     Route::delete('payments/{id}', [PaymentController::class, 'destroy'])
         ->middleware('role:admin|accountant');
-
     // =================================================================
     // == DISCIPLINE ROUTES (Phân hệ Kỷ luật & Hạnh kiểm)
     // =================================================================
@@ -251,7 +266,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/student/{studentId}', [ConductScoreController::class, 'byStudent'])->middleware('role:admin|principal|teacher')->name('by-student');
 
         // **Cập nhật & Phê duyệt**
-        Route::put('/{conductScore}', [ConductScoreController::class, 'update'])->middleware('role:teacher')->name('update'); // GVCN nhập nhận xét
+        Route::put('/{conductScore}', [ConductScoreController::class, 'update'])->middleware('role:teacher|admin|principal')->name('update'); // GVCN nhập nhận xét
         Route::post('/{conductScore}/approve', [ConductScoreController::class, 'approve'])->middleware('role:admin|principal')->name('approve');
 
         // **Tính toán lại**
@@ -264,34 +279,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ------------------------------------------------------------------------
     Route::middleware('role:parent')->group(function () {
         Route::get('my-children', [StudentController::class, 'myChildren']);
-    });
-
-    // ------------------------------------------------------------------------
-    // EVENT ROUTES
-    // ------------------------------------------------------------------------
-    Route::get('events', [EventController::class, 'index']);
-    Route::get('events/{event}', [EventController::class, 'show']);
-    Route::post('events/{event}/register', [EventController::class, 'register']);
-
-    Route::middleware('role_or_permission:admin|manage events')->group(function () {
-        Route::post('events', [EventController::class, 'store']);
-        Route::put('events/{event}', [EventController::class, 'update']);
-        Route::delete('events/{event}', [EventController::class, 'destroy']);
-    });
-
-    // ------------------------------------------------------------------------
-    // ATTENDANCE ROUTES
-    // ------------------------------------------------------------------------
-    Route::middleware('role:teacher|admin')->group(function () {
-        Route::post('attendances', [AttendanceController::class, 'store']);
-        Route::put('attendances/{attendance}', [AttendanceController::class, 'update']);
-        Route::delete('attendances/{attendance}', [AttendanceController::class, 'destroy']);
-    });
-
-    Route::middleware('role:student|parent|teacher|admin')->group(function () {
-        Route::get('attendances', [AttendanceController::class, 'index']);
-        Route::get('attendances/{attendance}', [AttendanceController::class, 'show']);
-        Route::get('attendances/student/{student}', [AttendanceController::class, 'byStudent']);
     });
 
     // ------------------------------------------------------------------------

@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Services\Interface\InvoiceServiceInterface;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class InvoiceController extends Controller
 {
@@ -24,12 +25,33 @@ class InvoiceController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $invoices = $this->invoiceService->getAllInvoices(
-            $request->all(),
-            $request->user()
-        );
+        try {
+            $invoices = $this->invoiceService->getAllInvoices(
+                $request->all(),
+                $request->user()
+            );
 
-        return response()->json(InvoiceResource::collection($invoices));
+            return response()->json([
+                'message' => 'Invoices retrieved successfully',
+                'data' => InvoiceResource::collection($invoices),
+                'pagination' => [
+                    'total' => $invoices->total(),
+                    'per_page' => $invoices->perPage(),
+                    'current_page' => $invoices->currentPage(),
+                    'last_page' => $invoices->lastPage(),
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching invoices', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching invoices',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -50,35 +72,68 @@ class InvoiceController extends Controller
             'fee_types.*.note' => 'nullable|string'
         ]);
 
-        $invoice = $this->invoiceService->createInvoice(
-            $validated,
-            $request->user()
-        );
+        try {
+            $invoice = $this->invoiceService->createInvoice(
+                $validated,
+                $request->user()
+            );
 
-        return response()->json(new InvoiceResource($invoice), 201);
+            return response()->json([
+                'message' => 'Invoice created successfully',
+                'data' => new InvoiceResource($invoice)
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Error creating invoice', [
+                'error' => $e->getMessage(),
+                'data' => $validated
+            ]);
+
+            return response()->json([
+                'message' => 'Error creating invoice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * Display the specified invoice
-     * GET /api/invoices/
+     * GET /api/invoices/{invoice}
      */
     public function show(Request $request, Invoice $invoice): JsonResponse
     {
-        // Kiểm tra quyền trực tiếp
-        if (!$this->invoiceService->canView($invoice, $request->user())) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            // Kiểm tra quyền trực tiếp
+            if (!$this->invoiceService->canView($invoice, $request->user())) {
+                return response()->json([
+                    'message' => 'Unauthorized to view this invoice'
+                ], 403);
+            }
+
+            // Load relationships
+            $invoice->load([
+                'student.user.profile',
+                'student.guardians.guardian.profile',
+                'student.schoolClass',
+                'feeTypes',
+                'payments.payer.profile',
+                'issuer.profile'
+            ]);
+
+            return response()->json([
+                'message' => 'Invoice retrieved successfully',
+                'data' => new InvoiceResource($invoice)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching invoice', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching invoice',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // Load relationships
-        $invoice->load([
-            'student.user.profile',
-            'student.guardians.guardian.profile',
-            'feeTypes',
-            'payments.payer.profile',
-            'issuer.profile'
-        ]);
-
-        return response()->json(new InvoiceResource($invoice));
     }
 
     /**
@@ -99,13 +154,28 @@ class InvoiceController extends Controller
             'fee_types.*.note' => 'nullable|string'
         ]);
 
-        $invoice = $this->invoiceService->updateInvoice(
-            $id,
-            $validated,
-            $request->user()
-        );
+        try {
+            $invoice = $this->invoiceService->updateInvoice(
+                $id,
+                $validated,
+                $request->user()
+            );
 
-        return response()->json(new InvoiceResource($invoice));
+            return response()->json([
+                'message' => 'Invoice updated successfully',
+                'data' => new InvoiceResource($invoice)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating invoice', [
+                'invoice_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error updating invoice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -115,20 +185,49 @@ class InvoiceController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $this->invoiceService->deleteInvoice($id, $request->user());
-        return response()->json(['message' => 'Resource deleted successfully.'], 200);
+        try {
+            $this->invoiceService->deleteInvoice($id, $request->user());
+
+            return response()->json([
+                'message' => 'Invoice deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error deleting invoice', [
+                'invoice_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error deleting invoice',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * Get my invoices (Student/Parent)
-     * GET /api/invoices/my
+     * GET /api/my-invoices
      */
     public function myInvoices(Request $request): JsonResponse
     {
-        $invoices = $this->invoiceService->getMyInvoices($request->user());
-        return response()->json([
-            'data' => InvoiceResource::collection($invoices)
-        ]);
+        try {
+            $invoices = $this->invoiceService->getMyInvoices($request->user());
+            return response()->json([
+                'message' => 'My invoices retrieved successfully',
+                'data' => InvoiceResource::collection($invoices),
+                'count' => $invoices->count()
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching my invoices', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching my invoices',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -137,15 +236,29 @@ class InvoiceController extends Controller
      */
     public function getByClass(Request $request, int $classId): JsonResponse
     {
-        $invoices = $this->invoiceService->getInvoicesByClass(
-            $classId,
-            $request->all(),
-            $request->user()
-        );
+        try {
+            $invoices = $this->invoiceService->getInvoicesByClass(
+                $classId,
+                $request->all(),
+                $request->user()
+            );
 
-        return response()->json([
-            'data' => InvoiceResource::collection($invoices)
-        ]);
+            return response()->json([
+                'message' => 'Class invoices retrieved successfully',
+                'data' => InvoiceResource::collection($invoices),
+                'count' => $invoices->count()
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching class invoices', [
+                'class_id' => $classId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching class invoices',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -155,10 +268,25 @@ class InvoiceController extends Controller
      */
     public function getOverdue(Request $request): JsonResponse
     {
-        $invoices = $this->invoiceService->getOverdueInvoices($request->user());
-        return response()->json([
-            'data' => InvoiceResource::collection($invoices)
-        ]);
+        try {
+            $invoices = $this->invoiceService->getOverdueInvoices($request->user());
+
+            return response()->json([
+                'message' => 'Overdue invoices retrieved successfully',
+                'data' => InvoiceResource::collection($invoices),
+                'count' => $invoices->count()
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching overdue invoices', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching overdue invoices',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -168,12 +296,42 @@ class InvoiceController extends Controller
      */
     public function statistics(Request $request): JsonResponse
     {
-        $stats = $this->invoiceService->getStatistics(
-            $request->all(),
-            $request->user()
-        );
+        try {
+            $stats = $this->invoiceService->getStatistics(
+                $request->all(),
+                $request->user()
+            );
 
-        return response()->json($stats);
+            // Đảm bảo luôn trả về data, không bao giờ null
+            if (!$stats || empty($stats)) {
+                $stats = [
+                    'total_invoices' => 0,
+                    'total_amount' => 0,
+                    'total_paid' => 0,
+                    'total_remaining' => 0,
+                    'unpaid_count' => 0,
+                    'partially_paid_count' => 0,
+                    'paid_count' => 0,
+                    'overdue_count' => 0,
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Invoice statistics retrieved successfully',
+                'data' => $stats
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching invoice statistics', [
+                'user_id' => $request->user()->id,
+                'filters' => $request->all(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching statistics',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -184,7 +342,7 @@ class InvoiceController extends Controller
     public function bulkCreate(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'class_id' => 'required|exists:school_classes,id',
+            'class_id' => 'required|exists:classes,id',
             'title' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'due_date' => 'required|date',
@@ -194,37 +352,75 @@ class InvoiceController extends Controller
             'fee_types.*.note' => 'nullable|string'
         ]);
 
-        // Authorization check
-        if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        try {
+            // Authorization check
+            if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
 
-        // Get all students in the class
-        $students = \App\Models\Student::where('class_id', $validated['class_id'])->get();
+            // Get all students in the class
+            $students = \App\Models\Student::where('class_id', $validated['class_id'])->get();
 
-        $createdInvoices = [];
-        foreach ($students as $student) {
-            $invoiceData = [
-                'student_id' => $student->id,
-                'title' => $validated['title'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-                'due_date' => $validated['due_date'],
-                'fee_types' => $validated['fee_types']
+            if ($students->isEmpty()) {
+                return response()->json([
+                    'message' => 'No students found in this class',
+                    'count' => 0
+                ], 404);
+            }
+
+            $createdInvoices = [];
+            $errors = [];
+
+            foreach ($students as $student) {
+                try {
+                    $invoiceData = [
+                        'student_id' => $student->id,
+                        'title' => $validated['title'] ?? null,
+                        'notes' => $validated['notes'] ?? null,
+                        'due_date' => $validated['due_date'],
+                        'fee_types' => $validated['fee_types']
+                    ];
+
+                    $invoice = $this->invoiceService->createInvoice(
+                        $invoiceData,
+                        $request->user()
+                    );
+
+                    $createdInvoices[] = $invoice;
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'student_id' => $student->id,
+                        'student_code' => $student->student_code,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            $response = [
+                'message' => 'Bulk invoice creation completed',
+                'success_count' => count($createdInvoices),
+                'error_count' => count($errors),
+                'data' => InvoiceResource::collection(collect($createdInvoices))
             ];
 
-            $invoice = $this->invoiceService->createInvoice(
-                $invoiceData,
-                $request->user()
-            );
+            if (!empty($errors)) {
+                $response['errors'] = $errors;
+            }
 
-            $createdInvoices[] = $invoice;
+            return response()->json($response, 201);
+        } catch (\Exception $e) {
+            Log::error('Error in bulk invoice creation', [
+                'class_id' => $validated['class_id'] ?? null,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error creating bulk invoices',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Invoices created successfully',
-            'count' => count($createdInvoices),
-            'data' => InvoiceResource::collection(collect($createdInvoices))
-        ], 201);
     }
 
     /**
@@ -234,20 +430,34 @@ class InvoiceController extends Controller
      */
     public function updateOverdueStatuses(Request $request): JsonResponse
     {
-        // Authorization check
-        if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        try {
+            // Authorization check
+            if (!$request->user()->hasRole(['admin', 'principal', 'accountant'])) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            $overdueInvoices = Invoice::overdue()->get();
+            $count = $overdueInvoices->count();
+
+            // Invoices are already filtered by overdue scope
+            // Status is managed by the model's updatePaymentStatus method
+
+            return response()->json([
+                'message' => "Found {$count} overdue invoices",
+                'count' => $count,
+                'data' => InvoiceResource::collection($overdueInvoices)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating overdue statuses', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error updating overdue statuses',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $overdueInvoices = Invoice::overdue()->get();
-        $count = $overdueInvoices->count();
-
-        // Invoices are already filtered by overdue scope
-        // Status is managed by the model's updatePaymentStatus method
-
-        return response()->json([
-            'message' => "Found {$count} overdue invoices",
-            'count' => $count
-        ]);
     }
 }

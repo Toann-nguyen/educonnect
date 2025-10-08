@@ -10,6 +10,7 @@ interface ScheduleRepositoryInterface
 {
     public function getByClass(SchoolClass $schoolClass): Collection;
     public function getByTeacher(User $user): Collection;
+    public function getTeacherClasses(User $user): Collection;
     public function create(array $data): \App\Models\Schedule;
     public function update(int $scheduleId, array $data): \App\Models\Schedule;
     public function delete(int $scheduleId): bool;

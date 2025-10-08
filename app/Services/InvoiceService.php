@@ -40,7 +40,6 @@ class InvoiceService implements InvoiceServiceInterface
         if (!$user->hasRole(['admin', 'principal', 'accountant'])) {
             throw new AuthorizationException('You do not have permission to view all invoices.');
         }
-
         return $this->invoiceRepository->getAll($filters);
     }
 
@@ -63,11 +62,11 @@ class InvoiceService implements InvoiceServiceInterface
 
     public function getMyInvoices(User $user)
     {
+
         // Student: xem hóa đơn của bản thân
         if ($user->hasRole('student') && $user->student) {
             return $this->invoiceRepository->getByStudentIds([$user->student->id]);
         }
-
         // Parent: xem hóa đơn của các con
         if ($user->hasRole('parent')) {
             $childrenIds = $user->guardianStudents()->pluck('students.id')->toArray();
@@ -77,10 +76,12 @@ class InvoiceService implements InvoiceServiceInterface
         // Homeroom teacher: xem hóa đơn của lớp chủ nhiệm
         if ($user->hasRole('teacher')) {
             $homeroomClass = $user->homeroomClasses()->first();
+
             if ($homeroomClass) {
                 return $this->invoiceRepository->getByClassId($homeroomClass->id, []);
             }
         }
+
 
         return collect();
     }

@@ -5,36 +5,81 @@ namespace App\Services\Interface;
 use App\Models\StudentConductScore;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 interface ConductScoreServiceInterface
 {
     /**
-     * Lấy điểm hạnh kiểm của học sinh/con
+     * Lấy conduct scores của user hiện tại (Student/Parent)
      */
-    public function getMyConductScores(User $user, array $filters): LengthAwarePaginator;
+    public function getMyConductScores(
+        User $user,
+        ?int $semester = null,
+        ?int $academicYearId = null
+    ): Collection;
 
     /**
-     * Lấy điểm hạnh kiểm theo lớp
+     * Lấy conduct scores của một lớp
      */
-    public function getConductScoresByClass(int $classId, array $filters): LengthAwarePaginator;
+    public function getClassConductScores(
+        int $classId,
+        User $user,
+        ?int $semester = null,
+        ?int $academicYearId = null
+    ): Collection;
 
     /**
-     * Lấy điểm hạnh kiểm của một học sinh
+     * Lấy 1 conduct score cụ thể (theo semester và năm học)
      */
-    public function getStudentConductScore(int $studentId, int $semester, int $academicYearId): ?StudentConductScore;
+    public function getStudentConductScore(
+        int $studentId,
+        int $semester,
+        int $academicYearId
+    ): ?StudentConductScore;
 
     /**
-     * Cập nhật/Tạo điểm hạnh kiểm
+     * Lấy TẤT CẢ conduct scores của một học sinh
      */
-    public function updateConductScore(int $studentId, int $semester, int $academicYearId, array $data): StudentConductScore;
+    public function getAllStudentConductScores(
+        int $studentId,
+        ?int $semester = null,
+        ?int $academicYearId = null
+    ): Collection;
 
     /**
-     * Phê duyệt điểm hạnh kiểm
+     * Cập nhật conduct score
      */
-    public function approveConductScore(StudentConductScore $conductScore, User $approver): StudentConductScore;
+    public function updateConductScore(
+        int $studentId,
+        int $semester,
+        int $academicYearId,
+        array $data
+    ): StudentConductScore;
 
     /**
-     * Tính toán lại điểm hạnh kiểm dựa trên disciplines
+     * Phê duyệt conduct score
      */
-    public function recalculateConductScore(int $studentId, int $semester, int $academicYearId): StudentConductScore;
+    public function approveConductScore(
+        StudentConductScore $conductScore,
+        User $approver
+    ): StudentConductScore;
+
+    /**
+     * Tính lại conduct score từ discipline records
+     */
+    public function recalculateConductScore(
+        int $studentId,
+        int $semester,
+        int $academicYearId
+    ): StudentConductScore;
+
+    /**
+     * Tính lại conduct scores cho nhiều học sinh (bulk)
+     */
+    public function recalculateBulk(
+        int $semester,
+        int $academicYearId,
+        ?int $classId = null,
+        ?int $studentId = null
+    ): array;
 }

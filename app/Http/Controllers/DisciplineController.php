@@ -67,7 +67,11 @@ class DisciplineController extends Controller
      */
     public function store(StoreDisciplineRequest $request): JsonResponse
     {
-        $discipline = $this->disciplineService->createDiscipline($request->validated());
+        $discipline = $this->disciplineService->createDiscipline(
+            $request->validated(),
+            $request->user()
+        );
+
         return response()->json([
             'message' => 'Bản ghi kỷ luật đã được tạo thành công',
             'data' => new DisciplineResource($discipline)

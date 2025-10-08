@@ -35,9 +35,13 @@ interface DisciplineServiceInterface
     public function getDisciplinesByStudent(int $studentId, array $filters): LengthAwarePaginator;
 
     /**
-     * Tạo bản ghi kỷ luật mới
+     * Tạo một bản ghi kỷ luật mới.
+     *
+     * @param array $data Dữ liệu đã được validate
+     * @param User $reporter Người dùng thực hiện hành động
+     * @return Discipline
      */
-    public function createDiscipline(array $data): Discipline;
+    public function createDiscipline(array $data, User $reporter): Discipline;
 
     /**
      * Cập nhật bản ghi kỷ luật

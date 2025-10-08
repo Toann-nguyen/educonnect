@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Http\Resources\ConductScoreResource;
-use App\Models\StudentConductScore;
 use App\Services\Interface\ConductScoreServiceInterface;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Support\Facades\Log;
 
 class ConductScoreController extends Controller
 {
@@ -19,144 +18,251 @@ class ConductScoreController extends Controller
     }
 
     /**
-     * GET /api/conduct-scores/my - Điểm hạnh kiểm của tôi/con tôi
+     * GET /api/conduct-scores/my - Điểm hạnh kiểm của tôi (Student/Parent)
      */
     public function my(Request $request): JsonResponse
     {
-        $conductScores = $this->conductScoreService->getMyConductScores($request->user(), $request->all());
-        return response()->json(ConductScoreResource::collection($conductScores)->response()->getData());
+        try {
+            $user = $request->user();
+            $semester = $request->input('semester') ? (int) $request->input('semester') : null;
+            $academicYearId = $request->input('academic_year_id') ? (int) $request->input('academic_year_id') : null;
+
+            $conductScores = $this->conductScoreService->getMyConductScores(
+                $user,
+                $semester,
+                $academicYearId
+            );
+
+            return response()->json([
+                'message' => 'My conduct scores retrieved successfully',
+                'data' => ConductScoreResource::collection($conductScores),
+                'count' => $conductScores->count()
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching my conduct scores', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching conduct scores',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
-     * GET /api/conduct-scores/class/{classId} - Điểm hạnh kiểm theo lớp
+     * GET /api/conduct-scores/class/{classId} - Điểm của cả lớp
      */
     public function byClass(Request $request, int $classId): JsonResponse
     {
-        // Only homeroom teacher, admin, principal can view
-        $user = $request->user();
-        if (!$user->hasAnyRole(['admin', 'principal'])) {
-            $isHomeroom = \App\Models\SchoolClass::where('id', $classId)
-                ->where('homeroom_teacher_id', $user->id)
-                ->exists();
+        try {
+            $semester = $request->input('semester');
+            $academicYearId = $request->input('academic_year_id');
 
-            if (!$isHomeroom) {
-                return response()->json(['message' => 'Bạn không có quyền xem điểm lớp này'], 403);
-            }
+            $conductScores = $this->conductScoreService->getClassConductScores(
+                $classId,
+                $request->user(),
+                $semester,
+                $academicYearId
+            );
+
+            return response()->json([
+                'message' => 'Class conduct scores retrieved successfully',
+                'data' => ConductScoreResource::collection($conductScores),
+                'count' => $conductScores->count(),
+                'filters' => [
+                    'class_id' => $classId,
+                    'semester' => $semester,
+                    'academic_year_id' => $academicYearId
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching class conduct scores', [
+                'class_id' => $classId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching class conduct scores',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $conductScores = $this->conductScoreService->getConductScoresByClass($classId, $request->all());
-        return response()->json(ConductScoreResource::collection($conductScores)->response()->getData());
     }
 
     /**
      * GET /api/conduct-scores/student/{studentId} - Điểm của một học sinh
+     *
+     * Query Parameters (Optional):
+     * - semester: int (1 hoặc 2) - Nếu không có, trả về tất cả
+     * - academic_year_id: int - Nếu không có, trả về tất cả
      */
     public function byStudent(Request $request, int $studentId): JsonResponse
     {
-        $semester = $request->input('semester');
-        $academicYearId = $request->input('academic_year_id');
+        try {
+            $semester = $request->input('semester');
+            $academicYearId = $request->input('academic_year_id');
 
-        if (!$semester || !$academicYearId) {
-            return response()->json([
-                'message' => 'Vui lòng cung cấp semester và academic_year_id'
-            ], 400);
-        }
+            // Nếu có đầy đủ semester và academic_year_id, trả về 1 record
+            if ($semester && $academicYearId) {
+                $conductScore = $this->conductScoreService->getStudentConductScore(
+                    $studentId,
+                    $semester,
+                    $academicYearId
+                );
 
-        $conductScore = $this->conductScoreService->getStudentConductScore(
-            $studentId,
-            $semester,
-            $academicYearId
-        );
+                if (!$conductScore) {
+                    return response()->json([
+                        'message' => 'Không tìm thấy điểm hạnh kiểm',
+                        'filters' => [
+                            'student_id' => $studentId,
+                            'semester' => $semester,
+                            'academic_year_id' => $academicYearId
+                        ]
+                    ], 404);
+                }
 
-        if (!$conductScore) {
-            return response()->json(['message' => 'Không tìm thấy điểm hạnh kiểm'], 404);
-        }
-
-        return response()->json(new ConductScoreResource($conductScore));
-    }
-
-    /**
-     * PUT /api/conduct-scores/{id} - Cập nhật điểm hạnh kiểm (GVCN, Admin)
-     */
-    public function update(Request $request, StudentConductScore $conductScore): JsonResponse
-    {
-        $user = $request->user();
-
-        // Check permission: Admin, Principal, or Homeroom teacher of the class
-        if (!$user->hasAnyRole(['admin', 'principal'])) {
-            $isHomeroom = $conductScore->student->schoolClass
-                && $conductScore->student->schoolClass->homeroom_teacher_id === $user->id;
-
-            if (!$isHomeroom) {
-                return response()->json(['message' => 'Bạn không có quyền cập nhật'], 403);
+                return response()->json([
+                    'message' => 'Student conduct score retrieved successfully',
+                    'data' => new ConductScoreResource($conductScore)
+                ], 200);
             }
+
+            // Nếu không có đầy đủ parameters, trả về tất cả conduct scores của học sinh
+            $conductScores = $this->conductScoreService->getAllStudentConductScores(
+                $studentId,
+                $semester,
+                $academicYearId
+            );
+
+            return response()->json([
+                'message' => 'Student conduct scores retrieved successfully',
+                'data' => ConductScoreResource::collection($conductScores),
+                'count' => $conductScores->count(),
+                'filters' => [
+                    'student_id' => $studentId,
+                    'semester' => $semester,
+                    'academic_year_id' => $academicYearId
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error fetching student conduct scores', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error fetching student conduct scores',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $validated = $request->validate([
-            'teacher_comment' => 'nullable|string|max:2000',
-            'total_penalty_points' => 'sometimes|integer|min:0',
-        ]);
-
-        $updated = $this->conductScoreService->updateConductScore(
-            $conductScore->student_id,
-            $conductScore->semester,
-            $conductScore->academic_year_id,
-            $validated
-        );
-
-        return response()->json([
-            'message' => 'Điểm hạnh kiểm đã được cập nhật',
-            'data' => new ConductScoreResource($updated)
-        ]);
     }
 
     /**
-     * POST /api/conduct-scores/{id}/approve - Phê duyệt điểm hạnh kiểm
+     * PUT /api/conduct-scores/{conductScore} - Cập nhật điểm hạnh kiểm
+     * Permissions: teacher (homeroom)
      */
-    public function approve(Request $request, StudentConductScore $conductScore): JsonResponse
+    public function update(Request $request, int $conductScoreId): JsonResponse
     {
-        // Only Admin/Principal can approve
-        if (!$request->user()->hasAnyRole(['admin', 'principal'])) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
-        if ($conductScore->approved_at) {
-            return response()->json(['message' => 'Điểm hạnh kiểm đã được phê duyệt'], 400);
-        }
-
-        $approved = $this->conductScoreService->approveConductScore($conductScore, $request->user());
-
-        return response()->json([
-            'message' => 'Điểm hạnh kiểm đã được phê duyệt',
-            'data' => new ConductScoreResource($approved)
+        $validated = $request->validate([
+            'teacher_comment' => 'sometimes|string|max:1000',
+            'total_penalty_points' => 'sometimes|integer|min:0'
         ]);
+
+        try {
+            // Load existing conduct score to extract composite keys
+            $existing = \App\Models\StudentConductScore::findOrFail($conductScoreId);
+
+            $conductScore = $this->conductScoreService->updateConductScore(
+                $existing->student_id,
+                (int) $existing->semester,
+                (int) $existing->academic_year_id,
+                $validated
+            );
+
+            return response()->json([
+                'message' => 'Conduct score updated successfully',
+                'data' => new ConductScoreResource($conductScore)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error updating conduct score', [
+                'conduct_score_id' => $conductScoreId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error updating conduct score',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/conduct-scores/{conductScore}/approve - Phê duyệt điểm hạnh kiểm
+     * Permissions: admin, principal
+     */
+    public function approve(Request $request, int $conductScoreId): JsonResponse
+    {
+        try {
+            $conductScoreModel = \App\Models\StudentConductScore::findOrFail($conductScoreId);
+
+            $conductScore = $this->conductScoreService->approveConductScore(
+                $conductScoreModel,
+                $request->user()
+            );
+
+            return response()->json([
+                'message' => 'Conduct score approved successfully',
+                'data' => new ConductScoreResource($conductScore)
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error approving conduct score', [
+                'conduct_score_id' => $conductScoreId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error approving conduct score',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
      * POST /api/conduct-scores/recalculate - Tính lại điểm hạnh kiểm
+     * Permissions: admin, principal
      */
     public function recalculate(Request $request): JsonResponse
     {
-        // Only Admin/Principal/Homeroom can recalculate
-        if (!$request->user()->hasAnyRole(['admin', 'principal', 'teacher'])) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $validated = $request->validate([
-            'student_id' => 'required|integer|exists:students,id',
             'semester' => 'required|integer|in:1,2',
-            'academic_year_id' => 'required|integer|exists:academic_years,id',
+            'academic_year_id' => 'required|exists:academic_years,id',
+            'class_id' => 'nullable|exists:classes,id',
+            'student_id' => 'nullable|exists:students,id'
         ]);
 
-        $conductScore = $this->conductScoreService->recalculateConductScore(
-            $validated['student_id'],
-            $validated['semester'],
-            $validated['academic_year_id']
-        );
+        try {
+            $result = $this->conductScoreService->recalculateConductScores(
+                $validated['semester'],
+                $validated['academic_year_id'],
+                $validated['class_id'] ?? null,
+                $validated['student_id'] ?? null
+            );
 
-        return response()->json([
-            'message' => 'Điểm hạnh kiểm đã được tính lại',
-            'data' => new ConductScoreResource($conductScore)
-        ]);
+            return response()->json([
+                'message' => 'Conduct scores recalculated successfully',
+                'data' => $result
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error recalculating conduct scores', [
+                'filters' => $validated,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error recalculating conduct scores',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

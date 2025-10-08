@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Discipline;
 use App\Models\DisciplineAppeal;
+use App\Models\DisciplineType;
 use App\Models\User;
 use App\Repositories\Contracts\DisciplineRepositoryInterface;
 use App\Services\Interface\DisciplineServiceInterface;
@@ -63,10 +64,44 @@ class DisciplineService implements DisciplineServiceInterface
         return $this->disciplineRepository->getByStudentId($studentId, $filters);
     }
 
-    public function createDiscipline(array $data): Discipline
+    /**
+     * Tạo một bản ghi kỷ luật mới, bổ sung các thông tin cần thiết.
+     *
+     * @param array $data Dữ liệu đã được validate từ request
+     * @param User $reporter Người dùng đang thực hiện hành động (người báo cáo)
+     * @return Discipline
+     */
+    public function createDiscipline(array $data, User $reporter): Discipline
     {
-        return DB::transaction(function () use ($data) {
-            return $this->disciplineRepository->create($data);
+        // Sử dụng transaction để đảm bảo tất cả các thao tác CSDL thành công hoặc thất bại cùng lúc.
+        // Đây là best practice cho các hành động "ghi" dữ liệu.
+        return DB::transaction(function () use ($data, $reporter) {
+
+            // Bước 1: Lấy thông tin phụ thuộc từ CSDL
+            // Tìm loại vi phạm để lấy điểm trừ mặc định.
+            // dùng findOrFail() để đảm bảo nếu `discipline_type_id` không hợp lệ,
+            // request sẽ dừng lại ngay lập tức và trả về lỗi 404.
+            $type = DisciplineType::findOrFail($data['discipline_type_id']);
+
+            // Bước 2: Xây dựng một mảng dữ liệu "sạch" và đầy đủ
+            // Chỉ lấy những gì cần thiết từ $data và bổ sung các thông tin từ server.
+            $disciplineData = [
+                // Dữ liệu từ client đã được validate
+                'student_id' => $data['student_id'],
+                'discipline_type_id' => $data['discipline_type_id'],
+                'incident_date' => $data['incident_date'],
+                'incident_location' => $data['incident_location'] ?? null,
+                'description' => $data['description'] ?? null,
+
+                // Dữ liệu được bổ sung bởi logic nghiệp vụ ở server
+                'reporter_user_id' => $reporter->id, // Lấy ID của người đang đăng nhập
+                'status' => 'reported', // Luôn đặt trạng thái ban đầu là 'reported'
+                'penalty_points' => $type->default_penalty_points, // Lấy điểm trừ từ loại vi phạm
+            ];
+
+            // Bước 3: Gọi Repository để thực hiện việc lưu trữ
+            // Truyền vào mảng dữ liệu đã được làm sạch và chuẩn hóa hoàn toàn.
+            return $this->disciplineRepository->create($disciplineData);
         });
     }
 

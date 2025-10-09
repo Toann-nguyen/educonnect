@@ -9,11 +9,17 @@ use App\Repositories\Contracts\FeeTypeRepositoryInterface;
 use App\Repositories\Contracts\GradeRepositoryInterface;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\Contracts\PermissionRepositoryInterface;
+use App\Repositories\Contracts\RolePermissionRepositoryInterface;
+use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Eloquent\ConductScoreRepository;
 use App\Repositories\Eloquent\DisciplineRepository;
 use App\Repositories\Eloquent\GradeRepository;
 use App\Repositories\Eloquent\InvoiceRepository;
 use App\Repositories\Eloquent\PaymentRepository;
+use App\Repositories\Eloquent\PermissionRepository;
+use App\Repositories\Eloquent\RolePermissionRepository;
+use App\Repositories\Eloquent\RoleRepository;
 use App\Repositories\Eloquent\UserRepository;
 use App\Services\AuthServices;
 use App\Services\DashBoardService;
@@ -33,6 +39,7 @@ use App\Services\Interface\UserServiceInterface;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use App\Services\StudentService;
+use App\Services\UserRoleService;
 use App\Services\UserService;
 use Illuminate\Cache\Repository;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +53,7 @@ use App\Services\Interface\DisciplineServiceInterface;
 use App\Services\DisciplineService;
 use App\Services\Interface\ConductScoreServiceInterface;
 use App\Services\ConductScoreService;
+use App\Services\RoleService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -64,6 +72,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DisciplineRepositoryInterface::class, DisciplineRepository::class);
         $this->app->bind(DisciplineTypeRepositoryInterface::class, DisciplineRepository::class);
         $this->app->bind(ConductScoreRepositoryInterface::class, ConductScoreRepository::class);
+        $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
+        $this->app->bind(PermissionRepositoryInterface::class, PermissionRepository::class);
+        $this->app->bind(RolePermissionRepositoryInterface::class, RolePermissionRepository::class);
 
         //bind service
         $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
@@ -77,6 +88,18 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GradeServiceInterface::class, GradeService::class);
         $this->app->bind(PaymentServiceInterface::class, PaymentService::class);
         $this->app->bind(FeeTypeServiceInterface::class, FeeTypeService::class);
+        $this->app->bind(RoleService::class, function ($app) {
+            return new RoleService(
+                $app->make(RoleRepositoryInterface::class),
+                $app->make(PermissionRepositoryInterface::class),
+                $app->make(RolePermissionRepositoryInterface::class)
+            );
+        });
+        $this->app->bind(UserRoleService::class, function ($app) {
+            return new UserRoleService(
+                $app->make(RolePermissionRepositoryInterface::class)
+            );
+        });
     }
 
     /**

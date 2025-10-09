@@ -81,8 +81,6 @@ class InvoiceService implements InvoiceServiceInterface
                 return $this->invoiceRepository->getByClassId($homeroomClass->id, []);
             }
         }
-
-
         return collect();
     }
 

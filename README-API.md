@@ -272,6 +272,130 @@ Authentication: Use `Authorization: Bearer {token}` for protected routes (Sanctu
 -   POST /api/disciplines/{discipline}/appeal (roles: student|parent)
     -   Body: `{ "reason": "...", "evidence": ["url1", "url2"] }`
 
+#### Discipline API Flows (Step-by-step)
+
+-   GET /api/disciplines
+
+    -   Who: Any authenticated user
+    -   Flow:
+        1. Auth via Sanctum
+        2. Controller calls service `getAllDisciplines(filters)`
+        3. Service applies role-based scope (admin/principal see all; teacher sees related; student/parent see relevant)
+        4. Returns paginated list with basic relations
+    -   Responses: 200 with list; 500 on errors
+
+-   GET /api/disciplines/my (roles: student|parent)
+
+    -   Who: student, parent
+    -   Flow:
+        1. Role middleware checks student|parent
+        2. Service `getMyDisciplines(user, filters)`
+            - student: by `user->student->id`
+            - parent: by children ids
+        3. Returns paginated list
+    -   Responses: 200; 403 if role invalid; 500 on errors
+
+-   GET /api/disciplines/class/{classId} (roles: admin|principal|teacher)
+
+    -   Who: admin, principal, teacher
+    -   Flow:
+        1. Role middleware validates
+        2. Service `getDisciplinesByClass(classId, filters)`
+            - Teacher: ensure homeroom or permitted class
+        3. Returns list
+    -   Responses: 200; 403 if unauthorized; 404 if class missing; 500 on errors
+
+-   GET /api/disciplines/student/{studentId} (roles: admin|principal|teacher)
+
+    -   Who: admin, principal, teacher
+    -   Flow:
+        1. Role middleware validates
+        2. Service `getDisciplinesByStudent(studentId, filters)` with policy-like checks for teacher
+        3. Returns list
+    -   Responses: 200; 403/404/500 as applicable
+
+-   GET /api/disciplines/{discipline}
+
+    -   Who: Any authenticated user; Policy enforces visibility
+    -   Flow:
+        1. Route-model binding loads discipline
+        2. Policy `view` checks (admin/principal allow; teacher only if related; student/parent if owner)
+        3. Load relations and return
+    -   Responses: 200; 403 unauthorized; 404 not found; 500 errors
+
+-   GET /api/disciplines/statistics (roles: admin|principal)
+
+    -   Who: admin, principal
+    -   Flow:
+        1. Role middleware validates
+        2. Service aggregates counts by status/type/date ranges
+        3. Return KPIs
+    -   Responses: 200; 403/500
+
+-   POST /api/disciplines (permission: record discipline)
+
+    -   Who: Users with permission `record discipline` (e.g., admin/principal/teacher if granted)
+    -   Body (example):
+        ```json
+        {
+            "student_id": 5,
+            "type_id": 2,
+            "incident_date": "2025-10-08",
+            "penalty_points": 3,
+            "description": "Late to class"
+        }
+        ```
+    -   Flow:
+        1. Permission middleware validates
+        2. Validate body (student exists, type valid, date format, points >= 0)
+        3. Service creates discipline record; may log activity and notify
+        4. Optionally recalculate conduct score asynchronously/synchronously
+    -   Responses: 201 with created resource; 422 validation; 403 permission; 500 errors
+
+-   PUT /api/disciplines/{discipline}
+
+    -   Who: Authenticated; Policy controls who can update (reporter/admin/principal, etc.)
+    -   Body: any updatable fields (description, status, etc.)
+    -   Flow:
+        1. Load discipline by id
+        2. Policy `update` checks complex role/state rules
+        3. Validate body; Service updates record
+        4. If status changed to confirmed/rejected, trigger side-effects (e.g., conduct score recompute)
+    -   Responses: 200 updated; 403 unauthorized; 422 validation; 404 not found; 500 errors
+
+-   DELETE /api/disciplines/{discipline} (roles: admin|principal)
+
+    -   Who: admin, principal
+    -   Flow:
+        1. Role middleware validates
+        2. Service deletes (soft delete if enabled)
+    -   Responses: 200; 403; 404; 500
+
+-   POST /api/disciplines/{discipline}/approve (roles: admin|principal)
+
+    -   Who: admin, principal
+    -   Flow:
+        1. Role middleware validates
+        2. Load record; Service marks approved (approved_by, approved_at), updates status
+        3. Trigger conduct score recalculation for the student/timeframe
+    -   Responses: 200; 403; 404; 500
+
+-   POST /api/disciplines/{discipline}/reject (roles: admin|principal)
+
+    -   Flow similar to approve; set status rejected with note if provided
+
+-   POST /api/disciplines/{discipline}/appeal (roles: student|parent)
+    -   Who: student/parent owning the student
+    -   Body:
+        ```json
+        { "reason": "...", "evidence": ["url1", "url2"] }
+        ```
+    -   Flow:
+        1. Role middleware validates
+        2. Ownership check (student or their parent)
+        3. Service creates appeal linked to discipline; may notify reviewers
+    -   Responses: 200/201; 403; 404; 422; 500
+
 ### Discipline Types
 
 -   GET /api/discipline-types

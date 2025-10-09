@@ -148,7 +148,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // My invoices (Student/Parent/Teacher) - FIX: Use array syntax for multiple roles
     Route::get('my-invoices', [InvoiceController::class, 'myInvoices'])
-        ->middleware(['role:student|parent|teacher']); // ✅ Wrap in array
+        ->middleware(['role:student|parent|teacher']);
 
     // OR better: Remove middleware and handle in controller
     Route::get('my-invoices', [InvoiceController::class, 'myInvoices']);

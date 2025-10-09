@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Exception;
+use Illuminate\Contracts\Pagination\Paginator;
 
 class RoleService implements RoleServiceInterface
 {

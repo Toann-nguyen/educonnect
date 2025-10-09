@@ -95,9 +95,7 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->forgotPassword($request->validated());
-
-
-
+            dd($status);
             // Ghi log trường hợp không gửi được link mà không rõ lý do
             Log::warning('Failed to send password reset link.', ['email' => $request->email, 'status' => $status]);
             return response()->json(['message' => 'Failed to send password reset link.', 'status' => $status], 400);
@@ -113,7 +111,11 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->resetPassword($request->validated());
-
+            if ($status) {
+                return response()->json([
+                    'message' => 'Password has been reset.'
+                ], 200);
+            }
             // token không hợp lệ
             return response()->json(['message' => 'Failed to reset password. The token may be invalid or expired.', 'status' => $status], 400);
         } catch (Exception $e) {

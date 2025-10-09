@@ -16,7 +16,7 @@ class RoleRepository implements RoleRepositoryInterface
         $this->model = $model;
     }
 
-    public function paginate(int $perPage = 15, array $filters = []): Paginator
+    public function paginate(int $perPage = 15, array $filters = [])
     {
         $query = $this->model->query();
 
@@ -34,9 +34,8 @@ class RoleRepository implements RoleRepositoryInterface
             $query->where('is_active', $filters['is_active']);
         }
 
-        // Add counts
-        $query->withCount(['permissions', 'users']);
-
+        $query->with(['permissions']); // Eager load danh sách permissions chi tiết
+        $query->withCount('users');    // Giữ lại withCount cho users
         // Sort
         $sortBy = $filters['sort_by'] ?? 'created_at';
         $sortOrder = $filters['sort_order'] ?? 'desc';

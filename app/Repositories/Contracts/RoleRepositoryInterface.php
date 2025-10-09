@@ -6,7 +6,7 @@ use Illuminate\Pagination\Paginator;
 
 interface RoleRepositoryInterface
 {
-    public function paginate(int $perPage = 15, array $filters = []): Paginator;
+    public function paginate(int $perPage = 15, array $filters = []);
     public function findById(int $id);
     public function findByName(string $name);
     public function create(array $data);

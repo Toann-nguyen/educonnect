@@ -20,6 +20,82 @@ class UserController extends Controller
     {
         $this->userService = $userService;
     }
+    /**
+     * @OA\Get(
+     *     path="/api/admin/users",
+     *     summary="Danh sách người dùng (có phân trang, role, permissions, profile)",
+     *     description="Trả về danh sách người dùng dạng phân trang cùng với thông tin chi tiết (profile, roles, permissions).",
+     *     tags={"Users"},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Số trang hiện tại",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lấy danh sách người dùng thành công",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="email", type="string", example="admin@educonnect.com"),
+     *                     @OA\Property(
+     *                         property="profile",
+     *                         type="object",
+     *                         @OA\Property(property="full_name", type="string", example="Admin User"),
+     *                         @OA\Property(property="phone_number", type="string", example="385-678-0558"),
+     *                         @OA\Property(property="birthday", type="string", example="2001-03-26"),
+     *                         @OA\Property(property="gender", type="integer", example=1),
+     *                         @OA\Property(property="address", type="string", example="42827 Nannie Loaf, FL 79652-7986"),
+     *                         @OA\Property(property="avatar", type="string", example="avatars/default.png")
+     *                     ),
+     *                     @OA\Property(
+     *                         property="roles",
+     *                         type="array",
+     *                         @OA\Items(type="string", example="admin")
+     *                     ),
+     *                     @OA\Property(
+     *                         property="permissions",
+     *                         type="array",
+     *                         @OA\Items(type="string", example="manage_users")
+     *                     ),
+     *                     @OA\Property(property="created_at", type="string", example="2025-10-02T10:27:06.000000Z"),
+     *                     @OA\Property(property="updated_at", type="string", example="2025-10-02T10:27:06.000000Z")
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="links",
+     *                 type="object",
+     *                 @OA\Property(property="first", type="string", example="http://127.0.0.1:8000/api/admin/users?page=1"),
+     *                 @OA\Property(property="last", type="string", example="http://127.0.0.1:8000/api/admin/users?page=44"),
+     *                 @OA\Property(property="prev", type="string", nullable=true, example=null),
+     *                 @OA\Property(property="next", type="string", example="http://127.0.0.1:8000/api/admin/users?page=2")
+     *             ),
+     *             @OA\Property(
+     *                 property="meta",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer", example=1),
+     *                 @OA\Property(property="from", type="integer", example=1),
+     *                 @OA\Property(property="last_page", type="integer", example=44),
+     *                 @OA\Property(property="path", type="string", example="http://127.0.0.1:8000/api/admin/users"),
+     *                 @OA\Property(property="per_page", type="integer", example=15),
+     *                 @OA\Property(property="to", type="integer", example=15),
+     *                 @OA\Property(property="total", type="integer", example=646)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Không có quyền truy cập hoặc chưa đăng nhập"
+     *     )
+     * )
+     */
     public function index(Request $request)
     {
         $users = $this->userService->getAllUsers($request->only(['role', 'search', 'per_page']));

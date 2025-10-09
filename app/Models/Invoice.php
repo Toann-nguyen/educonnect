@@ -92,6 +92,7 @@ class Invoice extends Model
         $this->save();
     }
 
+
     /** Scope lọc hóa đơn quá hạn */
     public function scopeOverdue($query)
     {

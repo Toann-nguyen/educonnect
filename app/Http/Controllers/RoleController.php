@@ -13,12 +13,10 @@ class RoleController extends Controller
 {
     protected $roleService;
 
+
     public function __construct(RoleService $roleService)
     {
         $this->roleService = $roleService;
-
-        // Middleware: check permission
-        $this->middleware('permission:manage_roles');
     }
 
     /**

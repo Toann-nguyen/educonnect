@@ -22,7 +22,9 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ConductScoreController;
 use App\Http\Controllers\DashBoardController;
+use App\Http\Controllers\RoleController;
 
+Route::get('/test', [App\Http\Controllers\Api\TestController::class, 'index']);
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -47,35 +49,23 @@ Route::prefix('auth')->group(function () {
 // ROLE AND PERMISSION ROUTES ( Authentication Required)
 // ============================================================================
 
-// Role Management Routes
 Route::middleware(['auth:sanctum', 'permission:manage_roles'])->group(function () {
     Route::apiResource('admin/roles', RoleController::class);
     Route::post('admin/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
-    Route::delete('admin/roles/{roleId}/permissions/{permissionId}', [RoleController::class, 'removePermission']);
+    Route::delete('admin/roles/{role}/permissions/{permission}', [RoleController::class, 'removePermission']);
 });
 
-// Permission Management Routes
 Route::middleware(['auth:sanctum', 'permission:manage_permissions'])->group(function () {
     Route::apiResource('admin/permissions', PermissionController::class);
     Route::get('admin/permissions/categories', [PermissionController::class, 'categories']);
 });
 
-// User Role Management Routes
 Route::middleware(['auth:sanctum', 'permission:manage_users'])->group(function () {
     Route::get('admin/users/{userId}/roles', [UserRoleController::class, 'getUserRoles']);
     Route::post('admin/users/{userId}/roles', [UserRoleController::class, 'assignRoles']);
     Route::delete('admin/users/{userId}/roles/{roleName}', [UserRoleController::class, 'removeRole']);
-
     Route::get('admin/users/{userId}/permissions', [UserRoleController::class, 'getUserPermissions']);
 });
-
-// Current User Self-service Routes
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get('me/roles', [UserRoleController::class, 'currentUserRoles']);
-    Route::get('me/permissions', [UserRoleController::class, 'currentUserPermissions']);
-    Route::get('me/can', [UserRoleController::class, 'currentUserCan']);
-});
-
 // ============================================================================
 // QR CODE
 // ============================================================================

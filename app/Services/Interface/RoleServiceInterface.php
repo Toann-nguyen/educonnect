@@ -12,7 +12,7 @@ interface RoleServiceInterface
      * @param array $filters ['search', 'is_active', 'sort_by', 'sort_order', 'per_page']
      * @return Paginator
      */
-    public function listRoles(array $filters = []): Paginator;
+    public function listRoles(array $filters = []);
 
     /**
      * Lấy chi tiết 1 role kèm permissions
@@ -21,7 +21,7 @@ interface RoleServiceInterface
      * @return array ['role' => Role, 'users_count' => int]
      * @throws Exception
      */
-    public function getRoleDetail(int $roleId): array;
+    public function getRoleDetail(int $roleId);
 
     /**
      * Tạo role mới
@@ -50,7 +50,7 @@ interface RoleServiceInterface
      * @return bool
      * @throws Exception
      */
-    public function deleteRole(int $roleId): bool;
+    public function deleteRole(int $roleId);
 
     /**
      * Gán permissions cho role
@@ -65,7 +65,7 @@ interface RoleServiceInterface
         int $roleId,
         array $permissionIds,
         string $mode = 'sync'
-    ): bool;
+    );
 
     /**
      * Xóa permissions khỏi role
@@ -75,5 +75,5 @@ interface RoleServiceInterface
      * @return bool
      * @throws Exception
      */
-    public function removePermissionsFromRole(int $roleId, array $permissionIds): bool;
+    public function removePermissionsFromRole(int $roleId, array $permissionIds);
 }

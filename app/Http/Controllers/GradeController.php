@@ -104,7 +104,9 @@ class GradeController extends Controller
     public function destroy(Request $request, Grade $grade)
     {
         $this->gradeService->deleteGrade($grade, $request->user());
-        return response()->json(null, 204);
+        return response()->json([
+            'message' => 'Grade deleted successfully'
+        ]);
     }
 
     /**

@@ -61,6 +61,7 @@ class RoleRepository implements RoleRepositoryInterface
 
     public function update(int $id, array $data)
     {
+
         $role = $this->findById($id);
         if ($role) {
             $role->update($data);

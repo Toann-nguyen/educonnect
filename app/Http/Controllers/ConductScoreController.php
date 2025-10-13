@@ -203,6 +203,7 @@ class ConductScoreController extends Controller
      */
     public function approve(Request $request, int $conductScoreId): JsonResponse
     {
+        dd(1);
         try {
             $conductScoreModel = \App\Models\StudentConductScore::findOrFail($conductScoreId);
 

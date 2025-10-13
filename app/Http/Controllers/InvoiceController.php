@@ -80,7 +80,7 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'message' => 'Invoice created successfully',
-                'data' => new InvoiceResource($invoice)
+                'data' => new $invoice
             ], 201);
         } catch (\Exception $e) {
             Log::error('Error creating invoice', [

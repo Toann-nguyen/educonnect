@@ -34,11 +34,10 @@ class FeeTypeService implements FeeTypeServiceInterface
 
     public function deleteFeeType(FeeType $feeType): bool
     {
-        // LOGIC NGHIỆP VỤ: Không cho xóa nếu đang được sử dụng
-        // Giả sử có mối quan hệ `items()` trong FeeType Model trỏ đến invoice_items
-        if ($feeType->invoiceItems()->exists()) {
+        if (\DB::table('invoice_items')->where('fee_type_id', $feeType->id)->exists()) {
             throw new Exception('Cannot delete fee type that is being used in invoices. Consider deactivating it instead.');
         }
+
         return $this->feeTypeRepository->delete($feeType->id);
     }
 

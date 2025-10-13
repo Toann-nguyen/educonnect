@@ -64,6 +64,7 @@ class RoleService implements RoleServiceInterface
      */
     public function createRole(array $data, ?array $permissionIds = null)
     {
+
         return DB::transaction(function () use ($data, $permissionIds) {
             // Validate unique name
             if ($this->roleRepository->findByName($data['name'])) {
@@ -75,6 +76,7 @@ class RoleService implements RoleServiceInterface
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
                 'is_active' => $data['is_active'] ?? true,
+                'guard_name' => 'web',
             ]);
 
             // Attach permissions
@@ -100,16 +102,11 @@ class RoleService implements RoleServiceInterface
      */
     public function updateRole(int $roleId, array $data)
     {
+
         return DB::transaction(function () use ($roleId, $data) {
             $role = $this->roleRepository->findById($roleId);
-
             if (!$role) {
                 throw new Exception('Role not found', 404);
-            }
-
-            // Không được thay đổi name (để tránh lỗi permissions)
-            if (isset($data['name']) && $data['name'] !== $role->name) {
-                throw new Exception('Cannot change role name', 422);
             }
 
             // Check constraints

@@ -45,6 +45,7 @@ class FeeTypeRepository implements FeeTypeRepositoryInterface
     {
         return FeeType::destroy($id) > 0;
     }
+
     public function findTrashedById(int $id): ?FeeType
     {
         // withTrashed() để tìm cả trong thùng rác

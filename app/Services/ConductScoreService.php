@@ -154,14 +154,23 @@ class ConductScoreService implements ConductScoreServiceInterface
     /**
      * Phê duyệt conduct score
      */
-    public function approveConductScore(
-        StudentConductScore $conductScore,
-        User $approver
-    ): StudentConductScore {
-        return $this->conductScoreRepository->update($conductScore->id, [
-            'approved_by_user_id' => $approver->id,
+    public function approveConductScore($conductScoreId)
+    {
+        $conductScore = StudentConductScore::find($conductScoreId);
+
+        if (!$conductScore) {
+            return null;
+        }
+
+        // Update
+        $conductScore->update([
+            'approved_by_user_id' => auth()->id(),
             'approved_at' => now(),
+            // các field khác nếu cần
         ]);
+
+        // ✅ THÊM: Return data sau update
+        return $conductScore->fresh();
     }
 
     /**

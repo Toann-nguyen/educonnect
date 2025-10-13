@@ -15,8 +15,13 @@ class UpdateRoleRequest extends FormRequest
     public function rules()
     {
         return [
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
             'description' => 'nullable|string|max:500',
-            'is_active' => 'boolean',
+            'is_active' => 'nullable|boolean',
         ];
     }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DisciplineTypeController;
 use App\Http\Controllers\FeeTypeController;
 use App\Http\Controllers\QrController;
+use App\Http\Controllers\UserRoleController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
@@ -87,7 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Profile - tất cả user đăng nhập
     Route::prefix('profile')->group(function () {
-        Route::get('/', [ProfileController::class, 'show']);
+        Route::get('/', [ProfileController::class, 'index']);
         Route::put('/', [ProfileController::class, 'update']);
     });
     // ------------------------------------------------------------------------
@@ -211,6 +212,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])
         ->where('invoice', '[0-9]+');
 
+
     // CRUD operations (Admin/Principal/Accountant only)
     Route::middleware(['role:admin|principal|accountant'])->group(function () {
         Route::post('invoices', [InvoiceController::class, 'store']);
@@ -252,11 +254,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [DisciplineController::class, 'index'])->name('index'); // Ai cũng có thể gọi, Service sẽ lọc
         Route::get('/my', [DisciplineController::class, 'my'])->middleware('role:student|parent')->name('my');
         Route::get('/class/{classId}', [DisciplineController::class, 'byClass'])->middleware('role:admin|principal|teacher')->name('by-class');
+        Route::get('/statistics', [DisciplineController::class, 'statistics'])->middleware('role:admin|principal')->name('statistics');
         Route::get('/student/{studentId}', [DisciplineController::class, 'byStudent'])->middleware('role:admin|principal|teacher')->name('by-student');
         Route::get('/{discipline}', [DisciplineController::class, 'show'])->name('show'); // Policy sẽ kiểm tra quyền xem chi tiết
 
         // **Thống kê & Xuất file (Admin/Principal)**
         Route::get('/statistics', [DisciplineController::class, 'statistics'])->middleware('role:admin|principal')->name('statistics');
+
         Route::get('/export', [DisciplineController::class, 'export'])->middleware('role:admin|principal')->name('export');
 
         // **Tạo (Create)** - Yêu cầu quyền 'record discipline'

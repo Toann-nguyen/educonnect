@@ -123,8 +123,10 @@ class DisciplineController extends Controller
      */
     public function approve(ReviewDisciplineRequest $request, Discipline $discipline): JsonResponse
     {
-        if ($discipline->status !== 'pending') {
-            return response()->json(['message' => 'Chỉ có thể duyệt bản ghi đang chờ'], 400);
+        if (!in_array($discipline->status, ['pending', 'rejected'])) {
+            return response()->json([
+                'message' => 'Chỉ có thể duyệt bản ghi đang chờ hoặc đã bị từ chối'
+            ], 400);
         }
 
         $approved = $this->disciplineService->approveDiscipline(
@@ -144,9 +146,12 @@ class DisciplineController extends Controller
      */
     public function reject(ReviewDisciplineRequest $request, Discipline $discipline): JsonResponse
     {
-        if ($discipline->status !== 'pending') {
-            return response()->json(['message' => 'Chỉ có thể từ chối bản ghi đang chờ'], 400);
+        if (!in_array($discipline->status, ['pending', 'rejected'])) {
+            return response()->json([
+                'message' => 'Chỉ có thể duyệt bản ghi đang chờ hoặc đã bị từ chối'
+            ], 400);
         }
+
 
         if (!$request->has('review_note')) {
             return response()->json(['message' => 'Vui lòng nhập lý do từ chối'], 400);

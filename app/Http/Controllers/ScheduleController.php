@@ -123,7 +123,18 @@ class ScheduleController extends Controller
      */
     public function destroy(Schedule $schedule): JsonResponse
     {
-        $this->scheduleService->deleteSchedule($schedule);
+        // Load với trashed để handle nếu đã soft delete
+        $schedule = Schedule::withTrashed()->findOrFail($schedule->id);
+
+        if ($schedule->trashed()) {
+            return response()->json(['message' => 'Schedule already deleted (in trash).'], 409);  // Conflict, không xóa lại
+        }
+
+        $success = $this->scheduleService->deleteSchedule($schedule);
+        if (!$success) {
+            return response()->json(['message' => 'Delete failed: Schedule not found.'], 500);
+        }
+
         return response()->json([
             'message' => 'Schedule deleted successfully'
         ], 200);

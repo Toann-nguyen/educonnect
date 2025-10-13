@@ -78,9 +78,6 @@ class FeeTypeController extends Controller
      */
     public function toggleActive(FeeType $feeType): JsonResponse
     {
-        // Thêm Policy check cho action tùy chỉnh
-        $this->authorize('update', $feeType);
-
         $updatedFeeType = $this->feeTypeService->toggleActiveStatus($feeType);
         return response()->json($updatedFeeType);
     }
@@ -92,18 +89,16 @@ class FeeTypeController extends Controller
      */
     public function restore($id): JsonResponse
     {
-        // Tìm bản ghi đã xóa để kiểm tra quyền
         $feeType = FeeType::withTrashed()->findOrFail($id);
-
-        // Sử dụng Policy để kiểm tra quyền 'restore'
-        $this->authorize('restore', $feeType);
 
         $restoredFeeType = $this->feeTypeService->restoreFeeType($id);
 
         if ($restoredFeeType) {
-            return response()->json($restoredFeeType); // Hoặc dùng FeeTypeResource
+            return response()->json($restoredFeeType);
         }
 
-        return response()->json(['message' => 'Fee Type not found in trash or could not be restored.'], 404);
+        return response()->json([
+            'message' => 'Fee Type not found in trash or could not be restored.'
+        ], 404);
     }
 }

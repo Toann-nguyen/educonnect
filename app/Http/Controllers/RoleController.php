@@ -90,7 +90,11 @@ class RoleController extends Controller
                 'data' => $role
             ], 201);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() ?: 500;
+            $statusCode = (int)($e->getCode() ?: 500);
+            // Validate status code (phải từ 100-599)
+            if ($statusCode < 100 || $statusCode > 599) {
+                $statusCode = 500;
+            }
             return response()->json([
                 'message' => $e->getMessage()
             ], $statusCode);

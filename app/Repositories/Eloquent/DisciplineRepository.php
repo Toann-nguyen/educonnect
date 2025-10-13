@@ -5,9 +5,9 @@ namespace App\Repositories\Eloquent;
 use App\Repositories\Contracts\DisciplineRepositoryInterface;
 use App\Models\Discipline;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 class DisciplineRepository implements DisciplineRepositoryInterface
 {

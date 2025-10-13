@@ -95,7 +95,7 @@ class DisciplineService implements DisciplineServiceInterface
 
                 // Dữ liệu được bổ sung bởi logic nghiệp vụ ở server
                 'reporter_user_id' => $reporter->id, // Lấy ID của người đang đăng nhập
-                'status' => 'reported', // Luôn đặt trạng thái ban đầu là 'reported'
+                'status' => 'pending', // Luôn đặt trạng thái ban đầu là 'reported'
                 'penalty_points' => $type->default_penalty_points, // Lấy điểm trừ từ loại vi phạm
             ];
 
@@ -129,8 +129,7 @@ class DisciplineService implements DisciplineServiceInterface
 
             $updated = $this->disciplineRepository->update($discipline->id, $data);
 
-            // TODO: Trigger notification to parent and student
-
+            // ✅ Đảm bảo return data mới
             return $updated;
         });
     }

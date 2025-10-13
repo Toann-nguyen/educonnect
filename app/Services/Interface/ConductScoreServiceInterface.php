@@ -59,10 +59,7 @@ interface ConductScoreServiceInterface
     /**
      * Phê duyệt conduct score
      */
-    public function approveConductScore(
-        StudentConductScore $conductScore,
-        User $approver
-    ): StudentConductScore;
+    public function approveConductScore($conductScoreId);
 
     /**
      * Tính lại conduct score từ discipline records

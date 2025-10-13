@@ -17,6 +17,7 @@ class Role extends Model
         'name',
         'description',
         'is_active',
+        'guard_name'
     ];
 
     protected $casts = [

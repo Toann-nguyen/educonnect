@@ -22,6 +22,7 @@ class StoreDisciplineRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'status' => 'nullable|in:pending,approved,rejected',
             'student_id' => 'required|integer|exists:students,id',
             'discipline_type_id' => 'required|integer|exists:discipline_types,id',
             'incident_date' => 'required|date|before_or_equal:today',

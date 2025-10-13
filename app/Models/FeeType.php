@@ -34,4 +34,9 @@ class FeeType extends Model
     {
         return $query->where('is_active', true);
     }
+
+    public function invoiceItems()
+    {
+        return $this->hasMany(InvoiceItem::class);
+    }
 }

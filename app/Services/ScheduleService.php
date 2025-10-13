@@ -80,8 +80,26 @@ class ScheduleService implements ScheduleServiceInterface
         return $this->scheduleRepository->update($schedule->id, $data);
     }
 
-    public function deleteSchedule(Schedule $schedule): bool
+    public function deleteSchedule(Schedule $schedule, ?User $user = null): bool
     {
+        $user ??= auth()->user();  // Lấy user từ auth nếu không pass
+
+        if (!$user) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Unauthorized.');  // 401/403
+        }
+
+        // Auth logic đơn giản (tùy chỉnh theo role)
+        $canDelete = match (true) {
+            $user->hasRole(['admin', 'principal']) => true,
+            $user->hasRole('teacher') && $user->id === $schedule->teacher_id => true,
+            $user->hasRole('student') && $user->student?->class_id === $schedule->class_id => true,  // Student chỉ xóa lịch lớp mình
+            default => false,
+        };
+
+        if (!$canDelete) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('You are not authorized to delete this schedule.');
+        }
+
         return $this->scheduleRepository->delete($schedule->id);
     }
 

@@ -52,7 +52,7 @@ class PaymentController extends Controller
     {
         // Load relationships
         $payment->load(['invoice.student.user.profile', 'payer.profile', 'creator.profile']);
-        return response()->json(new PaymentResource($payment));
+        return response()->json($payment);
     }
 
     /**

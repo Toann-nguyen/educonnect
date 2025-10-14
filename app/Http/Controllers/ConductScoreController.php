@@ -197,7 +197,6 @@ class ConductScoreController extends Controller
                 'data' => new ConductScoreResource($conductScore)
             ], 201);
         } catch (\Exception $e) {
-            dd($e);
             Log::error('Error creating conduct score', [
                 'data' => $validated,
                 'error' => $e->getMessage()

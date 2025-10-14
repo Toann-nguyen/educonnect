@@ -83,8 +83,12 @@ class PaymentService implements PaymentServiceInterface
             }
 
             $remainingAmount = $invoice->total_amount - $invoice->paid_amount;
-            if ($amountPaid > $remainingAmount) {
-                throw new \Exception("Payment amount cannot exceed remaining amount: {$remainingAmount}");
+            // ✅ FIX: Check xem hóa đơn đã paid hết chưa
+            if ($remainingAmount <= 0) {
+                throw new \Exception(
+                    "Invoice is already fully paid. Remaining amount: {$remainingAmount}",
+                    422
+                );
             }
 
             // Thêm created_by_user_id

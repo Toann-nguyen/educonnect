@@ -124,6 +124,11 @@ class ConductScoreRepository implements ConductScoreRepositoryInterface
             ->get();
     }
 
+    // === REPOSITORY METHOD ===
+    public function create(array $data): StudentConductScore
+    {
+        return $this->model->create($data);
+    }
 
     public function createOrUpdate(array $data): StudentConductScore
     {

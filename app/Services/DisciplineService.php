@@ -152,6 +152,78 @@ class DisciplineService implements DisciplineServiceInterface
         });
     }
 
+    /**
+     * Duyệt khiếu nại (approve appeal): Cập nhật status appeal thành 'approved', và có thể hủy kỷ luật
+     */
+    public function approveAppeal(Discipline $discipline, User $reviewer, ?string $note = null): Discipline
+    {
+        return DB::transaction(function () use ($discipline, $reviewer, $note) {
+            // Tìm appeal pending mới nhất (hoặc đầu tiên)
+            $appeal = DisciplineAppeal::where('discipline_id', $discipline->id)
+                ->where('status', 'pending')
+                ->firstOrFail();
+
+            // Cập nhật appeal
+            $appeal->update([
+                'status' => 'approved',
+                'reviewed_by_user_id' => $reviewer->id,
+                'reviewed_at' => now(),
+                'review_response' => $note,
+            ]);
+
+            // Nếu approve appeal, hủy kỷ luật (status = 'rejected', penalty = 0)
+            $data = [
+                'status' => 'rejected',
+                'penalty_points' => 0,
+                'review_note' => $note, // Có thể ghi đè note
+            ];
+            $updated = $this->disciplineRepository->update($discipline->id, $data);
+
+            // TODO: Trigger notification to appellant
+
+            return $updated;
+        });
+    }
+
+    /**
+     * Từ chối khiếu nại (reject appeal): Cập nhật status appeal thành 'rejected', giữ nguyên kỷ luật
+     */
+    public function rejectAppeal(Discipline $discipline, User $reviewer, string $reason): Discipline
+    {
+        return DB::transaction(function () use ($discipline, $reviewer, $reason) {
+
+            // Bước 1: Tìm TẤT CẢ các appeal đang 'pending' của discipline này
+            $pendingAppeals = $discipline->appeals()->where('status', 'pending')->get();
+
+            // Bước 2: Chỉ thực hiện hành động nếu có appeal đang chờ
+            if ($pendingAppeals->isNotEmpty()) {
+
+                // Cập nhật trạng thái cho tất cả các khiếu nại đang chờ
+                foreach ($pendingAppeals as $appeal) {
+                    $appeal->update([
+                        'status' => 'rejected',
+                        'reviewed_by_user_id' => $reviewer->id,
+                        'reviewed_at' => now(),
+                        'review_response' => $reason,
+                    ]);
+                }
+
+                // Bước 3: Cập nhật lại trạng thái của bản ghi kỷ luật gốc
+                // Sau khi từ chối khiếu nại, kỷ luật được xác nhận là có hiệu lực.
+                $discipline->update([
+                    'status' => 'rejected',
+                    'review_note' => $reason, // Có thể cập nhật lại ghi chú duyệt
+                ]);
+            }
+            // Nếu không có appeal nào đang chờ, không làm gì cả, chỉ trả về dữ liệu hiện tại.
+
+            // TODO: Trigger notification to appellant
+
+            // Trả về đối tượng discipline với dữ liệu MỚI NHẤT từ CSDL
+            return $discipline->fresh();
+        });
+    }
+
     public function createAppeal(Discipline $discipline, User $appellant, string $reason, ?array $evidence = null): bool
     {
         return DB::transaction(function () use ($discipline, $appellant, $reason, $evidence) {

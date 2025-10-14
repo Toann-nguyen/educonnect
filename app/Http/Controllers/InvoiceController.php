@@ -68,7 +68,7 @@ class InvoiceController extends Controller
             'due_date' => 'required|date',
             'fee_types' => 'required|array|min:1',
             'fee_types.*.fee_type_id' => 'required|exists:fee_types,id',
-            'fee_types.*.amount' => 'required|numeric|min:0',
+            'fee_types.*.total_amount' => 'required|numeric|min:0',
             'fee_types.*.note' => 'nullable|string'
         ]);
 
@@ -80,7 +80,7 @@ class InvoiceController extends Controller
 
             return response()->json([
                 'message' => 'Invoice created successfully',
-                'data' => new $invoice
+                'data' => new InvoiceResource($invoice->load('items.feeType'))
             ], 201);
         } catch (\Exception $e) {
             Log::error('Error creating invoice', [
@@ -150,9 +150,25 @@ class InvoiceController extends Controller
             'status' => 'sometimes|in:unpaid,partially_paid,paid,cancelled',
             'fee_types' => 'sometimes|array|min:1',
             'fee_types.*.fee_type_id' => 'required_with:fee_types|exists:fee_types,id',
-            'fee_types.*.amount' => 'required_with:fee_types|numeric|min:0',
+            'fee_types.*.total_amount' => 'required_with:fee_types|numeric|min:0',
+            'fee_types.*.amount' => 'nullable|numeric|min:0',
             'fee_types.*.note' => 'nullable|string'
+        ], [
+            'fee_types.*.total_amount.required_if' => 'total_amount or amount is required',
+            'fee_types.*.amount.required_if' => 'total_amount or amount is required'
         ]);
+        // dd($request);
+        if (isset($validated['fee_types'])) {
+            foreach ($validated['fee_types'] as &$feeType) {
+                // Nếu có "amount" nhưng không có "total_amount", copy qua
+                if (isset($feeType['amount']) && !isset($feeType['total_amount'])) {
+                    $feeType['total_amount'] = $feeType['amount'];
+                }
+                // Xóa "amount" để không gây lỗi
+                unset($feeType['amount']);
+            }
+        }
+
 
         try {
             $invoice = $this->invoiceService->updateInvoice(
@@ -443,6 +459,7 @@ class InvoiceController extends Controller
 
             // Invoices are already filtered by overdue scope
             // Status is managed by the model's updatePaymentStatus method
+            // Invoice::overdue()->update(['is_overdue' => 'fales']);
 
             return response()->json([
                 'message' => "Found {$count} overdue invoices",

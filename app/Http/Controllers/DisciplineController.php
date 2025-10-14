@@ -119,54 +119,74 @@ class DisciplineController extends Controller
     }
 
     /**
-     * POST /api/disciplines/{id}/approve - Duyệt
+     * POST /api/disciplines/{id}/approve - Duyệt (discipline HOẶC appeal)
      */
     public function approve(ReviewDisciplineRequest $request, Discipline $discipline): JsonResponse
     {
-        if (!in_array($discipline->status, ['pending', 'rejected'])) {
+        $user = $request->user();
+        $note = $request->input('review_note');
+
+        try {
+            // KIỂM TRA LOGIC NGHIỆP VỤ Ở ĐÂY
+            if ($discipline->status === 'appealed') {
+                // Nếu đang có khiếu nại -> đây là hành động duyệt KHIẾU NẠI
+                $this->authorize('approveAppeal', $discipline); // Cần Policy
+                $updatedDiscipline = $this->disciplineService->approveAppeal($discipline, $user, $note);
+                $message = 'Khiếu nại đã được duyệt thành công.';
+            } elseif (in_array($discipline->status, ['reported', 'pending', 'rejected'])) {
+                // Nếu đang chờ hoặc đã bị từ chối -> đây là hành động duyệt KỶ LUẬT
+                $this->authorize('approve', $discipline); // Cần Policy
+                $updatedDiscipline = $this->disciplineService->approveDiscipline($discipline, $user, $note);
+                $message = 'Bản ghi kỷ luật đã được duyệt thành công.';
+            } else {
+                // Các trạng thái khác (confirmed, cancelled...) không thể duyệt
+                return response()->json(['message' => 'Bản ghi này không ở trạng thái có thể duyệt.'], 400);
+            }
+
             return response()->json([
-                'message' => 'Chỉ có thể duyệt bản ghi đang chờ hoặc đã bị từ chối'
-            ], 400);
+                'message' => $message,
+                'data' => new DisciplineResource($updatedDiscipline)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Lỗi khi duyệt: ' . $e->getMessage()], 500);
         }
-
-        $approved = $this->disciplineService->approveDiscipline(
-            $discipline,
-            $request->user(),
-            $request->input('review_note')
-        );
-
-        return response()->json([
-            'message' => 'Bản ghi đã được duyệt',
-            'data' => new DisciplineResource($approved)
-        ]);
     }
 
     /**
-     * POST /api/disciplines/{id}/reject - Từ chối
+     * POST /api/disciplines/{id}/reject - Từ chối (discipline HOẶC appeal)
      */
     public function reject(ReviewDisciplineRequest $request, Discipline $discipline): JsonResponse
     {
-        if (!in_array($discipline->status, ['pending', 'rejected'])) {
+        $user = $request->user();
+        $reason = $request->input('review_note'); // Lý do từ chối
+
+        if (empty($reason)) {
+            return response()->json(['message' => 'Vui lòng cung cấp lý do từ chối.'], 422);
+        }
+
+        try {
+            if ($discipline->status === 'appealed') {
+                // Nếu đang có khiếu nại -> đây là hành động từ chối KHIẾU NẠI
+                $this->authorize('rejectAppeal', $discipline); // Cần Policy
+                $updatedDiscipline = $this->disciplineService->rejectAppeal($discipline, $user, $reason);
+                $message = 'Khiếu nại đã bị từ chối.';
+            } elseif (in_array($discipline->status, ['reported', 'pending'])) {
+                // Nếu đang chờ -> đây là hành động từ chối KỶ LUẬT
+                $this->authorize('reject', $discipline); // Cần Policy
+                $updatedDiscipline = $this->disciplineService->rejectDiscipline($discipline, $user, $reason);
+                $message = 'Bản ghi kỷ luật đã bị từ chối.';
+            } else {
+                // Các trạng thái khác không thể từ chối
+                return response()->json(['message' => 'Bản ghi này không ở trạng thái có thể từ chối.'], 400);
+            }
+
             return response()->json([
-                'message' => 'Chỉ có thể duyệt bản ghi đang chờ hoặc đã bị từ chối'
-            ], 400);
+                'message' => $message,
+                'data' => new DisciplineResource($updatedDiscipline)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Lỗi khi từ chối: ' . $e->getMessage()], 500);
         }
-
-
-        if (!$request->has('review_note')) {
-            return response()->json(['message' => 'Vui lòng nhập lý do từ chối'], 400);
-        }
-
-        $rejected = $this->disciplineService->rejectDiscipline(
-            $discipline,
-            $request->user(),
-            $request->input('review_note')
-        );
-
-        return response()->json([
-            'message' => 'Bản ghi đã bị từ chối',
-            'data' => new DisciplineResource($rejected)
-        ]);
     }
 
     /**

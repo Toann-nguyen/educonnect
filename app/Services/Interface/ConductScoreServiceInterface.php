@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 
+
 interface ConductScoreServiceInterface
 {
     /**
@@ -17,6 +18,12 @@ interface ConductScoreServiceInterface
         ?int $semester = null,
         ?int $academicYearId = null
     ): Collection;
+    public function recalculateConductScores(
+        int $semester,
+        int $academicYearId,
+        ?int $classId = null,
+        ?int $studentId = null
+    ): array;
 
     /**
      * Lấy conduct scores của một lớp
@@ -69,14 +76,4 @@ interface ConductScoreServiceInterface
         int $semester,
         int $academicYearId
     ): StudentConductScore;
-
-    /**
-     * Tính lại conduct scores cho nhiều học sinh (bulk)
-     */
-    public function recalculateBulk(
-        int $semester,
-        int $academicYearId,
-        ?int $classId = null,
-        ?int $studentId = null
-    ): array;
 }

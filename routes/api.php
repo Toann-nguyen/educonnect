@@ -131,7 +131,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('/', [ScheduleController::class, 'store']);
             Route::get('{schedule}', [ScheduleController::class, 'show']);
             Route::put('{schedule}', [ScheduleController::class, 'update']);
-            Route::patch('{schedule}', [ScheduleController::class, 'update']);
             Route::delete('{schedule}', [ScheduleController::class, 'destroy']);
             Route::post('{id}/restore', [ScheduleController::class, 'restore'])->name('schedules.restore');
         });
@@ -296,6 +295,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/my', [ConductScoreController::class, 'my'])->middleware('role:student|parent')->name('my');
         Route::get('/class/{classId}', [ConductScoreController::class, 'byClass'])->middleware('role:admin|principal|teacher')->name('by-class');
         Route::get('/student/{studentId}', [ConductScoreController::class, 'byStudent'])->middleware('role:admin|principal|teacher')->name('by-student');
+
+        Route::post('/', [ConductScoreController::class, 'store'])->middleware('role:admin|principal|teacher')->name('store');
 
         // **Cập nhật & Phê duyệt**
         Route::put('/{conductScore}', [ConductScoreController::class, 'update'])->middleware('role:teacher|admin|principal')->name('update'); // GVCN nhập nhận xét

@@ -77,6 +77,7 @@ class ScheduleService implements ScheduleServiceInterface
 
     public function updateSchedule(Schedule $schedule, array $data): Schedule
     {
+
         return $this->scheduleRepository->update($schedule->id, $data);
     }
 

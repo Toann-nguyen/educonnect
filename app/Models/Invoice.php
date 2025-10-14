@@ -21,13 +21,11 @@ class Invoice extends Model
         'paid_amount',
         'due_date',
         'status',
-        'amount' // Backward compatibility
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
-        'amount' => 'decimal:2',
         'due_date' => 'date'
     ];
 

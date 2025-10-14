@@ -112,11 +112,11 @@ class InvoiceService implements InvoiceServiceInterface
             // Thêm issued_by
             $data['issued_by'] = $creator->id;
 
-            // Tính total_amount từ fee_types nếu có
+            // Tính total_amount từ fee_types
             if (isset($data['fee_types']) && is_array($data['fee_types'])) {
-                $totalAmount = array_sum(array_column($data['fee_types'], 'amount'));
+                // Dùng "total_amount" từ request body để tính tổng
+                $totalAmount = array_sum(array_column($data['fee_types'], 'total_amount'));
                 $data['total_amount'] = $totalAmount;
-                $data['amount'] = $totalAmount; // Backward compatibility
             }
 
             // Đặt paid_amount mặc định = 0
@@ -156,7 +156,7 @@ class InvoiceService implements InvoiceServiceInterface
             if (isset($data['fee_types']) && is_array($data['fee_types'])) {
                 $totalAmount = array_sum(array_column($data['fee_types'], 'amount'));
                 $data['total_amount'] = $totalAmount;
-                $data['amount'] = $totalAmount;
+                // $data['amount'] = $totalAmount;
             }
 
             // Cập nhật invoice

@@ -114,11 +114,11 @@ class InvoiceRepository implements InvoiceRepositoryInterface
 
     public function attachFeeTypes(Invoice $invoice, array $feeTypes)
     {
-        // feeTypes format: [['fee_type_id' => 1, 'amount' => 1000000, 'note' => 'optional']]
+        // feeTypes format: [['fee_type_id' => 1, 'total_amount' => 1000000, 'note' => 'optional']]
         $syncData = [];
         foreach ($feeTypes as $feeType) {
             $syncData[$feeType['fee_type_id']] = [
-                'amount' => $feeType['amount'],
+                'amount' => $feeType['total_amount'],
                 'note' => $feeType['note'] ?? null,
             ];
         }

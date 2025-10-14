@@ -21,8 +21,9 @@ class UpdateScheduleRequest extends FormRequest
      */
     public function rules(): array
     {
+
         return [
-            'class_id' => 'sometimes|required|integer|exists:school_classes,id',
+            'class_id' => 'sometimes|required|integer|exists:classes,id',
             'subject_id' => 'sometimes|required|integer|exists:subjects,id',
             'teacher_id' => 'sometimes|required|integer|exists:users,id',
             'day_of_week' => 'sometimes|required|integer|between:1,7', // 1: Monday, 7: Sunday

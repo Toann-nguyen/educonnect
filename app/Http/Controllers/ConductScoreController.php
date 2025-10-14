@@ -157,6 +157,58 @@ class ConductScoreController extends Controller
             ], 500);
         }
     }
+    /**
+     * POST /api/conduct-scores - Tạo conduct score mới
+     * Permissions: admin, principal, teacher (homeroom)
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => 'required|integer|exists:students,id',
+            'semester' => 'required|integer',
+            'academic_year_id' => 'required|integer|exists:academic_years,id',
+            'total_penalty_points' => 'sometimes|integer',
+            'teacher_comment' => 'sometimes|string|max:1000',
+        ]);
+
+        if (isset($validated['total_penalty_points']) && $validated['total_penalty_points'] < 0) {
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => [
+                    'total_penalty_points' => ['Tổng điểm phạt không được âm (phải >= 0).']
+                ]
+            ], 422);
+        }
+
+        // Tương tự cho semester (nhưng rule in:1,2 đã handle, if này redundant)
+        if (isset($validated['semester']) && !in_array($validated['semester'], [1, 2])) {
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => [
+                    'semester' => ['Học kỳ phải là 1 (Học kỳ 1) hoặc 2 (Học kỳ 2).']
+                ]
+            ], 422);
+        }
+        try {
+            $conductScore = $this->conductScoreService->createConductScore($validated);
+
+            return response()->json([
+                'message' => 'Conduct score created successfully',
+                'data' => new ConductScoreResource($conductScore)
+            ], 201);
+        } catch (\Exception $e) {
+            dd($e);
+            Log::error('Error creating conduct score', [
+                'data' => $validated,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'message' => 'Error creating conduct score',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * PUT /api/conduct-scores/{conductScore} - Cập nhật điểm hạnh kiểm
@@ -166,8 +218,17 @@ class ConductScoreController extends Controller
     {
         $validated = $request->validate([
             'teacher_comment' => 'sometimes|string|max:1000',
-            'total_penalty_points' => 'sometimes|integer|min:0'
+            'total_penalty_points' => 'sometimes|integer'
         ]);
+
+
+        // Explicit check for total_penalty_points after validation (redundant but for custom error)
+        if (isset($validated['total_penalty_points']) && $validated['total_penalty_points'] < 0) {
+            return response()->json([
+                'message' => 'Error updating conduct score',
+                'error' => 'Tổng điểm phạt không được âm (phải >= 0).'
+            ], 422); // Custom 422 Unprocessable Entity
+        }
 
         try {
             // Load existing conduct score to extract composite keys
@@ -203,14 +264,13 @@ class ConductScoreController extends Controller
      */
     public function approve(Request $request, int $conductScoreId): JsonResponse
     {
-        dd(1);
+
         try {
             $conductScoreModel = \App\Models\StudentConductScore::findOrFail($conductScoreId);
-
             $conductScore = $this->conductScoreService->approveConductScore(
-                $conductScoreModel,
-                $request->user()
+                $conductScoreModel->id
             );
+            // dd($conductScore);
 
             return response()->json([
                 'message' => 'Conduct score approved successfully',
@@ -230,7 +290,7 @@ class ConductScoreController extends Controller
     }
 
     /**
-     * POST /api/conduct-scores/recalculate - Tính lại điểm hạnh kiểm
+     * POST /api/conduct-scores/recalculate - Tính lại điểm hạnh kiểm và thống kê báo cáo kỷ luật
      * Permissions: admin, principal
      */
     public function recalculate(Request $request): JsonResponse
@@ -243,7 +303,7 @@ class ConductScoreController extends Controller
         ]);
 
         try {
-            $result = $this->conductScoreService->recalculateConductScores(
+            $report = $this->conductScoreService->recalculateConductScores(
                 $validated['semester'],
                 $validated['academic_year_id'],
                 $validated['class_id'] ?? null,
@@ -251,8 +311,8 @@ class ConductScoreController extends Controller
             );
 
             return response()->json([
-                'message' => 'Conduct scores recalculated successfully',
-                'data' => $result
+                'message' => 'Conduct scores recalculated and discipline report generated successfully',
+                'data' => $report
             ], 200);
         } catch (\Exception $e) {
             Log::error('Error recalculating conduct scores', [

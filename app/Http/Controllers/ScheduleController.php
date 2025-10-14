@@ -111,6 +111,7 @@ class ScheduleController extends Controller
      */
     public function update(UpdateScheduleRequest $request, Schedule $schedule): JsonResponse
     {
+
         $updatedSchedule = $this->scheduleService->updateSchedule($schedule, $request->validated());
         return response()->json([
             'message' => 'Schedule updated successfully',

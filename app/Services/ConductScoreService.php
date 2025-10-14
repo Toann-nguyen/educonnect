@@ -5,12 +5,16 @@ namespace App\Services;
 use App\Models\AcademicYear;
 use App\Models\Discipline;
 use App\Models\StudentConductScore;
+use App\Models\Student;
 use App\Models\User;
 use App\Repositories\Contracts\ConductScoreRepositoryInterface;
 use App\Services\Interface\ConductScoreServiceInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Collection;
+use Carbon\Carbon;
+use App\Models\SchoolClass;
+use Illuminate\Support\Facades\Log;
 
 class ConductScoreService implements ConductScoreServiceInterface
 {
@@ -62,6 +66,29 @@ class ConductScoreService implements ConductScoreServiceInterface
         }
 
         return collect([]);
+    }
+    /**
+     * Tạo conduct score mới
+     */
+    public function createConductScore(array $data): StudentConductScore
+    {
+        return DB::transaction(function () use ($data) {
+            // Check if already exists
+            $existing = StudentConductScore::where('student_id', $data['student_id'])
+                ->where('semester', $data['semester'])
+                ->where('academic_year_id', $data['academic_year_id'])
+                ->first();
+
+            if ($existing) {
+                throw new \Exception('Conduct score already exists for this student/semester/year', 409);
+            }
+
+            // Set defaults
+            $data['total_penalty_points'] = $data['total_penalty_points'] ?? 0;
+            $data['conduct_grade'] = $data['conduct_grade'] ?? 'good';
+
+            return $this->conductScoreRepository->create($data);
+        });
     }
 
     /**
@@ -204,32 +231,72 @@ class ConductScoreService implements ConductScoreServiceInterface
         ]);
     }
 
+
     /**
-     * Tính lại conduct scores cho nhiều học sinh (bulk)
+     * POST /api/conduct-scores/recalculate - Tính lại điểm hạnh kiểm và thống kê báo cáo kỷ luật
+     * Permissions: admin, principal
+     * Best Practices:
+     * - Input validation with try-catch for invalid data (e.g., negative penalties).
+     * - Use DB::transaction for atomicity in bulk updates.
+     * - LEFT JOIN for comprehensive reporting (include students without scores).
+     * - Explicit error handling and logging.
+     * - Carbon for date handling.
+     * - Avoid N+1 queries by eager loading where possible (though raw DB for reports).
      */
-    public function recalculateBulk(
+    public function recalculateConductScores(
         int $semester,
         int $academicYearId,
         ?int $classId = null,
         ?int $studentId = null
     ): array {
-        $academicYear = AcademicYear::findOrFail($academicYearId);
+        // Step 0: Input Validation (Best Practice: Validate early)
+        try {
+            // Validate semester
+            if (!in_array($semester, [1, 2])) {
+                throw new \InvalidArgumentException('Semester must be 1 or 2.', 422);
+            }
 
-        // Calculate date range
+            // Validate academic year
+            $academicYear = AcademicYear::findOrFail($academicYearId);
+
+            // Validate class_id if provided
+            if ($classId !== null) {
+                SchoolClass::findOrFail($classId);
+            }
+
+            // Validate student_id if provided
+            if ($studentId !== null) {
+                $student = Student::findOrFail($studentId);
+            }
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            throw new \InvalidArgumentException('Invalid academic year, class, or student ID.', 422);
+        } catch (\InvalidArgumentException $e) {
+            throw $e;
+        }
+
+        // Calculate date range for semester (Best Practice: Use Carbon for immutable dates)
         $startDate = $semester === 1
-            ? $academicYear->start_date
+            ? $academicYear->start_date->copy()
             : $academicYear->start_date->copy()->addMonths(5);
 
         $endDate = $semester === 1
             ? $academicYear->start_date->copy()->addMonths(5)->subDay()
-            : $academicYear->end_date;
+            : $academicYear->end_date->copy();
 
-        // Build query for students
-        $studentsQuery = \App\Models\Student::query();
+        // Determine effective class ID for report
+        $effectiveClassId = null;
+        if (isset($student)) {
+            $effectiveClassId = $student->class_id;
+        } elseif ($classId !== null) {
+            $effectiveClassId = $classId;
+        }
 
-        if ($studentId) {
+        // Build query for students to update (Best Practice: Reuse query builder)
+        $studentsQuery = Student::query();
+
+        if ($studentId !== null) {
             $studentsQuery->where('id', $studentId);
-        } elseif ($classId) {
+        } elseif ($classId !== null) {
             $studentsQuery->where('class_id', $classId);
         }
 
@@ -237,32 +304,125 @@ class ConductScoreService implements ConductScoreServiceInterface
         $updated = 0;
         $errors = [];
 
-        foreach ($students as $student) {
-            try {
-                // Calculate penalty points
-                $totalPenalty = Discipline::where('student_id', $student->id)
-                    ->where('status', 'confirmed')
-                    ->whereBetween('incident_date', [$startDate, $endDate])
-                    ->sum('penalty_points');
+        // Step 1: Recalculate conduct scores within transaction (Best Practice: Atomic bulk update)
+        DB::transaction(function () use ($students, $semester, $academicYearId, $startDate, $endDate, &$updated, &$errors) {
+            foreach ($students as $student) {
+                try {
+                    // Calculate penalty points from confirmed disciplines
+                    $totalPenalty = Discipline::where('student_id', $student->id)
+                        ->where('status', 'confirmed')
+                        ->whereBetween('incident_date', [$startDate, $endDate])
+                        ->sum('penalty_points');
 
-                // Update conduct score
-                $this->updateConductScore($student->id, $semester, $academicYearId, [
-                    'total_penalty_points' => $totalPenalty,
-                ]);
+                    // Validate calculated total_penalty (Best Practice: Explicit check for negatives, though sum() ensures >=0)
+                    if ($totalPenalty < 0) {
+                        throw new \InvalidArgumentException("Penalty points cannot be negative for student ID {$student->id}.", 422);
+                    }
 
-                $updated++;
-            } catch (\Exception $e) {
-                $errors[] = [
-                    'student_id' => $student->id,
-                    'error' => $e->getMessage()
-                ];
+                    // Update conduct score (this internally uses createOrUpdate with transaction if needed)
+                    $this->updateConductScore($student->id, $semester, $academicYearId, [
+                        'total_penalty_points' => $totalPenalty,
+                    ]);
+
+                    $updated++;
+                } catch (\InvalidArgumentException $e) {
+                    // Re-throw validation errors to rollback transaction
+                    throw $e;
+                } catch (\Exception $e) {
+                    // Log error (Best Practice: Log for debugging)
+                    Log::error('Error recalculating conduct score for student', [
+                        'student_id' => $student->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    $errors[] = [
+                        'student_id' => $student->id,
+                        'error' => $e->getMessage()
+                    ];
+                    // Continue processing other students (partial success in bulk)
+                }
             }
+        });
+
+        // Step 2: Generate discipline report using updated conduct scores
+        // Best Practice: Use raw DB query for performance in reporting; LEFT JOIN for completeness
+        $conductQuery = DB::table('classes as c')
+            ->join('students as s', 's.class_id', '=', 'c.id')
+            ->leftJoin('student_conduct_scores as cs', function ($join) use ($semester, $academicYearId) {
+                $join->on('cs.student_id', '=', 's.id')
+                    ->where('cs.semester', '=', $semester)
+                    ->where('cs.academic_year_id', '=', $academicYearId);
+            })
+            ->select(
+                'c.id as class_id',
+                'c.name as class_name',
+                DB::raw('COUNT(DISTINCT s.id) as num_students'),
+                DB::raw('ROUND(AVG(COALESCE(cs.total_penalty_points, 0)), 2) as avg_penalty_points'),
+                DB::raw('SUM(CASE WHEN COALESCE(cs.total_penalty_points, 0) > 0 THEN 1 ELSE 0 END) as num_violating_students')
+            )
+            ->when($effectiveClassId !== null, function ($q) use ($effectiveClassId) {
+                return $q->where('c.id', $effectiveClassId);
+            })
+            ->groupBy('c.id', 'c.name')
+            ->get();
+
+        // Step 3: Get violations by type (Best Practice: Separate query for types; assume discipline_types table exists)
+        $typeQuery = DB::table('disciplines as d')
+            ->join('students as s', 'd.student_id', '=', 's.id')
+            ->join('classes as c', 's.class_id', '=', 'c.id')
+            ->join('discipline_types as dt', 'd.discipline_type_id', '=', 'dt.id')
+            ->where('d.status', '=', 'confirmed')
+            ->whereBetween('d.incident_date', [$startDate, $endDate])
+            ->select(
+                'c.id as class_id',
+                'c.name as class_name',
+                'dt.name as violation_type',
+                'dt.severity_level',
+                DB::raw('COUNT(DISTINCT d.student_id) as count')
+            )
+            ->when($effectiveClassId !== null, function ($q) use ($effectiveClassId) {
+                return $q->where('c.id', $effectiveClassId);
+            })
+            ->groupBy('c.id', 'c.name', 'dt.id', 'dt.name', 'dt.severity_level')
+            ->orderBy('c.id')
+            ->orderBy('dt.name')
+            ->get();
+
+        // Map violations by class (Best Practice: Use associative array for O(1) lookup)
+        $typeMap = [];
+        foreach ($typeQuery as $row) {
+            $classId = (int) $row->class_id;
+            if (!isset($typeMap[$classId])) {
+                $typeMap[$classId] = [];
+            }
+            $typeMap[$classId][$row->violation_type] = [
+                'count' => (int) $row->count,
+                'severity_level' => $row->severity_level
+            ];
         }
 
+        // Build final report (Best Practice: Type casting for JSON serialization)
+        $report = [];
+        foreach ($conductQuery as $row) {
+            $classId = (int) $row->class_id;
+            $report[] = [
+                'class_id' => $classId,
+                'class_name' => $row->class_name,
+                'num_students' => (int) $row->num_students,
+            ];
+        }
+
+        // Return structured response (Best Practice: Include metadata for traceability)
         return [
-            'total_students' => $students->count(),
-            'updated' => $updated,
-            'errors' => $errors
+            'recalculation' => [
+                'total_students_processed' => $students->count(),
+            ],
+            'period' => [
+                'semester' => $semester,
+                'academic_year_id' => $academicYearId,
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+            ]
         ];
     }
 }

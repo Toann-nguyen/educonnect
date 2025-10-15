@@ -56,10 +56,10 @@ Route::middleware(['auth:sanctum', 'permission:manage_roles'])->group(function (
     Route::delete('admin/roles/{role}/permissions/{permission}', [RoleController::class, 'removePermission']);
 });
 
-Route::middleware(['auth:sanctum', 'permission:manage_permissions'])->group(function () {
-    Route::apiResource('admin/permissions', PermissionController::class);
-    Route::get('admin/permissions/categories', [PermissionController::class, 'categories']);
-});
+// Route::middleware(['auth:sanctum', 'permission:manage_permissions'])->group(function () {
+//     Route::apiResource('admin/permissions', PermissionController::class);
+//     Route::get('admin/permissions/categories', [PermissionController::class, 'categories']);
+// });
 
 Route::middleware(['auth:sanctum', 'permission:manage_users'])->group(function () {
     Route::get('admin/users/{userId}/roles', [UserRoleController::class, 'getUserRoles']);

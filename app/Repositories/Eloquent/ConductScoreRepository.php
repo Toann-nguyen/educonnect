@@ -89,7 +89,7 @@ class ConductScoreRepository implements ConductScoreRepositoryInterface
         // Sort by conduct grade and penalty points
         return $query->orderByRaw("FIELD(conduct_grade, 'excellent', 'good', 'average', 'weak')")
             ->orderBy('total_penalty_points')
-            ->paginate($filters['per_page'] ?? 50);
+            ->paginate($filters['per_page'] ?? 15);
     }
 
     public function findByStudentSemester(int $studentId, int $semester, int $academicYearId): ?StudentConductScore

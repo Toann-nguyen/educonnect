@@ -19,23 +19,21 @@ class RoleRepository implements RoleRepositoryInterface
     public function paginate(int $perPage = 15, array $filters = [])
     {
         $query = $this->model->query();
-
+        
         // Filter by search
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
+         $query->when($filters['search'] ?? null, function ($q, $search) {
+            $q->where(function ($subQ) use ($search) {
+                $subQ->where('name', 'LIKE', "%{$search}%")
+                     ->orWhere('description', 'LIKE', "%{$search}%");
             });
-        }
+        });
 
-        // Filter by status
-        if (isset($filters['is_active'])) {
-            $query->where('is_active', $filters['is_active']);
-        }
+        $query->when(isset($filters['is_active']), function ($q) use ($filters) {
+            $q->where('is_active', $filters['is_active']);
+        });
+
 
         $query->with(['permissions']); // Eager load danh sách permissions chi tiết
-        $query->withCount('users');    // Giữ lại withCount cho users
         // Sort
         $sortBy = $filters['sort_by'] ?? 'created_at';
         $sortOrder = $filters['sort_order'] ?? 'desc';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RoleResource;
 use App\Services\RoleService;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
@@ -27,18 +28,21 @@ class RoleController extends Controller
     {
         try {
             $filters = $request->only(['search', 'is_active', 'sort_by', 'sort_order', 'per_page']);
+
+            /** @var \Illuminate\Pagination\LengthAwarePaginator $roles */
             $roles = $this->roleService->listRoles($filters);
 
-            return response()->json([
-                'message' => 'Roles retrieved successfully',
-                'data' => $roles->items(),
-                'meta' => [
-                    'current_page' => $roles->currentPage(),
-                    'total' => $roles->total(),
-                    'per_page' => $roles->perPage(),
-                    'last_page' => $roles->lastPage(),
-                ]
-            ]);
+            // return response()->json([
+            //     'message' => 'Roles retrieved successfully',
+            //     'data' => $roles->items(),
+            //     'meta' => [
+            //         'current_page' => $roles->currentPage(),
+            //         'total data' => $roles->total(),
+            //         'per_page' => $roles->perPage(),
+            //         'last_page' => $roles->lastPage(),
+            //     ]
+            // ]);
+            return RoleResource::collection($roles);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to retrieve roles',
@@ -87,7 +91,7 @@ class RoleController extends Controller
 
             return response()->json([
                 'message' => 'Role created successfully',
-                'data' => $role
+                'data' =>  new RoleResource($role),
             ], 201);
         } catch (\Exception $e) {
             $statusCode = (int)($e->getCode() ?: 500);

@@ -34,10 +34,12 @@ use App\Services\Interface\FeeTypeServiceInterface;
 use App\Services\Interface\GradeServiceInterface;
 use App\Services\Interface\InvoiceServiceInterface;
 use App\Services\Interface\PaymentServiceInterface;
+use App\Services\Interface\PermissionServiceInterface;
 use App\Services\Interface\StudentServiceInterface;
 use App\Services\Interface\UserServiceInterface;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use App\Services\RolePermissionService;
 use App\Services\StudentService;
 use App\Services\UserRoleService;
 use App\Services\UserService;
@@ -54,6 +56,7 @@ use App\Services\DisciplineService;
 use App\Services\Interface\ConductScoreServiceInterface;
 use App\Services\ConductScoreService;
 use App\Services\RoleService;
+use App\Services\PermissionService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -78,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
 
         //bind service
         $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
+        $this->app->bind(PermissionServiceInterface::class, PermissionService::class);
         $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
         $this->app->bind(UserServiceInterface::class, UserService::class);
         $this->app->bind(AuthServiceInterface::class, AuthService::class);

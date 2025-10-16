@@ -74,7 +74,7 @@ class Kernel extends HttpKernel
         'role' => \App\Http\Middleware\JsonRoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-        'check.status' => \App\Http\Middleware\CheckUserStatus::class,
+        // 'check.status' => \App\Http\Middleware\CheckUserStatus::class,
         // Custom middleware tối thiểu
         'validate.api' => \App\Http\Middleware\ValidateApiAccess::class,
         'role.redirect' => \App\Http\Middleware\RoleBasedRedirect::class,

@@ -4,30 +4,17 @@ namespace App\Services\Interface;
 
 use Illuminate\Database\Eloquent\Collection;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
 interface PermissionServiceInterface
 {
     /**
      * Lấy tất cả permissions
      *
-     * @return Collection
+     * @return LengthAwarePaginator
      */
-    public function getAllPermissions(): Collection;
-
-    /**
-     * Lấy permissions theo category
-     *
-     * @param string $category
-     * @return Collection
-     */
-    public function getPermissionsByCategory(string $category): Collection;
-
-    /**
-     * Lấy permissions groupby category
-     *
-     * @return array ['category_name' => [permissions]]
-     */
-    public function getPermissionsGrouped(): array;
-
+    public function getAllPermissions(array $filters = []): LengthAwarePaginator;
+  
     /**
      * Lấy chi tiết 1 permission
      *

@@ -1,8 +1,11 @@
 <?php
+namespace App\Services;
 
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Services\Interface\PermissionServiceInterface;
+use Exception;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PermissionService implements PermissionServiceInterface
 {
@@ -12,13 +15,24 @@ class PermissionService implements PermissionServiceInterface
     {
         $this->permissionRepository = $permissionRepository;
     }
+    
+    /**
+     * Lấy tất cả permissions (có phân trang)
+     */
+    public function getAllPermissions(array $filters = []): LengthAwarePaginator
+    {
+        $perPage = $filters['per_page'] ?? 15;
+        return $this->permissionRepository->all($perPage, $filters);
+    }
 
     /**
-     * Lấy tất cả permissions
+     * Lấy danh sách permissions có PHÂN TRANG.
      */
-    public function getAllPermissions(): Collection
+    public function listPermissions(array $filters = []): LengthAwarePaginator
     {
-        return $this->permissionRepository->all(['id', 'name', 'description', 'category']);
+        $perPage = $filters['per_page'] ?? 15;
+        // Gọi đến hàm paginate của Repository
+        return $this->permissionRepository->paginate($perPage, $filters);
     }
 
     /**

@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class DisciplineTypeResource extends JsonResource
+class PermissionResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,9 +16,7 @@ class DisciplineTypeResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'code' => $this->code,
             'name' => $this->name,
-            'Muc do nghiem trong ' => $this->severity_level,
         ];
     }
 }

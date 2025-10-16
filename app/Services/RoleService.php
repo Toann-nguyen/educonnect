@@ -93,7 +93,7 @@ class RoleService implements RoleServiceInterface
             // Clear cache
             $this->clearRoleCache();
 
-            return $role;
+             return $role->load('permissions');
         });
     }
 

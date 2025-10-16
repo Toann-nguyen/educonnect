@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DisciplineTypeController;
 use App\Http\Controllers\FeeTypeController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\QrController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Http\Request;
@@ -50,23 +51,27 @@ Route::prefix('auth')->group(function () {
 // ROLE AND PERMISSION ROUTES ( Authentication Required)
 // ============================================================================
 
-Route::middleware(['auth:sanctum', 'permission:manage_roles'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin|principal'])->group(function () {
     Route::apiResource('admin/roles', RoleController::class);
+
+    Route::get('permissions', [PermissionController::class, 'index']);
+    Route::get('permissions/{id}', [PermissionController::class, 'show']);
+    Route::post('admin/permissions', [PermissionController::class, 'store']);
+    Route::put('admin/permissions/{id}', [PermissionController::class,'update']);
+    Route::delete('admin/permissions/{id}', [PermissionController::class,'destroy']);
+    
     Route::post('admin/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
     Route::delete('admin/roles/{role}/permissions/{permission}', [RoleController::class, 'removePermission']);
 });
 
-// Route::middleware(['auth:sanctum', 'permission:manage_permissions'])->group(function () {
-//     Route::apiResource('admin/permissions', PermissionController::class);
-//     Route::get('admin/permissions/categories', [PermissionController::class, 'categories']);
-// });
 
-Route::middleware(['auth:sanctum', 'permission:manage_users'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin|principal'])->group(function () {
     Route::get('admin/users/{userId}/roles', [UserRoleController::class, 'getUserRoles']);
     Route::post('admin/users/{userId}/roles', [UserRoleController::class, 'assignRoles']);
     Route::delete('admin/users/{userId}/roles/{roleName}', [UserRoleController::class, 'removeRole']);
     Route::get('admin/users/{userId}/permissions', [UserRoleController::class, 'getUserPermissions']);
 });
+
 // ============================================================================
 // QR CODE
 // ============================================================================

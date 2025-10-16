@@ -17,18 +17,6 @@ interface RoleRepositoryInterface
     public function getUsersCount(int $roleId): int;
 }
 
-interface PermissionRepositoryInterface
-{
-    public function all();
-    public function getByCategory(string $category);
-    public function findById(int $id);
-    public function findByName(string $name);
-    public function create(array $data);
-    public function update(int $id, array $data);
-    public function delete(int $id): bool;
-    public function getCategories();
-}
-
 interface RolePermissionRepositoryInterface
 {
     public function attachPermissionsToRole(int $roleId, array $permissionIds, string $mode = 'sync');

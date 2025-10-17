@@ -51,7 +51,7 @@ class RoleAndPermissionSeeder extends Seeder
             'manage events',
             'manage users',
             'view schedules',
-            'manage schedules'
+            'manage schedules',
         ]);
 
         $adminRole->givePermissionTo(Permission::all());

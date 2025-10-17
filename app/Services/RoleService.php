@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Exception;
 use Illuminate\Contracts\Pagination\Paginator;
+use App\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleService implements RoleServiceInterface
 {
@@ -28,6 +30,7 @@ class RoleService implements RoleServiceInterface
         $this->rolePermissionRepository = $rolePermissionRepository;
     }
 
+
     /**
      * Lấy danh sách roles với pagination
      */
@@ -40,23 +43,83 @@ class RoleService implements RoleServiceInterface
     }
 
     /**
+     * Thêm các quyền cho một vai trò (role), bỏ qua những quyền (permissions)đã tồn tại.
+     * Trả về một mảng chứa kết quả chi tiết để Controller có thể xử lý.
+     *
+     * @param int $roleId ID của vai trò cần gán quyền.
+     * @param array $permissionIds Mảng các ID quyền từ request.
+     * @return array Cấu trúc trả về bao gồm:
+     *               - 'role': Đối tượng Role đã được cập nhật.
+     *               - 'details': Mảng chi tiết về các quyền đã thêm và bị bỏ qua.
+     * @throws Exception Nếu không tìm thấy Role.
+     */
+    public function addPermissionsToRole(int $roleId, array $permissionIds): array
+    {
+        return DB::transaction(function () use ($roleId, $permissionIds) {
+            $role = $this->roleRepository->findById($roleId);
+            if (!$role) {
+                throw new Exception('Vai trò (Role) không tồn tại.', 404);
+            }
+
+            $uniquePermissionIds = array_unique($permissionIds);
+
+            // LOGIC CHECK: Lấy các permission đã tồn tại
+            $existingPermissionIds = DB::table('role_has_permissions')
+                ->where('role_id', $roleId)
+                ->whereIn('permission_id', $uniquePermissionIds)
+                ->pluck('permission_id')
+                ->all();
+
+            // LOGIC CHECK: Lọc ra các permission mới
+            $newPermissionIds = array_diff($uniquePermissionIds, $existingPermissionIds);
+
+            if (!empty($newPermissionIds)) {
+                $this->roleRepository->attachPermissions($roleId, $newPermissionIds);
+                app()[PermissionRegistrar::class]->forgetCachedPermissions();
+            }
+
+            // Tải lại role đã cập nhật
+            $updatedRole = $this->roleRepository->getWithPermissions($roleId);
+
+            // Đóng gói tất cả thông tin cần thiết vào một mảng và trả về
+            return [
+                'role' => $updatedRole,
+                'details' => [
+                    'added' => array_values($newPermissionIds),
+                    'skipped_existing' => $existingPermissionIds,
+                ]
+            ];
+        });
+    }
+
+
+    /**
+     * Đồng bộ (thay thế hoàn toàn) permissions của một role.
+     */
+    public function syncPermissionsForRole(int $roleId, array $permissionIds): Role
+    {
+        dd(1);
+        // Gọi đến RolePermissionRepository để thực hiện
+        $role = $this->rolePermissionRepository->syncPermissions($roleId, $permissionIds);
+
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        return $role->load('permissions');
+    }
+    /**
      * Lấy chi tiết 1 role
      */
-    public function getRoleDetail(int $roleId)
+    public function getRoleDetail(int $roleId): ?Role
     {
         $role = $this->roleRepository->getWithPermissions($roleId);
-
         if (!$role) {
             throw new Exception('Role not found', 404);
         }
 
-        // Add users count
-        $usersCount = $this->roleRepository->getUsersCount($roleId);
-
-        return [
-            'role' => $role,
-            'users_count' => $usersCount,
-        ];
+        if (!$role) {
+            throw new Exception('Role not found', 404);
+        }
+        return $role;
     }
 
     /**
@@ -74,8 +137,6 @@ class RoleService implements RoleServiceInterface
             // Create role
             $role = $this->roleRepository->create([
                 'name' => $data['name'],
-                'description' => $data['description'] ?? null,
-                'is_active' => $data['is_active'] ?? true,
                 'guard_name' => 'web',
             ]);
 
@@ -93,7 +154,7 @@ class RoleService implements RoleServiceInterface
             // Clear cache
             $this->clearRoleCache();
 
-             return $role->load('permissions');
+            return $role->load('permissions');
         });
     }
 
@@ -108,12 +169,15 @@ class RoleService implements RoleServiceInterface
             if (!$role) {
                 throw new Exception('Role not found', 404);
             }
+            // === THÊM LOGIC KIỂM TRA TRÙNG TÊN KHI CẬP NHẬT ===
+            if (isset($data['name'])) {
+                // Tìm xem có role nào khác có tên này không
+                $existingRole = $this->roleRepository->findByName($data['name']);
 
-            // Check constraints
-            if (isset($data['is_active']) && !$data['is_active']) {
-                $usersCount = $this->roleRepository->getUsersCount($roleId);
-                if ($usersCount > 0) {
-                    Log::warning("Deactivating role {$roleId} with {$usersCount} active users");
+                // Nếu tìm thấy một role và ID của nó không phải là ID của role đang sửa
+                // thì tức là tên đã bị trùng
+                if ($existingRole && $existingRole->id !== $roleId) {
+                    throw new Exception('Role name already exists', 409);
                 }
             }
 
@@ -159,8 +223,6 @@ class RoleService implements RoleServiceInterface
             // Soft delete
             $this->roleRepository->delete($roleId);
 
-            // Log audit
-            $this->logAudit('role_deleted', $roleId, 'role', $role->toArray(), null);
 
             // Clear cache
             $this->clearRoleCache();
@@ -168,6 +230,10 @@ class RoleService implements RoleServiceInterface
             return true;
         });
     }
+
+
+
+
 
     /**
      * Gán permissions cho role
@@ -206,6 +272,19 @@ class RoleService implements RoleServiceInterface
 
             return true;
         });
+    }
+    /**
+     * Lấy permissions của role
+     */
+    public function getRolePermissions(int $roleId)
+    {
+        $role = $this->roleRepository->findById($roleId);
+
+        if (!$role) {
+            throw new Exception('Role not found', 404);
+        }
+
+        return $this->rolePermissionRepository->getRolePermissions($roleId);
     }
 
     /**

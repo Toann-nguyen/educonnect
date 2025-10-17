@@ -2,7 +2,8 @@
 
 namespace App\Services\Interface;
 
-use Illuminate\Database\Eloquent\Collection;
+use App\Models\User;
+use \Illuminate\Database\Eloquent\Collection;
 
 interface UserRoleServiceInterface
 {
@@ -69,7 +70,7 @@ interface UserRoleServiceInterface
      * @return bool
      * @throws Exception
      */
-    public function revokePermissionsFromUser($userId, $permissions): bool;
+    public function revokePermissionsFromUser(int $userId, array $permissions): User;
 
     /**
      * Check user có permission không (OR logic - có 1 trong các permission)
@@ -105,4 +106,6 @@ interface UserRoleServiceInterface
      * @return array
      */
     public function getUserAccessMatrix(int $userId): array;
+
+    
 }

@@ -78,7 +78,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
         $this->app->bind(PermissionRepositoryInterface::class, PermissionRepository::class);
         $this->app->bind(RolePermissionRepositoryInterface::class, RolePermissionRepository::class);
-
+       
         //bind service
         $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
         $this->app->bind(PermissionServiceInterface::class, PermissionService::class);
@@ -92,16 +92,19 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GradeServiceInterface::class, GradeService::class);
         $this->app->bind(PaymentServiceInterface::class, PaymentService::class);
         $this->app->bind(FeeTypeServiceInterface::class, FeeTypeService::class);
-        $this->app->bind(RoleService::class, function ($app) {
-            return new RoleService(
-                $app->make(RoleRepositoryInterface::class),
-                $app->make(PermissionRepositoryInterface::class),
-                $app->make(RolePermissionRepositoryInterface::class)
+       // Role Service with dependencies
+        $this->app->bind(\App\Services\Interface\RoleServiceInterface::class, function ($app) {
+            return new \App\Services\RoleService(
+                $app->make(\App\Repositories\Contracts\RoleRepositoryInterface::class),
+                $app->make(\App\Repositories\Contracts\PermissionRepositoryInterface::class),
+                $app->make(\App\Repositories\Contracts\RolePermissionRepositoryInterface::class)
             );
         });
-        $this->app->bind(UserRoleService::class, function ($app) {
-            return new UserRoleService(
-                $app->make(RolePermissionRepositoryInterface::class)
+        
+        // UserRole Service with dependencies
+        $this->app->bind(\App\Services\Interface\UserRoleServiceInterface::class, function ($app) {
+            return new \App\Services\UserRoleService(
+                $app->make(\App\Repositories\Contracts\RolePermissionRepositoryInterface::class)
             );
         });
     }

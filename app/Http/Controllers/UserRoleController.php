@@ -5,7 +5,15 @@ namespace App\Http\Controllers;
 use App\Services\UserRoleService;
 use App\Http\Requests\AssignRolesToUserRequest;
 use Illuminate\Http\Request;
-
+use App\Http\Requests\AssignPermissionsToUserRequest;
+use App\Http\Resources\UserResource;
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use App\Services\Interface\UserRoleServiceInterface;
+use Spatie\Permission\Models\Permission;
+use App\Http\Resources\PermissionResource;
+use Exception;
 class UserRoleController extends Controller
 {
     protected $userRoleService;
@@ -13,8 +21,7 @@ class UserRoleController extends Controller
     public function __construct(UserRoleService $userRoleService)
     {
         $this->userRoleService = $userRoleService;
-        $this->middleware('permission:manage_users')->except(['currentUserRoles', 'currentUserPermissions', 'currentUserCan']);
-    }
+      }
 
     /**
      * GET /api/admin/users/{userId}/roles
@@ -50,7 +57,7 @@ class UserRoleController extends Controller
             return response()->json([
                 'message' => 'User permissions retrieved successfully',
                 'data' => $permissions,
-                // SỬA LỖI Ở ĐÂY: Sử dụng phương thức ->count() của Collection
+                // Sử dụng phương thức ->count() của Collection
                 'total' => $permissions->count()
             ]);
         } catch (\Exception $e) {
@@ -90,21 +97,65 @@ class UserRoleController extends Controller
      * DELETE /api/admin/users/{userId}/roles/{roleName}
      * Xóa role khỏi user
      */
-    public function removeRole($userId, $roleName)
+     public function removeRole(User $user, Role $role): JsonResponse
     {
         try {
-            $this->userRoleService->removeRoleFromUser($userId, $roleName);
+            $updatedUser = $this->userRoleService->removeRoleFromUser($user->id, $role->name);
 
-            return response()->json([
-                'message' => 'Role removed successfully'
-            ]);
-        } catch (\Exception $e) {
-            $statusCode = $e->getCode() ?: 500;
-            return response()->json([
-                'message' => $e->getMessage()
-            ], $statusCode);
+            return response()->json(new UserResource($updatedUser));
+
+        } catch (Exception $e) {
+            return $this->handleException($e);
         }
     }
+
+     /**
+     * DELETE /api/admin/users/{user}/permissions/{permission}
+     * Xóa một quyền hạn được gán trực tiếp khỏi người dùng.
+     */
+    public function removePermission(User $user,Permission  $permission): JsonResponse
+    {
+        try {
+            $this->userRoleService->revokePermissionsFromUser($user->id, [$permission->name]);
+
+            // Lấy lại danh sách các quyền trực tiếp còn lại để trả về
+            $directPermissions = $this->userRoleService->getUserDirectPermissions($user->id);
+
+            return response()->json([
+                'message' => 'Direct permission revoked successfully.',
+                'data' => PermissionResource::collection($directPermissions)
+            ]);
+
+        } catch (Exception $e) {
+            return $this->handleException($e);
+        }
+    }
+
+    /**
+     * POST /api/admin/users/{userId}/permissions
+     * Gán permissions trực tiếp cho user (không qua role)
+     */
+    public function assignPermissions(AssignPermissionsToUserRequest $request, int $userId): JsonResponse
+    {
+        try {
+            $validated = $request->validated();
+            
+            $this->userRoleService->givePermissionsToUser(
+                $userId,
+                $validated['permissions']
+            );
+
+            return response()->json([
+                'message' => 'Direct permissions assigned successfully',
+                'data' => $this->userRoleService->getUserDirectPermissions($userId)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+   
 
     /**
      * GET /api/me/roles
@@ -126,6 +177,7 @@ class UserRoleController extends Controller
             ], 500);
         }
     }
+    
 
     /**
      * GET /api/me/permissions
@@ -184,5 +236,23 @@ class UserRoleController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+      /**
+     * Phương thức xử lý lỗi chung.
+     */
+    private function handleException(Exception $e): JsonResponse
+    {
+        $statusCode = is_int($e->getCode()) && $e->getCode() >= 100 && $e->getCode() <= 599 
+                      ? $e->getCode() 
+                      : 500;
+        
+        if ($statusCode === 500) {
+            \Log::error($e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        }
+        
+        return response()->json([
+            'message' => $statusCode === 500 ? 'An unexpected server error occurred.' : $e->getMessage()
+        ], $statusCode);
     }
 }

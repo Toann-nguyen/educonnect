@@ -7,8 +7,11 @@ use App\Services\RoleService;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
 use App\Http\Requests\AssignPermissionsRequest;
+use App\Models\Role;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Http\JsonResponse;
 
 class RoleController extends Controller
 {
@@ -32,16 +35,6 @@ class RoleController extends Controller
             /** @var \Illuminate\Pagination\LengthAwarePaginator $roles */
             $roles = $this->roleService->listRoles($filters);
 
-            // return response()->json([
-            //     'message' => 'Roles retrieved successfully',
-            //     'data' => $roles->items(),
-            //     'meta' => [
-            //         'current_page' => $roles->currentPage(),
-            //         'total data' => $roles->total(),
-            //         'per_page' => $roles->perPage(),
-            //         'last_page' => $roles->lastPage(),
-            //     ]
-            // ]);
             return RoleResource::collection($roles);
         } catch (\Exception $e) {
             return response()->json([
@@ -55,26 +48,34 @@ class RoleController extends Controller
      * GET /api/admin/roles/{id}
      * Lấy chi tiết 1 role
      */
-    public function show($id)
+    public function show(Role $role)
     {
         try {
-            $roleDetail = $this->roleService->getRoleDetail($id);
+            // FIX: Check role tồn tại trước khi gọi service
+            if (!$role) {
+                return response()->json([
+                    'message' => 'Role not found'
+                ], 404);
+            }
 
+            // Service chỉ cần trả về đối tượng Role đã được load sẵn
+            $roleWithDetails = $this->roleService->getRoleDetail($role->id);
+
+            // SỬ DỤNG RESOURCE ĐỂ ĐỊNH DẠNG RESPONSE
             return response()->json([
                 'message' => 'Role retrieved successfully',
-                'data' => $roleDetail
+                'data' => new RoleResource($roleWithDetails)
             ]);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() ?: 500;
-            return response()->json([
-                'message' => $e->getMessage()
-            ], $statusCode);
+            return $this->handleException($e);
         }
     }
 
+
+
     /**
      * POST /api/admin/roles
-     * Tạo role mới
+     * Tạo role mới 
      */
     public function store(StoreRoleRequest $request)
     {
@@ -111,7 +112,15 @@ class RoleController extends Controller
      */
     public function update(UpdateRoleRequest $request, $id)
     {
+        dd(1);
         try {
+            // FIX: Validate $id không null hoặc không phải int
+            if ($id === null || !is_numeric($id) || $id <= 0) {
+                return response()->json([
+                    'message' => 'Invalid role ID'
+                ], 400);
+            }
+
             $validated = $request->validated();
             $role = $this->roleService->updateRole($id, $validated);
 
@@ -134,6 +143,13 @@ class RoleController extends Controller
     public function destroy($id)
     {
         try {
+            // FIX: Validate $id không null hoặc không phải int
+            if ($id === null || !is_numeric($id) || $id <= 0) {
+                return response()->json([
+                    'message' => 'Invalid role ID'
+                ], 400);
+            }
+
             $this->roleService->deleteRole($id);
 
             return response()->json([
@@ -148,21 +164,61 @@ class RoleController extends Controller
     }
 
     /**
-     * POST /api/admin/roles/{id}/permissions
-     * Gán permissions cho role
+     * Gán thêm các quyền cho một vai trò.
+     * POST /api/admin/roles/{roleId}/permissions
      */
-    public function assignPermissions(AssignPermissionsRequest $request, $id)
+    public function assignPermissions(AssignPermissionsRequest $request, int $roleId): JsonResponse
     {
         try {
-            $validated = $request->validated();
-            $this->roleService->assignPermissionsToRole(
-                $id,
-                $validated['permissions'],
-                $validated['mode'] ?? 'sync'
-            );
+            $permissionIds = $request->validated()['permissions'];
+
+            // 1. Gọi Service. $result bây giờ là một MẢNG.
+            $result = $this->roleService->addPermissionsToRole($roleId, $permissionIds);
+            
+            // 2. "Giải nén" mảng kết quả ra các biến để dễ sử dụng
+            $updatedRole = $result['role'];
+            $details = $result['details'];
+            
+            // 3. Dùng $details để tạo message thông báo
+            $message = 'Yêu cầu đã được xử lý.';
+            if (!empty($details['added']) && empty($details['skipped_existing'])) {
+                $message = 'Tất cả các quyền đã được gán thành công.';
+            } elseif (empty($details['added']) && !empty($details['skipped_existing'])) {
+                $message = 'Không có quyền nào được thêm mới vì tất cả đã được gán từ trước.';
+            } elseif (!empty($details['added']) && !empty($details['skipped_existing'])) {
+                $message = 'Một số quyền đã được gán, một số khác bị bỏ qua vì đã tồn tại.';
+            }
+
+            // 4. Trả về JsonResponse hoàn chỉnh
+            return response()->json([
+                'message' => $message,
+                'data' => new RoleResource($updatedRole), // Dùng đối tượng Role để tạo Resource
+                'details' => $details,
+            ]);
+
+        } catch (Exception $e) {
+            $statusCode = is_numeric($e->getCode()) && $e->getCode() >= 400 ? (int)$e->getCode() : 500;
+            return response()->json(['message' => $e->getMessage()], $statusCode);
+        }
+    }
+    /**
+     * DELETE /api/admin/roles/{id}/permissions/{permissionId}
+     * Xóa permission khỏi role
+     */
+    public function removePermission($roleId, $permissionId)
+    {
+        try {
+            // FIX: Validate $roleId không null hoặc không phải int
+            if ($roleId === null || !is_numeric($roleId) || $roleId <= 0) {
+                return response()->json([
+                    'message' => 'Invalid role ID'
+                ], 400);
+            }
+
+            $this->roleService->removePermissionsFromRole($roleId, [$permissionId]);
 
             return response()->json([
-                'message' => 'Permissions assigned successfully'
+                'message' => 'Permission removed successfully'
             ]);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() ?: 500;
@@ -173,16 +229,25 @@ class RoleController extends Controller
     }
 
     /**
-     * DELETE /api/admin/roles/{id}/permissions/{permissionId}
-     * Xóa permission khỏi role
+     * GET /api/admin/roles/{id}/permissions
+     * Lấy danh sách permissions của role
      */
-    public function removePermission($roleId, $permissionId)
+    public function getRolePermissions(int $id): JsonResponse
     {
         try {
-            $this->roleService->removePermissionsFromRole($roleId, [$permissionId]);
+            // FIX: Vì method signature có type hint int $id, nhưng nếu route param null, PHP sẽ error sớm. Thêm check an toàn
+            if ($id === null || $id <= 0) {
+                return response()->json([
+                    'message' => 'Invalid role ID'
+                ], 400);
+            }
+
+            $permissions = $this->roleService->getRolePermissions($id);
 
             return response()->json([
-                'message' => 'Permission removed successfully'
+                'message' => 'Role permissions retrieved successfully',
+                'data' => $permissions,
+                'total' => $permissions->count()
             ]);
         } catch (\Exception $e) {
             $statusCode = $e->getCode() ?: 500;

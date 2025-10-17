@@ -8,23 +8,25 @@ class AssignPermissionsRequest extends FormRequest
 {
     public function authorize()
     {
-        return $this->user()->can('manage_roles') && $this->user()->can('manage_permissions');
-    }
+        return true;
+      }
 
     public function rules()
     {
         return [
-            'permissions' => 'required|array|min:1',
+            'permissions' => 'required|array',
             'permissions.*' => 'integer|exists:permissions,id',
-            'mode' => 'in:add,replace,sync',
+            'mode' => 'sometimes|string|in:sync,attach',
         ];
     }
 
     public function messages()
     {
         return [
-            'permissions.required' => 'At least one permission is required',
-            'permissions.*.exists' => 'One or more permissions do not exist',
+            'permissions.required' => 'Mảng permissions là bắt buộc.',
+            'permissions.array' => 'Permissions phải là một mảng.',
+            'permissions.*.integer' => 'Mỗi permission ID phải là một số nguyên.',
+            'permissions.*.exists' => 'Một hoặc nhiều permission ID không tồn tại.',
         ];
     }
 }

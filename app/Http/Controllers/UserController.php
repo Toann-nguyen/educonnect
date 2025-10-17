@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AssignRoleRequest;
+use App\Http\Requests\StoreUserByAdminRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -172,21 +174,25 @@ class UserController extends Controller
                 'message' => 'User not found or not deleted.',
             ], 404);
     }
-    public function store(StoreUserRequest $request)
-    {
-        $validated = $request->validated();
-        $user = User::create([
-            'email' => $validated['email'],
-            'password' => Hash::make('password'), // Mặc định, nên yêu cầu đổi sau lần đăng nhập đầu tiên
-        ]);
-        $user->profile()->create($validated['profile']);
 
-        foreach ($validated['roles'] as $roleName) {
-            $this->userService->assignRoleToUser($user, $roleName);
+      /**
+     * Store a newly created resource in storage (by Admin).
+     *
+     * @param StoreUserByAdminRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(StoreUserByAdminRequest $request)
+    {
+        try {
+            $user = $this->userService->createUserByAdmin($request->validated());
+
+            return response()->json([
+                'message' => 'User created successfully.',
+                'data' => new UserResource($user),
+            ], 201);
+
+        } catch (\Exception $e) {
+            return $this->handleException($e); 
         }
-        if (!empty($validated['permissions'])) {
-            $user->givePermissionTo($validated['permissions']);
-        }
-        return new UserResource($user);
     }
 }

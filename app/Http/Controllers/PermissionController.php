@@ -86,6 +86,7 @@ class PermissionController extends Controller
      */
     public function update(UpdatePermissionRequest $request, int $id): JsonResponse
     {
+        dd(1);
         try {
             $validated = $request->validated();
             $permission = $this->permissionService->updatePermission($id, $validated);

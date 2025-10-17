@@ -4,40 +4,54 @@ namespace App\Repositories\Eloquent;
 
 use Illuminate\Support\Facades\DB;
 use App\Repositories\Contracts\RolePermissionRepositoryInterface;
+use Spatie\Permission\Models\Role;
+use Exception;
 
 class RolePermissionRepository implements RolePermissionRepositoryInterface
 {
-    public function attachPermissionsToRole(int $roleId, array $permissionIds, string $mode = 'sync')
+
+
+      public function syncPermissions(int $roleId, array $permissionIds): Role
     {
-        $role = DB::table('roles')->find($roleId);
+        $role = Role::findById($roleId);
         if (!$role) {
-            throw new \Exception('Role not found');
+            throw new Exception("Role with ID {$roleId} not found.", 404);
         }
 
-        if ($mode === 'sync') {
-            DB::table('role_has_permissions')
-                ->where('role_id', $roleId)
-                ->delete();
-        } elseif ($mode === 'add') {
-            // Remove duplicates
-            $existing = DB::table('role_has_permissions')
-                ->where('role_id', $roleId)
-                ->pluck('permission_id')
-                ->toArray();
-
-            $permissionIds = array_diff($permissionIds, $existing);
-        }
-
-        // Insert
-        foreach ($permissionIds as $permissionId) {
-            DB::table('role_has_permissions')->insert([
-                'role_id' => $roleId,
-                'permission_id' => $permissionId,
-            ]);
-        }
-
-        return true;
+        // Spatie's syncPermissions() sẽ thao tác với bảng `role_has_permissions`
+        $role->syncPermissions($permissionIds);
+        
+        return $role;
     }
+
+     public function attachPermissions(int $roleId, array $permissionIds): Role
+    {
+        $role = Role::findById($roleId);
+        if (!$role) {
+            throw new Exception("Role with ID {$roleId} not found.", 404);
+        }
+
+        // Spatie's givePermissionTo() cũng sẽ thao tác với bảng `role_has_permissions`
+        $role->givePermissionTo($permissionIds);
+
+        return $role;
+    }    
+
+    /**
+     * Thao tác với danh sách permissions của một role.
+     */
+    public function syncPermissionsForRole(int $roleId, array $permissionIds): Role
+    {
+        $role = Role::findById($roleId);
+        if (!$role) {
+            throw new Exception("Role with ID {$roleId} not found.", 404);
+        }
+        // syncPermissions: Xóa tất cả quyền cũ, chỉ gán danh sách mới.
+        $role->syncPermissions($permissionIds);
+        return $role;
+    }
+
+
 
     public function detachPermissionsFromRole(int $roleId, array $permissionIds)
     {

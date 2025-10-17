@@ -51,17 +51,52 @@ Route::prefix('auth')->group(function () {
 // ROLE AND PERMISSION ROUTES ( Authentication Required)
 // ============================================================================
 
-Route::middleware(['auth:sanctum', 'role:admin|principal'])->group(function () {
-    Route::apiResource('admin/roles', RoleController::class);
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+ // --- BẮT ĐẦU PHẦN THAY THẾ ---
+    
+    // THAY THẾ CHO: Route::apiResource('admin/roles', RoleController::class);
+
+    // 1. Lấy danh sách roles
+    Route::get('admin/roles', [RoleController::class, 'index']);
+
+    // 2. Tạo role mới
+    Route::post('admin/roles', [RoleController::class, 'store']);
+
+    // 3. Lấy chi tiết một role
+    Route::get('admin/roles/{id}', [RoleController::class, 'show']);
+
+    // 4. Cập nhật một role (ĐÂY LÀ ROUTE BẠN ĐANG CẦN)
+    Route::put('admin/roles/{id}', [RoleController::class, 'update']);
+
+    // 5. Xóa một role
+    Route::delete('admin/roles/{id}', [RoleController::class, 'destroy']);
+
+    // --- KẾT THÚC PHẦN THAY THẾ ---::delete('admin/roles/{id}', [RoleController::class, 'destroy']);
 
     Route::get('permissions', [PermissionController::class, 'index']);
     Route::get('permissions/{id}', [PermissionController::class, 'show']);
     Route::post('admin/permissions', [PermissionController::class, 'store']);
-    Route::put('admin/permissions/{id}', [PermissionController::class,'update']);
-    Route::delete('admin/permissions/{id}', [PermissionController::class,'destroy']);
+    Route::put('admin/permissions/{id}', [PermissionController::class, 'update']);
+    Route::delete('admin/permissions/{id}', [PermissionController::class, 'destroy']);
+    
+    
+    // Lấy permissions của role
+    Route::get('admin/roles/{id}/permissions', [RoleController::class, 'getRolePermissions']);
     
     Route::post('admin/roles/{id}/permissions', [RoleController::class, 'assignPermissions']);
     Route::delete('admin/roles/{role}/permissions/{permission}', [RoleController::class, 'removePermission']);
+
+    // Lấy roles và permissions của user
+    Route::get('admin/users/{userId}/roles', [UserRoleController::class, 'getUserRoles']);
+    Route::get('admin/users/{userId}/permissions', [UserRoleController::class, 'getUserPermissions']);
+
+    // Gán/Xóa roles cho user
+    Route::post('admin/users/{userId}/roles', [UserRoleController::class, 'assignRoles']);
+    Route::delete('admin/users/{userId}/roles/{roleName}', [UserRoleController::class, 'removeRole']);
+
+    // Gán/Xóa permissions trực tiếp cho user
+    Route::post('admin/users/{userId}/permissions', [UserRoleController::class, 'assignPermissions']);
+    Route::delete('admin/users/{user}/permissions/{permission}', [UserRoleController::class, 'removePermission']);
 });
 
 
@@ -91,6 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('user', [AuthController::class, 'user']);
     });
 
+
     // Profile - tất cả user đăng nhập
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'index']);
@@ -104,7 +140,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ADMIN ONLY ROUTES
     // ------------------------------------------------------------------------
     Route::middleware('role:admin')->prefix('admin')->group(function () {
+
+        // create user by admin
         Route::apiResource('users', UserController::class);
+
         Route::apiResource('academic-years', AcademicYearController::class);
         Route::apiResource('classes', SchoolClassController::class);
         Route::apiResource('subjects', SubjectController::class);

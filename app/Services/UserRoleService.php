@@ -6,10 +6,10 @@ use App\Repositories\Contracts\RolePermissionRepositoryInterface;
 // THAY ĐỔI: Sử dụng User Model thay vì DB facade để tận dụng relationship
 use App\Models\User;
 use App\Services\Interface\UserRoleServiceInterface;
-use Illuminate\Database\Eloquent\Collection; // Thêm import
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use \Illuminate\Database\Eloquent\Collection;
 use Exception;
 
 class UserRoleService implements UserRoleServiceInterface
@@ -26,7 +26,6 @@ class UserRoleService implements UserRoleServiceInterface
      */
     public function getUserRoles(int $userId): Collection
     {
-        // Code gốc của bạn đã đúng
         return $this->rolePermissionRepository->getUserRoles($userId);
     }
 
@@ -135,13 +134,11 @@ class UserRoleService implements UserRoleServiceInterface
     /**
      * Xóa permission trực tiếp khỏi user
      */
-    public function revokePermissionsFromUser($userId, $permissions): bool
+    public function revokePermissionsFromUser(int $userId, array $permissions): User
     {
         $user = User::findOrFail($userId);
         $user->revokePermissionTo($permissions);
-        $this->clearUserCache($userId);
-        $this->logAudit('direct_permissions_revoked_from_user', $userId, 'user', null, ['permissions' => $permissions]);
-        return true;
+         return $user;
     }
 
     /**

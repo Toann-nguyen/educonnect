@@ -2,6 +2,7 @@
 
 namespace App\Services\Interface;
 
+use App\Models\Role;
 use Illuminate\Contracts\Pagination\Paginator;
 
 interface RoleServiceInterface
@@ -21,8 +22,7 @@ interface RoleServiceInterface
      * @return array ['role' => Role, 'users_count' => int]
      * @throws Exception
      */
-    public function getRoleDetail(int $roleId);
-
+    public function getRoleDetail(int $roleId):?Role;
     /**
      * Tạo role mới
      *
@@ -76,4 +76,29 @@ interface RoleServiceInterface
      * @throws Exception
      */
     public function removePermissionsFromRole(int $roleId, array $permissionIds);
+     
+    /**
+     * Lấy permissions của role
+     */
+    public function getRolePermissions(int $roleId);
+    
+    /**
+     * Thêm các permissions mới vào một role.
+     *
+     * @param int $roleId
+     * @param array $permissionIds
+     * @return Role
+     */
+    public function addPermissionsToRole(int $roleId, array $permissionIds): array;
+
+    /**
+     * Đồng bộ (thay thế hoàn toàn) permissions của một role.
+     *
+     * @param int $roleId
+     * @param array $permissionIds
+     * @return Role
+     */
+    public function syncPermissionsForRole(int $roleId, array $permissionIds): Role;
+    
+
 }

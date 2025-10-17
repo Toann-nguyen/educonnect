@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use Illuminate\Pagination\Paginator;
+use Spatie\Permission\Models\Role;
 
 interface RoleRepositoryInterface
 {
@@ -15,18 +16,41 @@ interface RoleRepositoryInterface
     public function forceDelete(int $id): bool;
     public function getWithPermissions(int $id);
     public function getUsersCount(int $roleId): int;
+    
+      /**
+     * Gán thêm các quyền mới cho một vai trò (chỉ thêm, không xóa).
+     *
+     * @param int $roleId
+     * @param array $permissionIds
+     * @return bool
+     */
+    public function attachPermissions(int $roleId, array $permissionIds): bool;
 }
 
 interface RolePermissionRepositoryInterface
-{
-    public function attachPermissionsToRole(int $roleId, array $permissionIds, string $mode = 'sync');
+{ 
+    
+    /**
+     * Đồng bộ hóa (xóa cũ, thêm mới) các quyền cho một vai trò.
+     */
+    public function syncPermissions(int $roleId, array $permissionIds): Role;
+
     public function detachPermissionsFromRole(int $roleId, array $permissionIds);
-    public function getRolePermissions(int $roleId);
+
     public function syncUserRoles(int $userId, array $roleNames);
+
     public function attachRolesToUser(int $userId, array $roleNames);
+
     public function getUserRoles(int $userId);
     public function getUserPermissions(int $userId);
+
     public function getUserDirectPermissions(int $userId);
+
     public function userHasPermission(int $userId, string $permission): bool;
+
     public function userHasRole(int $userId, string $role): bool;
+    /**
+     * Gán thêm (chỉ thêm, không xóa) các quyền mới cho một vai trò.
+     */
+    public function attachPermissions(int $roleId, array $permissionIds): Role;
 }

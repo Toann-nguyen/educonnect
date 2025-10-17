@@ -18,10 +18,7 @@ class ScheduleController extends Controller
     public function __construct(ScheduleServiceInterface $scheduleService)
     {
         $this->scheduleService = $scheduleService;
-        $this->middleware('auth:sanctum');
-        $this->authorizeResource(Schedule::class, 'schedule', [
-            'except' => ['getByClass', 'mySchedule', 'getWeeklySchedule', 'getTeacherClasses']
-        ]);
+     
     }
 
     /**

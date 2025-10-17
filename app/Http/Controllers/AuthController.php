@@ -38,7 +38,8 @@ class AuthController extends Controller
         } catch (Exception $e) {
             // Ghi log lỗi không mong muốn
             Log::error('Registration failed: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
+
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -63,13 +64,15 @@ class AuthController extends Controller
             ], $e->status ?? 422);
         } catch (AuthorizationException $e) {
             Log::warning('Authorization failed during login: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
+
                 'ip' => $request->ip()
             ]);
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (Exception $e) {
             Log::error('Login failed with unexpected error: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
+
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred during login.'], 500);
@@ -101,7 +104,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Failed to send password reset link.', 'status' => $status], 400);
         } catch (Exception $e) {
             Log::error('Forgot password failed: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred.'], 500);
@@ -120,7 +123,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Failed to reset password. The token may be invalid or expired.', 'status' => $status], 400);
         } catch (Exception $e) {
             Log::error('Reset password failed: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred.'], 500);

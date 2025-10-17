@@ -8,12 +8,12 @@ class UpdateRoleRequest extends FormRequest
 {
     public function authorize()
     {
-        // return $this->user()->can('manage_roles');
         return true;
     }
 
     public function rules()
     {
+        dd(1);
         return [
             'name' => [
                 'required',

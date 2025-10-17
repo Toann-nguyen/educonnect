@@ -19,12 +19,12 @@ class RoleRepository implements RoleRepositoryInterface
     public function paginate(int $perPage = 15, array $filters = [])
     {
         $query = $this->model->query();
-        
+
         // Filter by search
-         $query->when($filters['search'] ?? null, function ($q, $search) {
+        $query->when($filters['search'] ?? null, function ($q, $search) {
             $q->where(function ($subQ) use ($search) {
                 $subQ->where('name', 'LIKE', "%{$search}%")
-                     ->orWhere('description', 'LIKE', "%{$search}%");
+                    ->orWhere('description', 'LIKE', "%{$search}%");
             });
         });
 
@@ -90,5 +90,20 @@ class RoleRepository implements RoleRepositoryInterface
             ->where('role_id', $roleId)
             ->where('model_type', 'App\\Models\\User')
             ->count();
+    }
+     /**
+     * Gán thêm các quyền mới cho một vai trò.
+     * Sử dụng attach() sẽ tự động bỏ qua các ID đã tồn tại.
+     */
+    public function attachPermissions(int $roleId, array $permissionIds): bool
+    {
+        $role = $this->findById($roleId);
+        if ($role) {
+            // attach() chỉ thêm các bản ghi mới vào bảng trung gian
+            // và bỏ qua nếu cặp (role_id, permission_id) đã tồn tại.
+            $role->permissions()->attach($permissionIds);
+            return true;
+        }
+        return false;
     }
 }

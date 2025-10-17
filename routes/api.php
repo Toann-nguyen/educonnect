@@ -27,6 +27,12 @@ use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\RoleController;
 
 Route::get('/test', [App\Http\Controllers\Api\TestController::class, 'index']);
+
+Route::get('hello' , function(){
+    return response()->json([
+        'message' => 'hello'
+    ]);
+});
 /*
 |--------------------------------------------------------------------------
 | API Routes

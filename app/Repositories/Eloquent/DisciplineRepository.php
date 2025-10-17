@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 
 class DisciplineRepository implements DisciplineRepositoryInterface
 {
+    
     protected $model;
 
     public function __construct(Discipline $model)

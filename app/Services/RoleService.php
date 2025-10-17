@@ -180,7 +180,7 @@ class RoleService implements RoleServiceInterface
                     throw new Exception('Role name already exists', 409);
                 }
             }
-
+            
             // Update
             $oldValues = $role->only(['name', 'description', 'is_active']);
             $role = $this->roleRepository->update($roleId, $data);

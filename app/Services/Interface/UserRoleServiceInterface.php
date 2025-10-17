@@ -13,7 +13,7 @@ interface UserRoleServiceInterface
      * @param int $userId
      * @return Collection
      */
-    public function getUserRoles(int $userId): Collection;
+    public function getUserRoles(int $userId);
 
     /**
      * Lấy permissions của user (từ role + direct)

@@ -80,7 +80,7 @@ class UserRoleController extends Controller
                 $validated['roles'],
                 $validated['mode'] ?? 'sync'
             );
-
+         
             return response()->json([
                 'message' => 'Roles assigned successfully',
                 'data' => $this->userRoleService->getUserRoles($userId)

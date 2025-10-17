@@ -13,7 +13,6 @@ class UpdateRoleRequest extends FormRequest
 
     public function rules()
     {
-        dd(1);
         return [
             'name' => [
                 'required',

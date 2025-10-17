@@ -24,10 +24,10 @@ class UserRoleService implements UserRoleServiceInterface
     /**
      * Lấy roles của user
      */
-    public function getUserRoles(int $userId): Collection
+    public function getUserRoles(int $userId)
     {
         return $this->rolePermissionRepository->getUserRoles($userId);
-    }
+    }   
 
     /**
      * Lấy permissions của user (role + direct)

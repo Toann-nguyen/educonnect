@@ -48,7 +48,7 @@ class RoleController extends Controller
      * GET /api/admin/roles/{id}
      * Lấy chi tiết 1 role
      */
-    public function show(Role $role)
+    public function show(int $role)
     {
         try {
             // FIX: Check role tồn tại trước khi gọi service
@@ -57,10 +57,11 @@ class RoleController extends Controller
                     'message' => 'Role not found'
                 ], 404);
             }
-
+          
             // Service chỉ cần trả về đối tượng Role đã được load sẵn
-            $roleWithDetails = $this->roleService->getRoleDetail($role->id);
+            $roleWithDetails = $this->roleService->getRoleDetail($role);
 
+       
             // SỬ DỤNG RESOURCE ĐỂ ĐỊNH DẠNG RESPONSE
             return response()->json([
                 'message' => 'Role retrieved successfully',
@@ -112,7 +113,6 @@ class RoleController extends Controller
      */
     public function update(UpdateRoleRequest $request, $id)
     {
-        dd(1);
         try {
             // FIX: Validate $id không null hoặc không phải int
             if ($id === null || !is_numeric($id) || $id <= 0) {
@@ -129,7 +129,18 @@ class RoleController extends Controller
                 'data' => $role
             ]);
         } catch (\Exception $e) {
-            $statusCode = $e->getCode() ?: 500;
+            $statusCode = $e->getCode() ?: 500; 
+            dd($statusCode);
+
+            // === XỬ LÝ TRƯỜNG HỢP KHÔNG CÓ THAY ĐỔI ===
+            if ($statusCode === 304) {
+                // Trả về 200 OK với message thông báo, vì đây không phải là lỗi
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    // Có thể trả về dữ liệu hiện tại của role
+                    'data' => $this->roleService->getRoleDetail($id)
+                ], 200);
+            }
             return response()->json([
                 'message' => $e->getMessage()
             ], $statusCode);
@@ -142,6 +153,7 @@ class RoleController extends Controller
      */
     public function destroy($id)
     {
+ 
         try {
             // FIX: Validate $id không null hoặc không phải int
             if ($id === null || !is_numeric($id) || $id <= 0) {

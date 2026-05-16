@@ -2,18 +2,17 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Schedule;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes, HasRoles;
+    use  HasFactory, Notifiable, SoftDeletes, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +25,22 @@ class User extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
     protected $casts = ['email_verified_at' => 'datetime', 'password' => 'hashed'];
     protected $dates = ['deleted_at'];
+
+    // Trả về khóa chính của user cho JWT claim "sub"
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    // Trả về các custom claims nhét vào JWT payload
+    public function getJWTCustomClaims(): array
+    {
+        return [
+            "email" => $this->email,
+            "roles" => $this->getRoleNames()->toArray(),
+            'permissions' => $this->getPermissionNames()->toArray(),
+        ];
+    }
 
     /** Mối quan hệ 1-1 với Profile */
     public function profile()

@@ -57,6 +57,10 @@ use App\Services\Interface\ConductScoreServiceInterface;
 use App\Services\ConductScoreService;
 use App\Services\RoleService;
 use App\Services\PermissionService;
+use App\Repositories\Contracts\AuthRepositoryInterface;
+use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
+use App\Repositories\Auth\AuthRepository;
+use App\Repositories\Auth\EmailVerificationRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -78,6 +82,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
         $this->app->bind(PermissionRepositoryInterface::class, PermissionRepository::class);
         $this->app->bind(RolePermissionRepositoryInterface::class, RolePermissionRepository::class);
+        $this->app->bind(AuthRepositoryInterface::class, AuthRepository::class);
+        $this->app->bind(EmailVerificationRepositoryInterface::class, EmailVerificationRepository::class);
        
         //bind service
         $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);

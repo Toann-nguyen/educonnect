@@ -60,8 +60,8 @@ Route::prefix('auth')->group(function () {
          ->middleware('throttle:10,1');    // 10 req/phút
     Route::post('login/phone', [AuthController::class, 'sendPhoneOtp']);
     Route::post('login/phone/verify', [AuthController::class, 'verifyPhoneOtp']);
-    
-    
+    Route::get('oauth/{provider}', [OAuthController::class, 'redirect']);
+    Route::get('oauth/{provider}/callback', [OAuthController::class, 'callback']);
     Route::post('token/refresh', [TokenController::class, 'refresh']);
     Route::post('password/forgot', [PasswordController::class, 'forgot']);
     Route::post('password/reset', [PasswordController::class, 'reset']);

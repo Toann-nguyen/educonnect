@@ -29,21 +29,46 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            $user = $this->authService->register($request->validated());
+            $result = $this->authService->register($request->validated());
 
             return response()->json([
-                'message' => 'User registered successfully!',
-                'data' => new UserResource($user)
+                'message' => 'User registered successfully! Please check your email to verify.',
+                'access_token' => $result['token'],
+                'token_type' => 'Bearer',
+                'data' => new UserResource($result['user'])
             ], 201);
         } catch (Exception $e) {
             // Ghi log lỗi không mong muốn
             Log::error('Registration failed: ' . $e->getMessage(), [
-                'email' => $request->user()->email,
+                'email' => $request->input('email') ?? null,
 
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json(['message' => 'An unexpected error occurred during registration.'], 500);
+        }
+    }
+
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string'
+        ]);
+
+        try {
+            $this->authService->verifyEmail($request->token);
+            
+            return response()->json([
+                'message' => 'Email verified successfully.'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], $e->status ?? 422);
+        } catch (Exception $e) {
+            Log::error('Email verification failed: ' . $e->getMessage());
+            return response()->json(['message' => 'An unexpected error occurred.'], 500);
         }
     }
     public function login(LoginRequest $request)
@@ -98,13 +123,15 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->forgotPassword($request->validated());
-            dd($status);
-            // Ghi log trường hợp không gửi được link mà không rõ lý do
-            Log::warning('Failed to send password reset link.', ['email' => $request->email, 'status' => $status]);
-            return response()->json(['message' => 'Failed to send password reset link.', 'status' => $status], 400);
+            
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json(['message' => __($status)]);
+            }
+
+            return response()->json(['message' => __($status)], 400);
         } catch (Exception $e) {
             Log::error('Forgot password failed: ' . $e->getMessage(), [
-                'email' => $request->user()->email,
+                'email' => $request->email,
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred.'], 500);
@@ -114,16 +141,16 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->resetPassword($request->validated());
-            if ($status) {
+            if ($status === Password::PASSWORD_RESET) {
                 return response()->json([
-                    'message' => 'Password has been reset.'
+                    'message' => __($status)
                 ], 200);
             }
             // token không hợp lệ
-            return response()->json(['message' => 'Failed to reset password. The token may be invalid or expired.', 'status' => $status], 400);
+            return response()->json(['message' => __($status)], 400);
         } catch (Exception $e) {
             Log::error('Reset password failed: ' . $e->getMessage(), [
-                'email' => $request->user()->email,
+                'email' => $request->email,
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred.'], 500);

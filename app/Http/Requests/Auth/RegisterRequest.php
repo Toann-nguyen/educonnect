@@ -3,32 +3,56 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class RegisterRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
-        return [ // full_name là bắt buộc, phải là chuỗi, tối đa 255 ký tự
-            'full_name' => 'required|string|max:255',
-
-            // email là bắt buộc, phải là định dạng email hợp lệ, và phải là duy nhất (unique) trong bảng 'users'
-            'email' => 'required|string|email|max:255|unique:users,email',
-
-            // password là bắt buộc, phải là chuỗi, tối thiểu 8 ký tự, và phải khớp với trường 'password_confirmation'
-            'password' => 'required|string|min:8|confirmed',
+        return [
+            'name'     => ['required', 'string', 'min:2', 'max:100'],
+            'email'    => ['required', 'string', 'email:rfc', 'max:255', 'unique:users,email'],
+            'password' => [
+                'required',
+                'confirmed', // tự động check với password_confirmation field
+                Password::min(8)
+                    ->mixedCase()   // phải có chữ hoa + chữ thường
+                    ->numbers()     // phải có ít nhất 1 số
+                    ->uncompromised(), // kiểm tra trong danh sách password bị leak
+            ],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.required'              => 'Tên không được để trống.',
+            'name.min'                   => 'Tên phải có ít nhất 2 ký tự.',
+            'email.required'             => 'Email không được để trống.',
+            'email.email'                => 'Email không hợp lệ.',
+            'email.unique'               => 'Email này đã được sử dụng.',
+            'password.required'          => 'Mật khẩu không được để trống.',
+            'password.confirmed'         => 'Xác nhận mật khẩu không khớp.',
+            'password.min'               => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.mixed_case'        => 'Mật khẩu phải có cả chữ hoa và chữ thường.',
+            'password.numbers'           => 'Mật khẩu phải có ít nhất 1 chữ số.',
+            'password.uncompromised'     => 'Mật khẩu này đã bị lộ trong các vụ rò rỉ dữ liệu, vui lòng chọn mật khẩu khác.',
+        ];
+    }
+
+    /**
+     * Chuẩn hóa dữ liệu trước khi validate
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => strtolower(trim($this->email ?? '')),
+            'name'  => trim($this->name ?? ''),
+        ]);
     }
 }

@@ -18,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Password;
 
+use App\Services\Auth\RegisterService;
+
 class AuthController extends Controller
 {
     protected $authService;
@@ -26,26 +28,31 @@ class AuthController extends Controller
     {
         $this->authService = $authService;
     }
-    public function register(RegisterRequest $request)
+    public function register(RegisterRequest $request, RegisterService $registerService)
     {
         try {
-            $result = $this->authService->register($request->validated());
+            $user = $registerService->register($request->validated());
 
             return response()->json([
-                'message' => 'User registered successfully! Please check your email to verify.',
-                'access_token' => $result['token'],
-                'token_type' => 'Bearer',
-                'data' => new UserResource($result['user'])
+                'message' => 'Registration successful. Please check your email for verification.',
+                'data' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'status' => 'UNVERIFIED'
+                ]
             ], 201);
         } catch (Exception $e) {
-            // Ghi log lỗi không mong muốn
-            Log::error('Registration failed: ' . $e->getMessage(), [
-                'email' => $request->input('email') ?? null,
+            // Ghi log lỗi không mong muốn (không ghi log lỗi validation 422)
+            if ($e->getCode() !== 422) {
+                Log::error('Registration failed: ' . $e->getMessage(), [
+                    'email' => $request->input('email') ?? null,
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
 
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json(['message' => 'An unexpected error occurred during registration.'], 500);
+            return response()->json([
+                'message' => $e->getMessage() ?: 'An unexpected error occurred during registration.'
+            ], $e->getCode() ?: 500);
         }
     }
 

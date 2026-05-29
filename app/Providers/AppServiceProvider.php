@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use App\Repositories\Contracts\ConductScoreRepositoryInterface;
 use App\Repositories\Contracts\DisciplineRepositoryInterface;
 use App\Repositories\Contracts\DisciplineTypeRepositoryInterface;
@@ -118,5 +121,10 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void {}
+    public function boot(): void
+    {
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+    }
 }

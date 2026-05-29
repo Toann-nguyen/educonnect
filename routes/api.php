@@ -47,7 +47,7 @@ Route::get('hello' , function(){
 // PUBLIC ROUTES (No Authentication Required)
 // ============================================================================
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware(['throttle:register', 'idempotence']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
@@ -55,7 +55,7 @@ Route::prefix('auth')->group(function () {
 });
 // Nhóm 1 — Public (không cần token)
 Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
+    Route::post('register', [AuthController::class, 'register'])->middleware(['throttle:register', 'idempotence']);
     Route::post('login', [AuthController::class, 'login'])
          ->middleware('throttle:10,1');    // 10 req/phút
     Route::post('login/phone', [AuthController::class, 'sendPhoneOtp']);

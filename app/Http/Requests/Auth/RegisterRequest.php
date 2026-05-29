@@ -16,7 +16,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name'     => ['required', 'string', 'min:2', 'max:100'],
-            'email'    => ['required', 'string', 'email:rfc', 'max:255', 'unique:users,email'],
+                        'email'    => ['required', 'string', 'email:rfc', 'max:255'],
             'password' => [
                 'required',
                 'confirmed', // tự động check với password_confirmation field
@@ -35,7 +35,6 @@ class RegisterRequest extends FormRequest
             'name.min'                   => 'Tên phải có ít nhất 2 ký tự.',
             'email.required'             => 'Email không được để trống.',
             'email.email'                => 'Email không hợp lệ.',
-            'email.unique'               => 'Email này đã được sử dụng.',
             'password.required'          => 'Mật khẩu không được để trống.',
             'password.confirmed'         => 'Xác nhận mật khẩu không khớp.',
             'password.min'               => 'Mật khẩu phải có ít nhất 8 ký tự.',

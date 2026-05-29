@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Events\UserRegistered;
 use App\Jobs\SendVerificationEmail;
 use App\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
@@ -20,13 +21,13 @@ class RegisterService
     /**
      * Đăng ký tài khoản mới
      *
-     * @throws \Exception nếu email đã tồn tại
+     * @throws \Exception nếu email đã tồn tại hoặc đăng ký thất bại
      */
     public function register(array $data): User
     {
-        // 1. Kiểm tra email đã tồn tại
+        // 1. Kiểm tra email đã tồn tại (No Email Enumeration: Trả về lỗi generic)
         if ($this->authRepository->findByEmail($data['email'])) {
-            throw new \Exception('Email already registered.', 409);
+            throw new \Exception('Registration failed. Please try again.', 422);
         }
 
         // 2. Tạo raw token verify email
@@ -36,18 +37,21 @@ class RegisterService
 
         // 3. Wrap trong transaction để đảm bảo tính toàn vẹn
         $user = DB::transaction(function () use ($data, $tokenHash, $expiresAt) {
+            $passwordHash = Hash::make($data['password'], ['rounds' => 12]);
+
             // Tạo user
             $user = $this->authRepository->create([
                 'name'               => $data['name'],
                 'email'              => $data['email'],
-                'password_hash'      => Hash::make($data['password'], ['rounds' => 12]),
+                'password'           => $passwordHash,
+                'password_hash'      => $passwordHash,
                 'is_email_verified'  => false,
                 'is_active'          => true,
                 'token_version'      => 1,
             ]);
 
-            // Gán role mặc định
-            $user->assignRole('user');
+            // Gán role mặc định (student theo test case và nghiệp vụ cũ)
+            $user->assignRole('student');
 
             // Tạo / cập nhật token verify email
             $this->emailVerificationRepository->upsert(
@@ -59,9 +63,12 @@ class RegisterService
             return $user;
         });
 
-        // 4. Dispatch job gửi email (ngoài transaction, không block response)
+        // 4. Dispatch job gửi email (ngoài transaction, không block response) trên queue 'emails'
         SendVerificationEmail::dispatch($user, $rawToken)
             ->onQueue('emails');
+
+        // 5. Dispatch Event UserRegistered
+        event(new UserRegistered($user));
 
         return $user;
     }

@@ -79,5 +79,6 @@ class Kernel extends HttpKernel
         // Custom middleware tối thiểu
         'validate.api' => \App\Http\Middleware\ValidateApiAccess::class,
         'role.redirect' => \App\Http\Middleware\RoleBasedRedirect::class,
+        'idempotence' => \App\Http\Middleware\IdempotencyMiddleware::class,
     ];
 }

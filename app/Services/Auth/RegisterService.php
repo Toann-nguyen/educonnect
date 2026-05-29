@@ -37,13 +37,13 @@ class RegisterService
 
         // 3. Wrap trong transaction để đảm bảo tính toàn vẹn
         $user = DB::transaction(function () use ($data, $tokenHash, $expiresAt) {
-            $passwordHash = Hash::make($data['password'], ['rounds' => 12]);
+            $passwordHash = Hash::make($data['password']);
 
             // Tạo user
             $user = $this->authRepository->create([
                 'name'               => $data['name'],
                 'email'              => $data['email'],
-                'password'           => $passwordHash,
+                'password'           => $data['password'], // Truyền raw để 'hashed' cast tự xử lý
                 'password_hash'      => $passwordHash,
                 'is_email_verified'  => false,
                 'is_active'          => true,

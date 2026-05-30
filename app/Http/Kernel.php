@@ -80,5 +80,6 @@ class Kernel extends HttpKernel
         'validate.api' => \App\Http\Middleware\ValidateApiAccess::class,
         'role.redirect' => \App\Http\Middleware\RoleBasedRedirect::class,
         'idempotence' => \App\Http\Middleware\IdempotencyMiddleware::class,
+        'rate.register' => \App\Http\Middleware\RateLimitRegister::class,
     ];
 }

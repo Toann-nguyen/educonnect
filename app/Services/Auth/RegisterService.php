@@ -60,15 +60,18 @@ class RegisterService
                 $expiresAt
             );
 
+            // Dispatch event bên trong transaction với afterCommit
+            // Event sẽ chỉ fire sau khi transaction commit thành công
+            event(new UserRegistered($user));
+
             return $user;
         });
 
-        // 4. Dispatch job gửi email (ngoài transaction, không block response) trên queue 'emails'
+        // 4. Dispatch job gửi email SAU KHI transaction commit thành công
+        // Sử dụng afterCommit để đảm bảo job chỉ chạy khi DB thành công
         SendVerificationEmail::dispatch($user, $rawToken)
-            ->onQueue('emails');
-
-        // 5. Dispatch Event UserRegistered
-        event(new UserRegistered($user));
+            ->onQueue('emails')
+            ->afterCommit();
 
         return $user;
     }

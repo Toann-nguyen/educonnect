@@ -25,6 +25,12 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ConductScoreController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\RoleController;
+// Controllers for auth extended routes
+use App\Http\Controllers\Auth\EmailController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\TokenController;
 
 Route::get('/test', [App\Http\Controllers\Api\TestController::class, 'index']);
 
@@ -47,27 +53,13 @@ Route::get('hello' , function(){
 // PUBLIC ROUTES (No Authentication Required)
 // ============================================================================
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register'])->middleware(['throttle:register', 'idempotence']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register'])
+        ->middleware(['rate.register', 'idempotence']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1'); // 10 req/phút cho login
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
-});
-// Nhóm 1 — Public (không cần token)
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register'])->middleware(['throttle:register', 'idempotence']);
-    Route::post('login', [AuthController::class, 'login'])
-         ->middleware('throttle:10,1');    // 10 req/phút
-    Route::post('login/phone', [AuthController::class, 'sendPhoneOtp']);
-    Route::post('login/phone/verify', [AuthController::class, 'verifyPhoneOtp']);
-    
-    
-    Route::post('token/refresh', [TokenController::class, 'refresh']);
-    Route::post('password/forgot', [PasswordController::class, 'forgot']);
-    Route::post('password/reset', [PasswordController::class, 'reset']);
-    Route::get('email/verify', [EmailController::class, 'verify']);
-    Route::post('2fa/verify', [TwoFactorController::class, 'verify']);
-    Route::post('2fa/backup-codes/verify', [TwoFactorController::class, 'verifyBackupCode']);
 });
 
 // Nhóm 2 — Protected (cần JWT)

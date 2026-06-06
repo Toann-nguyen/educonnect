@@ -18,6 +18,8 @@ use Illuminate\Validation\ValidationException;
 use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Password;
 
+use App\Services\Auth\RegisterService;
+
 class AuthController extends Controller
 {
     protected $authService;
@@ -26,30 +28,61 @@ class AuthController extends Controller
     {
         $this->authService = $authService;
     }
-    public function register(RegisterRequest $request)
+    public function register(RegisterRequest $request, RegisterService $registerService)
     {
         try {
-            $user = $this->authService->register($request->validated());
+            $user = $registerService->register($request->validated());
 
             return response()->json([
-                'message' => 'User registered successfully!',
-                'data' => new UserResource($user)
+                'message' => 'Registration successful. Please check your email for verification.',
+                'data' => [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'status' => 'UNVERIFIED'
+                ]
             ], 201);
         } catch (Exception $e) {
-            // Ghi log lỗi không mong muốn
-            Log::error('Registration failed: ' . $e->getMessage(), [
-                'email' => $request->email,
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Ghi log lỗi không mong muốn (không ghi log lỗi validation 422)
+            if ($e->getCode() !== 422) {
+                Log::error('Registration failed: ' . $e->getMessage(), [
+                    'email' => $request->input('email') ?? null,
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
 
-            return response()->json(['message' => 'An unexpected error occurred during registration.'], 500);
+            return response()->json([
+                'message' => $e->getMessage() ?: 'An unexpected error occurred during registration.'
+            ], $e->getCode() ?: 500);
+        }
+    }
+
+    public function verifyEmail(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string'
+        ]);
+
+        try {
+            $this->authService->verifyEmail($request->token);
+            
+            return response()->json([
+                'message' => 'Email verified successfully.'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], $e->status ?? 422);
+        } catch (Exception $e) {
+            Log::error('Email verification failed: ' . $e->getMessage());
+            return response()->json(['message' => 'An unexpected error occurred.'], 500);
         }
     }
     public function login(LoginRequest $request)
     {
+
         try {
             $result = $this->authService->login($request->validated());
-
             return response()->json([
                 'message' => 'Login successful!',
                 'access_token' => $result['token'],
@@ -63,13 +96,15 @@ class AuthController extends Controller
             ], $e->status ?? 422);
         } catch (AuthorizationException $e) {
             Log::warning('Authorization failed during login: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
+
                 'ip' => $request->ip()
             ]);
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (Exception $e) {
             Log::error('Login failed with unexpected error: ' . $e->getMessage(), [
-                'email' => $request->email,
+                'email' => $request->user()->email,
+
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred during login.'], 500);
@@ -95,12 +130,12 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->forgotPassword($request->validated());
+            
+            if ($status === Password::RESET_LINK_SENT) {
+                return response()->json(['message' => __($status)]);
+            }
 
-
-
-            // Ghi log trường hợp không gửi được link mà không rõ lý do
-            Log::warning('Failed to send password reset link.', ['email' => $request->email, 'status' => $status]);
-            return response()->json(['message' => 'Failed to send password reset link.', 'status' => $status], 400);
+            return response()->json(['message' => __($status)], 400);
         } catch (Exception $e) {
             Log::error('Forgot password failed: ' . $e->getMessage(), [
                 'email' => $request->email,
@@ -113,9 +148,13 @@ class AuthController extends Controller
     {
         try {
             $status = $this->authService->resetPassword($request->validated());
-
+            if ($status === Password::PASSWORD_RESET) {
+                return response()->json([
+                    'message' => __($status)
+                ], 200);
+            }
             // token không hợp lệ
-            return response()->json(['message' => 'Failed to reset password. The token may be invalid or expired.', 'status' => $status], 400);
+            return response()->json(['message' => __($status)], 400);
         } catch (Exception $e) {
             Log::error('Reset password failed: ' . $e->getMessage(), [
                 'email' => $request->email,

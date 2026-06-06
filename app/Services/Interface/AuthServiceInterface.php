@@ -8,5 +8,6 @@ interface AuthServiceInterface
     public function login(array $credentials);
     public function logout($user);
     public function forgotPassword(array $data);
+    public function verifyEmail(string $token);
     public function resetPassword(array $data);
 }

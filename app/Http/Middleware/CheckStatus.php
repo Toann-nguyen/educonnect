@@ -15,7 +15,7 @@ class CheckStatus
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() && $request->user()->trashed()) {
+        if ($request->user() && $request->user()->trashed()) {
             return response()->json(['message' => 'Your account is deactivated. Please contact support.'], 403);
         }
         return $next($request);

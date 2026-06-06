@@ -70,14 +70,16 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        'auth.jwt' => \App\Http\Middleware\JwtMiddleware::class,
         //
-
-        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'role' => \App\Http\Middleware\JsonRoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-        'check.status' => \App\Http\Middleware\CheckUserStatus::class,
+        // 'check.status' => \App\Http\Middleware\CheckUserStatus::class,
         // Custom middleware tối thiểu
         'validate.api' => \App\Http\Middleware\ValidateApiAccess::class,
         'role.redirect' => \App\Http\Middleware\RoleBasedRedirect::class,
+        'idempotence' => \App\Http\Middleware\IdempotencyMiddleware::class,
+        'rate.register' => \App\Http\Middleware\RateLimitRegister::class,
     ];
 }

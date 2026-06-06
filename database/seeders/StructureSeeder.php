@@ -32,6 +32,7 @@ class StructureSeeder extends Seeder
         ]);
 
         // 2. Tạo Học sinh, gán vào lớp và liên kết với Phụ huynh
+        $this->command->info('Creating random student accounts and linking them to classes...');
         $progressBar = $this->command->getOutput()->createProgressBar($classes->count());
         $progressBar->start();
 
@@ -59,6 +60,39 @@ class StructureSeeder extends Seeder
         });
 
         $progressBar->finish();
+        // --- PHẦN BỔ SUNG ĐỂ SỬA LỖI ---
+        // 3. Liên kết các tài khoản Student CỤ THỂ đã được tạo trong UserSeeder
+        $this->command->info("\nLinking specific student accounts to student records...");
+        $specificStudentUsers = User::role('student')->whereIn('email', [
+            'student@educonnect.com',
+            'redscarf@educonnect.com'
+        ])->get();
+
+        foreach ($specificStudentUsers as $studentUser) {
+            if (!$studentUser->student && $classes->isNotEmpty()) {
+                Student::factory()->create([
+                    'user_id' => $studentUser->id,
+                    'class_id' => $classes->random()->id, // Gán vào một lớp ngẫu nhiên
+                ]);
+            }
+        }
+
+        // 4. Liên kết PHỤ HUYNH với TẤT CẢ học sinh đã được tạo
+        $this->command->info('Linking parents to students...');
+        $allStudents = Student::all();
+        if ($parents->isNotEmpty() && $allStudents->isNotEmpty()) {
+            foreach ($allStudents as $student) {
+                // Lấy 1-2 phụ huynh ngẫu nhiên để gán
+                $guardiansToAssign = $parents->random(rand(1, min(2, $parents->count())));
+                foreach ($guardiansToAssign as $parent) {
+                    StudentGuardian::factory()->create([
+                        'student_id' => $student->id,
+                        'guardian_user_id' => $parent->id,
+                    ]);
+                }
+            }
+        }
+
         $this->command->info("\nSchool structure created successfully.");
     }
 }

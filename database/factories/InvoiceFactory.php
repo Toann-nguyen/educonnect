@@ -17,11 +17,20 @@ class InvoiceFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => 'Học phí ' . fake()->monthName() . ' năm ' . fake()->year(),
-            'amount' => fake()->randomElement([1500000, 2000000, 2500000]),
+            // CỘT MỚI: Tạo một số hóa đơn ngẫu nhiên, duy nhất
+            'invoice_number' => 'INV-' . fake()->unique()->randomNumber(6),
+
+            // Các cột cũ
             'due_date' => fake()->dateTimeBetween('+5 days', '+1 month'),
             'status' => 'unpaid',
-            // 'student_id' will be set in the Seeder
+
+            // CỘT MỚI: Tạm thời để là 0, Seeder sẽ tính toán và ghi đè
+            'total_amount' => 0,
+            'paid_amount' => 0,
+
+            // CỘT MỚI: issued_by và student_id sẽ do Seeder cung cấp
+            'notes' => fake()->optional(0.5)->sentence(), // 50% hóa đơn có ghi chú
+
         ];
     }
 }

@@ -4,32 +4,72 @@ namespace Database\Seeders;
 
 use App\Models\Profile;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    private string $defaultPassword;
+
+    public function __construct()
+    {
+        // Use consistent password for all seeded users
+        $this->defaultPassword = Hash::make('password123');
+    }
+
+    private function createCoreUser(string $email, string $fullName, string|array $roles): User
+    {
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'password' => $this->defaultPassword,
+                'email_verified_at' => now(),
+                'status' => 1,
+                'remember_token' => \Str::random(10)
+            ]
+        );
+
+        if (!$user->profile) {
+            $user->profile()->save(Profile::factory()->make(['full_name' => $fullName]));
+        }
+
+        $user->syncRoles($roles);
+
+        return $user;
+    }
+
     public function run(): void
     {
         $this->command->info('Creating core users...');
 
-        // 1. Tạo Admin
-        User::factory()->has(Profile::factory()->state(['full_name' => 'Admin User']))
-            ->create(['email' => 'admin@educonnect.com', 'password' => Hash::make('admin123')])
-            ->assignRole('admin');
+        // Clear permission cache
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 2. Tạo các vai trò khác với tài khoản cụ thể
-        User::factory()->has(Profile::factory())->create(['email' => 'accountant@educonnect.com'])->assignRole('accountant');
-        User::factory()->has(Profile::factory())->create(['email' => 'librarian@educonnect.com'])->assignRole('librarian');
-        User::factory()->has(Profile::factory())->create(['email' => 'teacher@educonnect.com'])->assignRole('teacher');
+        // Create core system users
+        $this->createCoreUser('admin@educonnect.com', 'Admin User', 'admin');
+        $this->createCoreUser('principal@educonnect.com', 'Principal User', 'principal');
+        $this->createCoreUser('teacher@educonnect.com', 'Teacher User', 'teacher');
+        $this->createCoreUser('parent@educonnect.com', 'Parent User', 'parent');
+        $this->createCoreUser('redscarf@educonnect.com', 'Red Scarf User', ['student', 'red_scarf']);
+        $this->createCoreUser('student@educonnect.com', 'Student User', 'student');
+        $this->createCoreUser('accountant@educonnect.com', 'Accountant User', 'accountant');
+        $this->createCoreUser('librarian@educonnect.com', 'Librarian User', 'librarian');
 
-        // 3. Tạo nhiều giáo viên và phụ huynh ngẫu nhiên
-        $this->command->info('Creating teachers and parents...');
-        User::factory()->count(20)->has(Profile::factory())->create()->each(fn($user) => $user->assignRole('teacher'));
-        User::factory()->count(100)->has(Profile::factory())->create()->each(fn($user) => $user->assignRole('parent'));
+        $this->command->info('Creating bulk random users...');
+
+        // Create random users with same password for testing
+        User::factory()
+            ->count(20)
+            ->has(Profile::factory())
+            ->state(['password' => $this->defaultPassword])
+            ->create()
+            ->each(fn($user) => $user->assignRole('teacher'));
+
+        User::factory()
+            ->count(100)
+            ->has(Profile::factory())
+            ->state(['password' => $this->defaultPassword])
+            ->create()
+            ->each(fn($user) => $user->assignRole('parent'));
     }
 }

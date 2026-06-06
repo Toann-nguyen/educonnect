@@ -11,4 +11,9 @@ interface UserServiceInterface
     public function removeRoleFromUser(User $user, string $roleName): User;
     public function deactivateUser(User $user): bool;
     public function restoreUser(int $id): ?User;
+
+    public function updateUser(User $user, array $data): ?User;
+
+    // create user by admin
+    public function createUserByAdmin(array $data): ?User;
 }

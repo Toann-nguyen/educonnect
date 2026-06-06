@@ -6,6 +6,49 @@ use App\Models\Discipline;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
 
+class DisciplinePolicy
+{
+    // ...
+
+    /**
+     * Ai có quyền duyệt một bản ghi kỷ luật.
+     */
+    public function approve(User $user, Discipline $discipline): bool
+    {
+        return $user->hasRole(['admin', 'principal']);
+    }
+
+    /**
+     * Ai có quyền từ chối một bản ghi kỷ luật.
+     */
+    public function reject(User $user, Discipline $discipline): bool
+    {
+        return $user->hasRole(['admin', 'principal']);
+    }
+
+    // ====================================================================
+    // == CÁC QUYỀN XỬ LÝ KHIẾU NẠI LIÊN QUAN ĐẾN KỶ LUẬT
+    // == Thêm các hàm này vào
+    // ====================================================================
+
+    /**
+     * Ai có quyền duyệt một KHIẾU NẠI (dẫn đến hủy kỷ luật).
+     */
+    public function approveAppeal(User $user, Discipline $discipline): bool
+    {
+        // Chỉ Admin/Principal mới có quyền này
+        return $user->hasRole(['admin', 'principal']);
+    }
+
+    /**
+     * Ai có quyền từ chối một KHIẾU NẠI (giữ nguyên kỷ luật).
+     */
+    public function rejectAppeal(User $user, Discipline $discipline): bool
+    {
+        // Chỉ Admin/Principal mới có quyền này
+        return $user->hasRole(['admin', 'principal']);
+    }
+}
 // class DisciplinePolicy
 // {
 //     /**

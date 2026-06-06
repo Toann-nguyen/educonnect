@@ -4,10 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
+use App\Http\Resources\StudentResource;
 use App\Models\Student;
+use App\Services\Interface\StudentServiceInterface;
+use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
+    protected $studentService;
+    public function __construct(StudentServiceInterface $studentService)
+    {
+        $this->studentService = $studentService;
+    }
+
+    public function myChildren(Request $request)
+    {
+        $children = $this->studentService->getChildrenOfParent($request->user());
+        return StudentResource::collection($children);
+    }
     /**
      * Display a listing of the resource.
      */

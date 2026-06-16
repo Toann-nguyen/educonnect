@@ -6,9 +6,19 @@ use App\Http\Controllers\Controller;
 
 /**
  * @OA\Info(
- *     title="Demo API",
+ *     title="EduConnect API",
  *     version="1.0.0",
- *     description="Demo tài liệu API cho Laravel 10"
+ *     description="Tài liệu API cho hệ thống EduConnect - Quản lý giáo dục trực tuyến"
+ * )
+ * @OA\Server(
+ *     url="https://api.toanrobert.online",
+ *     description="Production server"
+ * )
+ * @OA\SecurityScheme(
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT",
+ *     securityScheme="bearerAuth"
  * )
  */
 class TestController extends Controller

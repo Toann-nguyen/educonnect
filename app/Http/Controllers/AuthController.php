@@ -28,6 +28,66 @@ class AuthController extends Controller
     {
         $this->authService = $authService;
     }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/register",
+     *     summary="Đăng ký tài khoản mới",
+     *     description="Đăng ký tài khoản người dùng mới. Sau khi đăng ký thành công, email xác thực sẽ được gửi đến địa chỉ email đã cung cấp.",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="name", type="string", example="Nguyễn Văn A", description="Tên người dùng (2-100 ký tự)"),
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com", description="Địa chỉ email hợp lệ"),
+     *             @OA\Property(property="password", type="string", format="password", example="Password@123", description="Mật khẩu (tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và số)"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="Password@123", description="Xác nhận mật khẩu (phải khớp với password)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Đăng ký thành công",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="Registration successful. Please check your email for verification."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="email", type="string", example="user@example.com"),
+     *                 @OA\Property(property="status", type="string", example="UNVERIFIED")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Lỗi xác thực dữ liệu",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="email",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="Email đã tồn tại.")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="Mật khẩu phải có ít nhất 8 ký tự.")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=429,
+     *         description="Quá nhiều yêu cầu (rate limit)"
+     *     )
+     * )
+     */
     public function register(RegisterRequest $request, RegisterService $registerService)
     {
         try {
@@ -80,15 +140,45 @@ class AuthController extends Controller
     }
     public function login(LoginRequest $request)
     {
-
         try {
             $result = $this->authService->login($request->validated());
+
+            if (isset($result['requires_2fa']) && $result['requires_2fa'] === true) {
+                return response()->json([
+                    'requires_2fa' => true,
+                    'pre_auth_token' => $result['pre_auth_token']
+                ]);
+            }
+
             return response()->json([
                 'message' => 'Login successful!',
-                'access_token' => $result['token'],
+                'access_token' => $result['access_token'],
+                'refresh_token' => $result['refresh_token'],
                 'token_type' => 'Bearer',
                 'data' => new UserResource($result['user'])
             ]);
+        } catch (\App\Exceptions\Auth\IPSpamException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 429);
+        } catch (\App\Exceptions\Auth\AccountLockedException $e) {
+            return response()->json([
+                'message' => $e->getMessage()
+            ], 423);
+        } catch (\App\Exceptions\Auth\CaptchaRequiredException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'requires_captcha' => true
+            ], 403);
+        } catch (\App\Exceptions\Auth\InvalidCredentialsException $e) {
+            $response = [
+                'message' => $e->getMessage()
+            ];
+            if ($e->getAttemptsLeft() !== null) {
+                $response['attempts_left'] = $e->getAttemptsLeft();
+                $response['requires_captcha'] = $e->getRequiresCaptcha();
+            }
+            return response()->json($response, 401);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -96,15 +186,13 @@ class AuthController extends Controller
             ], $e->status ?? 422);
         } catch (AuthorizationException $e) {
             Log::warning('Authorization failed during login: ' . $e->getMessage(), [
-                'email' => $request->user()->email,
-
+                'email' => $request->input('email'),
                 'ip' => $request->ip()
             ]);
             return response()->json(['message' => $e->getMessage()], 403);
         } catch (Exception $e) {
             Log::error('Login failed with unexpected error: ' . $e->getMessage(), [
-                'email' => $request->user()->email,
-
+                'email' => $request->input('email'),
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An unexpected error occurred during login.'], 500);

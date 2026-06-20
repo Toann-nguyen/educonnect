@@ -44,11 +44,11 @@ class EmailVerificationServiceTest extends TestCase
         $rawToken = 'valid-token';
         $tokenHash = hash('sha256', $rawToken);
         
-        $verification = (object)[
-            'id' => 1,
+        $verification = new \App\Models\EmailVerification([
             'user_id' => 10,
             'expires_at' => now()->addHour()
-        ];
+        ]);
+        $verification->id = 1;
 
         // 1. Tìm token hash
         $this->emailVerificationRepository->shouldReceive('findByTokenHash')
@@ -94,11 +94,11 @@ class EmailVerificationServiceTest extends TestCase
         $rawToken = 'expired-token';
         $tokenHash = hash('sha256', $rawToken);
         
-        $verification = (object)[
-            'id' => 1,
+        $verification = new \App\Models\EmailVerification([
             'user_id' => 10,
             'expires_at' => now()->subHour() // Đã hết hạn
-        ];
+        ]);
+        $verification->id = 1;
 
         $this->emailVerificationRepository->shouldReceive('findByTokenHash')
             ->with($tokenHash)

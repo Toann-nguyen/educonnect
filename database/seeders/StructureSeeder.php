@@ -24,6 +24,7 @@ class StructureSeeder extends Seeder
         $teachers = User::role('teacher')->get();
         $parents = User::role('parent')->get()->shuffle();
         $parentIndex = 0;
+        $studentCodeCounter = 1;
 
         // 1. Tạo Lớp học và gán GVCN
         $classes = SchoolClass::factory()->count(15)->create([
@@ -36,14 +37,18 @@ class StructureSeeder extends Seeder
         $progressBar = $this->command->getOutput()->createProgressBar($classes->count());
         $progressBar->start();
 
-        $classes->each(function ($class) use ($parents, &$parentIndex, $progressBar) {
+        $classes->each(function ($class) use ($parents, &$parentIndex, $progressBar, &$studentCodeCounter) {
             $studentCount = rand(30, 40);
 
             for ($i = 0; $i < $studentCount; $i++) {
                 // Tạo User account và Profile cho học sinh
                 $user = User::factory()->has(Profile::factory())->create()->assignRole('student');
                 // Tạo record Student
-                $student = Student::factory()->create(['user_id' => $user->id, 'class_id' => $class->id]);
+                $student = Student::factory()->create([
+                    'user_id' => $user->id,
+                    'class_id' => $class->id,
+                    'student_code' => 'HS' . str_pad($studentCodeCounter++, 6, '0', STR_PAD_LEFT),
+                ]);
 
                 // Gán 1 hoặc 2 phụ huynh cho học sinh này
                 for ($j = 0; $j < rand(1, 2); $j++) {
@@ -72,7 +77,8 @@ class StructureSeeder extends Seeder
             if (!$studentUser->student && $classes->isNotEmpty()) {
                 Student::factory()->create([
                     'user_id' => $studentUser->id,
-                    'class_id' => $classes->random()->id, // Gán vào một lớp ngẫu nhiên
+                    'class_id' => $classes->random()->id,
+                    'student_code' => 'HS' . str_pad($studentCodeCounter++, 6, '0', STR_PAD_LEFT),
                 ]);
             }
         }

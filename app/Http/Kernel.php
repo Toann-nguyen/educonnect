@@ -22,7 +22,8 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
 
-        \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+        // Sanctum đã được thực hiện rồi (stateless JWT), không cần để tránh conflict với cookie JWT
+        // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
     ];
 
     /**
@@ -43,11 +44,11 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \App\Http\Middleware\CacheUserData::class,
+            // Cần thiết để cookie() helper được attach vào response (stateless API)
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \App\Http\Middleware\SecureHeadersMiddleware::class,
         ],
     ];
 
@@ -81,5 +82,6 @@ class Kernel extends HttpKernel
         'role.redirect' => \App\Http\Middleware\RoleBasedRedirect::class,
         'idempotence' => \App\Http\Middleware\IdempotencyMiddleware::class,
         'rate.register' => \App\Http\Middleware\RateLimitRegister::class,
+        'rate.limit'    => \App\Http\Middleware\RateLimitMiddleware::class,
     ];
 }

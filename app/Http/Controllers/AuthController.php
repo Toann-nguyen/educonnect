@@ -8,14 +8,17 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\User;
 use App\Services\Interface\AuthServiceInterface;
+use App\Services\PermissionCacheService;
 use Exception;
 use Hash;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\LoginResource;
+use App\Http\Resources\ProfileResource;
 use Illuminate\Support\Facades\Password;
 
 use App\Services\Auth\RegisterService;
@@ -150,26 +153,21 @@ class AuthController extends Controller
                 ]);
             }
 
+            // Refresh token được trả qua HttpOnly cookie (chống XSS), KHÔNG nằm trong body.
+            // Access token (15 phút) frontend lưu in-memory và gửi qua Authorization: Bearer.
             return response()->json([
                 'message' => 'Login successful!',
                 'access_token' => $result['access_token'],
-                'refresh_token' => $result['refresh_token'],
+                'expires_in' => config('jwt.ttl') * 60,
                 'token_type' => 'Bearer',
-                'data' => new UserResource($result['user'])
-            ]);
+                'data' => new LoginResource($result['user'])
+            ])->withCookie($this->makeRefreshCookie($result['refresh_token']));
         } catch (\App\Exceptions\Auth\IPSpamException $e) {
-            return response()->json([
-                'message' => $e->getMessage()
-            ], 429);
+            return $e->render($request);
         } catch (\App\Exceptions\Auth\AccountLockedException $e) {
-            return response()->json([
-                'message' => $e->getMessage()
-            ], 423);
+            return $e->render($request);
         } catch (\App\Exceptions\Auth\CaptchaRequiredException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'requires_captcha' => true
-            ], 403);
+            return $e->render($request);
         } catch (\App\Exceptions\Auth\InvalidCredentialsException $e) {
             $response = [
                 'message' => $e->getMessage()
@@ -201,18 +199,109 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         try {
-            $this->authService->logout($request->user());
+            $this->authService->logout($request->user(), $request->cookie('refresh_token'));
 
             return response()->json([
                 'message' => 'Successfully logged out'
-            ]);
+            ])->withCookie($this->forgetRefreshCookie());
         } catch (Exception $e) {
             Log::error('Logout failed: ' . $e->getMessage(), [
-                'user_id' => $request->user()->id,
+                'user_id' => $request->user()->id ?? null,
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json(['message' => 'An error occurred during logout.'], 500);
         }
+    }
+
+    public function logoutAll(Request $request)
+    {
+        try {
+            $this->authService->logoutAll($request->user());
+
+            return response()->json([
+                'message' => 'Logged out from all devices'
+            ])->withCookie($this->forgetRefreshCookie());
+        } catch (Exception $e) {
+            Log::error('Logout-all failed: ' . $e->getMessage(), [
+                'user_id' => $request->user()->id ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'An error occurred during logout.'], 500);
+        }
+    }
+
+    /**
+     * Cấp lại access token bằng refresh token (đọc từ HttpOnly cookie).
+     * Endpoint này KHÔNG yêu cầu Bearer token vì access token có thể đã hết hạn.
+     */
+    public function refresh(Request $request)
+    {
+        $rawRefreshToken = $request->cookie('refresh_token');
+
+        if (!$rawRefreshToken) {
+            return response()->json(['message' => 'Refresh token not provided'], 401);
+        }
+
+        try {
+            $result = $this->authService->refresh($rawRefreshToken);
+
+            return response()->json([
+                'message' => 'Token refreshed',
+                'access_token' => $result['access_token'],
+                'expires_in' => config('jwt.ttl') * 60,
+                'token_type' => 'Bearer',
+                'data' => new LoginResource($result['user'])
+            ])->withCookie($this->makeRefreshCookie($result['refresh_token']));
+        } catch (\App\Exceptions\Auth\InvalidCredentialsException $e) {
+            return response()->json(['message' => $e->getMessage()], 401)
+                ->withCookie($this->forgetRefreshCookie());
+        } catch (Exception $e) {
+            Log::error('Token refresh failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'An unexpected error occurred.'], 500);
+        }
+    }
+
+    /**
+     * Tạo HttpOnly cookie chứa refresh token.
+     *
+     * Path = '/api/auth/' (có trailing slash) → browser tự động gửi cookie
+     * cho tất cả sub-path: /api/auth/refresh, /api/auth/logout, /api/auth/logout/all.
+     * Không dùng '/' (quá rộng) — tối thiểu scope cần thiết (Principle of Least Privilege).
+     *
+     * Secure=true  → chỉ gửi qua HTTPS (production). Dev local dùng HTTP cần tắt.
+     * HttpOnly=true → JS không đọc được → chống XSS tuyệt đối.
+     * SameSite=Strict → không gửi trong cross-site request → chống CSRF.
+     */
+    private function makeRefreshCookie(string $value)
+    {
+        return cookie(
+            name: 'refresh_token',
+            value: $value,
+            minutes: 60 * 24 * 7,                          // 7 ngày
+            path: '/api/auth/',                             // trailing slash bắt buộc
+            domain: null,
+            secure: app()->isProduction(),                  // HTTPS-only trên production
+            httpOnly: true,
+            raw: false,
+            sameSite: 'Strict'
+        );
+    }
+
+    private function forgetRefreshCookie()
+    {
+        return cookie(
+            name: 'refresh_token',
+            value: '',
+            minutes: -1,
+            path: '/api/auth/',
+            domain: null,
+            secure: app()->isProduction(),
+            httpOnly: true,
+            raw: false,
+            sameSite: 'Strict'
+        );
     }
     public function forgotPassword(ForgotPasswordRequest $request)
     {
@@ -251,12 +340,22 @@ class AuthController extends Controller
             return response()->json(['message' => 'An unexpected error occurred.'], 500);
         }
     }
-    public function user(Request $request)
+    public function user(Request $request): JsonResponse
     {
-
         try {
+            $user = $request->user();
+
+            $cacheService = app(PermissionCacheService::class);
+            $cached = $cacheService->get($user->id);
+
             return response()->json([
-                'data' => $request->user()->load('profile', 'roles')
+                'data' => [
+                    'id'    => $user->id,
+                    'email' => $user->email,
+                    'profile' => new ProfileResource($user->profile),
+                    'roles' => $cached['roles'],
+                    'permissions' => $cached['permissions'],
+                ]
             ]);
         } catch (Exception $e) {
             Log::error('Failed to fetch authenticated user: ' . $e->getMessage(), [

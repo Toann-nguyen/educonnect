@@ -89,7 +89,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60),
+    'ttl' => env('JWT_TTL', 15),
 
     /*
     |--------------------------------------------------------------------------
@@ -108,7 +108,7 @@ return [
     |
     */
 
-    'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),
+    'refresh_ttl' => env('JWT_REFRESH_TTL', 10080),
 
     /*
     |--------------------------------------------------------------------------
@@ -122,7 +122,7 @@ return [
     |
     */
 
-    'algo' => env('JWT_ALGO', 'HS256'),
+    'algo' => env('JWT_ALGO', 'RS256'),
 
     /*
     |--------------------------------------------------------------------------
@@ -136,12 +136,10 @@ return [
     */
 
     'required_claims' => [
-        'iss',
-        'iat',
-        'exp',
-        'nbf',
         'sub',
         'jti',
+        'iat',
+        'exp',
     ],
 
     /*
@@ -179,7 +177,7 @@ return [
     |
     */
 
-    'lock_subject' => true,
+    'lock_subject' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -223,7 +221,7 @@ return [
     |
     */
 
-    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 0),
+    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 30),
 
     /*
     |--------------------------------------------------------------------------
@@ -262,11 +260,6 @@ return [
     | Specify the various providers used throughout the package.
     |
     */
-    'ttl'            => env('JWT_TTL', 15),
-    'refresh_ttl'    => env('JWT_REFRESH_TTL', 10080),
-    'algo'           => env('JWT_ALGO', 'HS256'),
-    'blacklist_enabled' => env('JWT_BLACKLIST_ENABLED', true),
-    'blacklist_grace_period' => env('JWT_BLACKLIST_GRACE_PERIOD', 30),
     'providers' => [
         /*
         |--------------------------------------------------------------------------

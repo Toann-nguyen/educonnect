@@ -6,10 +6,10 @@ use App\Repositories\Contracts\RolePermissionRepositoryInterface;
 // THAY ĐỔI: Sử dụng User Model thay vì DB facade để tận dụng relationship
 use App\Models\User;
 use App\Services\Interface\UserRoleServiceInterface;
+use App\Services\PermissionCacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use \Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection;
 use Exception;
 
 class UserRoleService implements UserRoleServiceInterface
@@ -208,8 +208,7 @@ class UserRoleService implements UserRoleServiceInterface
 
     protected function clearUserCache(int $userId)
     {
-        // Code gốc của bạn giữ nguyên
-        Cache::forget("user:{$userId}:roles");
-        Cache::forget("user:{$userId}:permissions");
+        app(PermissionCacheService::class)->clearUser($userId);
+        User::where('id', $userId)->increment('token_version');
     }
 }

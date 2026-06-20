@@ -18,12 +18,12 @@ class RolePermissionService
         $this->clearCache();
 
         foreach (PermissionEnum::cases() as $permission) {
-            Permission::firstOrCreate(['name' => $permission->value]);
+            Permission::firstOrCreate(['name' => $permission->value, 'guard_name' => 'api']);
         }
 
         $config = config('rbac.roles');
         foreach ($config as $roleName => $roleData) {
-            $role = Role::firstOrCreate(['name' => $roleName]);
+            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
 
             if ($roleData['all_permissions'] ?? false) {
                 $role->syncPermissions(Permission::all());

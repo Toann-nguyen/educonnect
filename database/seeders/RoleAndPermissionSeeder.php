@@ -19,24 +19,24 @@ class RoleAndPermissionSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Tạo quyền (nếu chưa có thì tạo, có rồi thì bỏ qua)
-        Permission::firstOrCreate(['name' => 'manage finances']);     // Quản lý tài chính
-        Permission::firstOrCreate(['name' => 'manage library']);      // Quản lý thư viện
-        Permission::firstOrCreate(['name' => 'record discipline']);   // Ghi nhận kỷ luật
-        Permission::firstOrCreate(['name' => 'manage events']);       // Quản lý sự kiện
-        Permission::firstOrCreate(['name' => 'manage school structure']);
-        Permission::firstOrCreate(['name' => 'manage users']);
-        Permission::firstOrCreate(['name' => 'view schedules']);      // Xem thời khóa biểu
-        Permission::firstOrCreate(['name' => 'manage schedules']);    // Quản lý thời khóa biểu
+        Permission::firstOrCreate(['name' => 'manage finances', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'manage library', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'record discipline', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'manage events', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'manage school structure', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'manage users', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'view schedules', 'guard_name' => 'api']);
+        Permission::firstOrCreate(['name' => 'manage schedules', 'guard_name' => 'api']);
 
         // Tạo role
-        $studentRole   = Role::firstOrCreate(['name' => 'student']);
-        $parentRole    = Role::firstOrCreate(['name' => 'parent']);
-        $teacherRole   = Role::firstOrCreate(['name' => 'teacher']);
-        $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
-        $librarianRole = Role::firstOrCreate(['name' => 'librarian']);
-        $principalRole = Role::firstOrCreate(['name' => 'principal']);
-        $redScarfRole  = Role::firstOrCreate(['name' => 'red_scarf']);
-        $adminRole     = Role::firstOrCreate(['name' => 'admin']);
+        $studentRole   = Role::firstOrCreate(['name' => 'student', 'guard_name' => 'api']);
+        $parentRole    = Role::firstOrCreate(['name' => 'parent', 'guard_name' => 'api']);
+        $teacherRole   = Role::firstOrCreate(['name' => 'teacher', 'guard_name' => 'api']);
+        $accountantRole = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'api']);
+        $librarianRole = Role::firstOrCreate(['name' => 'librarian', 'guard_name' => 'api']);
+        $principalRole = Role::firstOrCreate(['name' => 'principal', 'guard_name' => 'api']);
+        $redScarfRole  = Role::firstOrCreate(['name' => 'red_scarf', 'guard_name' => 'api']);
+        $adminRole     = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
 
         // Gán quyền
         $teacherRole->givePermissionTo(['record discipline', 'manage events', 'view schedules', 'manage schedules']);

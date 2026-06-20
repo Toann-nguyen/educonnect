@@ -25,9 +25,14 @@ class RegisterService
      */
     public function register(array $data): User
     {
-        // 1. Kiểm tra email đã tồn tại (No Email Enumeration: Trả về lỗi generic)
-        if ($this->authRepository->findByEmail($data['email'])) {
-            throw new \Exception('Registration failed. Please try again.', 422);
+        // 1. Kiểm tra email đã tồn tại (No Email Enumeration: Trả về thành công giả lập)
+        $existingUser = $this->authRepository->findByEmail($data['email']);
+        if ($existingUser) {
+            $dummyUser = new User();
+            $dummyUser->id = $existingUser->id;
+            $dummyUser->email = $existingUser->email;
+            $dummyUser->name = $existingUser->name;
+            return $dummyUser;
         }
 
         // 2. Tạo raw token verify email

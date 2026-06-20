@@ -199,31 +199,51 @@ return [
     'defaults' => [
         'supervisor-1' => [
             'connection' => 'redis',
-            'queue' => ['default'],
-            'balance' => 'auto',
+            'queue'      => ['default', 'emails'],
+            'balance'    => 'auto',
             'autoScalingStrategy' => 'time',
             'maxProcesses' => 1,
-            'maxTime' => 0,
-            'maxJobs' => 0,
-            'memory' => 128,
-            'tries' => 1,
-            'timeout' => 60,
-            'nice' => 0,
+            'maxTime'    => 0,
+            'maxJobs'    => 0,
+            'memory'     => 128,
+            'tries'      => 1,
+            'timeout'    => 60,
+            'nice'       => 0,
+        ],
+        // Supervisor riêng cho audit log: ưu tiên thấp (nice=10),
+        // worker nhẹ để không tranh tài nguyên với business logic
+        'supervisor-audit' => [
+            'connection' => 'redis',
+            'queue'      => ['audit'],
+            'balance'    => 'simple',
+            'maxProcesses' => 1,
+            'memory'     => 64,
+            'tries'      => 3,
+            'backoff'    => 5,
+            'timeout'    => 10,
+            'nice'       => 10, // CPU priority thấp hơn supervisor-1
         ],
     ],
 
     'environments' => [
         'production' => [
             'supervisor-1' => [
-                'maxProcesses' => 10,
+                'maxProcesses'    => 10,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
+            ],
+            // Production: audit có thể scale lên 2 worker khi có spike login
+            'supervisor-audit' => [
+                'maxProcesses' => 2,
             ],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
+            ],
+            'supervisor-audit' => [
+                'maxProcesses' => 1,
             ],
         ],
     ],

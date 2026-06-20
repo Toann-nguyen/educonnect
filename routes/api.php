@@ -31,6 +31,7 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\TokenController;
+use App\Http\Controllers\Auth\SessionController;
 
 Route::get('/test', [App\Http\Controllers\Api\TestController::class, 'index']);
 
@@ -54,17 +55,24 @@ Route::get('hello' , function(){
 // ============================================================================
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])
-        ->middleware(['rate.register', 'idempotence']);
-    Route::post('/login', [AuthController::class, 'login'])
-        ->middleware('throttle:10,1'); // 10 req/phút cho login
-    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
-    Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
+        ->middleware(['rate.limit:register', 'idempotence']);
+    // Login đã có dual sliding window trong AuthService, không cần middleware riêng
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+        ->middleware('rate.limit:forgot_password');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+        ->middleware('rate.limit:reset_password');
+    Route::post('/email/verify', [AuthController::class, 'verifyEmail'])
+        ->middleware('rate.limit:api');
+    // Refresh: dùng refresh token trong HttpOnly cookie, KHÔNG cần Bearer (access token có thể đã hết hạn)
+    Route::post('/refresh', [AuthController::class, 'refresh'])
+        ->middleware('rate.limit:refresh');
+
 });
 
 // Nhóm 2 — Protected (cần JWT)
 Route::middleware('auth.jwt')->prefix('auth')->group(function () {
-    Route::get('me', [AuthController::class, 'me']);
+    Route::get('me', [AuthController::class, 'user']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('logout/all', [AuthController::class, 'logoutAll']);
     Route::post('email/verify/send', [EmailController::class, 'send']);
@@ -93,7 +101,7 @@ Route::middleware(['auth.jwt', 'permission:roles.read'])->group(function () {
 // ROLE AND PERMISSION ROUTES ( Authentication Required)
 // ============================================================================
 
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth.jwt', 'role:admin'])->group(function () {
  // --- BẮT ĐẦU PHẦN THAY THẾ ---
     
     // THAY THẾ CHO: Route::apiResource('admin/roles', RoleController::class);
@@ -142,7 +150,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 });
 
 
-Route::middleware(['auth:sanctum', 'role:admin|principal'])->group(function () {
+Route::middleware(['auth.jwt', 'role:admin|principal'])->group(function () {
     Route::get('admin/users/{userId}/roles', [UserRoleController::class, 'getUserRoles']);
     Route::post('admin/users/{userId}/roles', [UserRoleController::class, 'assignRoles']);
     Route::delete('admin/users/{userId}/roles/{roleName}', [UserRoleController::class, 'removeRole']);
@@ -157,18 +165,11 @@ Route::post('qrcode', [QrController::class, 'testQr']);
 // ============================================================================
 // PROTECTED ROUTES (Authentication Required)
 // ============================================================================
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth.jwt'])->group(function () {
 
     // ------------------------------------------------------------------------
-    // AUTH & PROFILE ROUTES
+    // PROFILE ROUTES
     // ------------------------------------------------------------------------
-    // Auth routes
-    Route::prefix('auth')->group(function () {
-        Route::post('logout', [AuthController::class, 'logout']);
-        Route::get('user', [AuthController::class, 'user']);
-    });
-
-
     // Profile - tất cả user đăng nhập
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'index']);

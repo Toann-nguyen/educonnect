@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class StudentFactory extends Factory
 {
+    protected static int $codeCounter = 1;
+
     /**
      * Define the model's default state.
      *
@@ -17,7 +19,7 @@ class StudentFactory extends Factory
     public function definition(): array
     {
          return [
-            'student_code' => 'HS' . fake()->unique()->numberBetween(100000, 999999),
+            'student_code' => 'HS' . str_pad(self::$codeCounter++, 6, '0', STR_PAD_LEFT),
             'status' => 'studying',
         ];
     }

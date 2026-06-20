@@ -88,16 +88,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->getKey();
     }
 
-    /**
-     * Nhúng roles/permissions và token_version vào JWT payload
-     */
     public function getJWTCustomClaims(): array
     {
         return [
-            'email'         => $this->email,
-            'roles'         => $this->getRoleNames()->toArray(),
-            'permissions'   => $this->getAllPermissions()->pluck('name')->toArray(),
-            'token_version' => $this->token_version,
+            'type' => 'access',
+            'ver'  => $this->token_version,
         ];
     }
 

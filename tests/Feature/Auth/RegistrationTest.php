@@ -137,10 +137,14 @@ class RegistrationTest extends TestCase
 
         $response = $this->postJson('/api/auth/register', $userData);
 
-        // Đảm bảo không tiết lộ email đã tồn tại (Email Enumeration Attack)
-        $response->assertStatus(422)
+        // Đảm bảo không tiết lộ email đã tồn tại bằng cách trả về 201 thành công giả lập
+        $response->assertStatus(201)
             ->assertJson([
-                'message' => 'Registration failed. Please try again.'
+                'message' => 'Registration successful. Please check your email for verification.',
+                'data' => [
+                    'email' => 'existing@example.com',
+                    'status' => 'UNVERIFIED',
+                ]
             ]);
     }
 

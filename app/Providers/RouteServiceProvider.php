@@ -32,6 +32,28 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip());
         });
 
+        RateLimiter::for('login', function (Request $request) {
+            $ip = $request->ip();
+            $email = strtolower($request->input('email', ''));
+
+            return [
+                Limit::perMinute(5)->by($ip),
+                Limit::perMinutes(15, 15)->by($email),
+            ];
+        });
+
+        RateLimiter::for('refresh', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            if ($request->is('*/forgot-password')) {
+                $email = strtolower($request->input('email', ''));
+                return Limit::perHour(3)->by($email);
+            }
+            return Limit::perHour(3)->by($request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

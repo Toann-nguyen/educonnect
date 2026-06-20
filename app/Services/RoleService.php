@@ -6,9 +6,9 @@ use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\RolePermissionRepositoryInterface;
 use App\Services\Interface\RoleServiceInterface;
+use App\Services\PermissionCacheService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 use Exception;
 use Illuminate\Contracts\Pagination\Paginator;
 use App\Models\Role;
@@ -98,11 +98,11 @@ class RoleService implements RoleServiceInterface
      */
     public function syncPermissionsForRole(int $roleId, array $permissionIds): Role
     {
-        dd(1);
-        // Gọi đến RolePermissionRepository để thực hiện
         $role = $this->rolePermissionRepository->syncPermissions($roleId, $permissionIds);
 
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $this->clearRoleCache($roleId);
 
         return $role->load('permissions');
     }
@@ -343,9 +343,6 @@ class RoleService implements RoleServiceInterface
      */
     protected function clearRoleCache(?int $roleId = null)
     {
-        Cache::forget('roles:list');
-        if ($roleId) {
-            Cache::forget("role:{$roleId}:permissions");
-        }
+        app(PermissionCacheService::class)->clearAll();
     }
 }

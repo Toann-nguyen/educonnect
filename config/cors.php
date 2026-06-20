@@ -19,7 +19,15 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // When `supports_credentials` is true, `allowed_origins` MUST NOT contain
+    // the wildcard `*`. The browser will reject the response. Use the explicit
+    // frontend origins (dev + production) instead.
+    'allowed_origins' => [
+        'https://toanrobert.online',
+        'https://www.toanrobert.online',
+        'http://localhost:3000',
+        'http://localhost:8080',
+    ],
 
     'allowed_origins_patterns' => [],
 
@@ -29,6 +37,8 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => false,
+    // Must be true so the browser accepts the `Cookie` header that the
+    // frontend sends with `credentials: 'include'` (used for JWT auth).
+    'supports_credentials' => true,
 
 ];

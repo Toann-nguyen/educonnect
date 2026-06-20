@@ -42,6 +42,9 @@ use App\Services\Interface\StudentServiceInterface;
 use App\Services\Interface\UserServiceInterface;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
+use App\Models\User;
+use App\Observers\UserObserver;
+use App\Services\PermissionCacheService;
 use App\Services\RolePermissionService;
 use App\Services\StudentService;
 use App\Services\UserRoleService;
@@ -123,6 +126,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        User::observe(UserObserver::class);
+
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });

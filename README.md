@@ -1,4 +1,10 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<p align="center">
+<a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" style="vertical-align: middle;" alt="Laravel Logo"></a>
+<a href="https://redis.io" target="_blank"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original-wordmark.svg" width="150" style="vertical-align: middle;" alt="Redis Logo"></a>
+<a href="https://nginx.org" target="_blank"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" width="120" style="vertical-align: middle;" alt="Nginx Logo"></a>
+<a href="https://www.docker.com" target="_blank"><img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original-wordmark.svg" width="150" style="vertical-align: middle;" alt="Docker Logo"></a>
+<a href="https://phpunit.de" target="_blank"><img src="https://phpunit.de/img/phpunit.svg" width="150" style="vertical-align: middle; margin-left: 20px;" alt="PHPUnit Logo"></a>
+</p>
 
 <p align="center">
 <a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
@@ -7,60 +13,130 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+# 🎓 EduConnect
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+> Hệ thống quản lý giáo dục kết nối học sinh, phụ huynh và nhà trường.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🛠️ Tech Stack
 
-## Learning Laravel
+### 🐘 Backend
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| | Công nghệ | Mô tả |
+|---|-----------|-------|
+| ⚡ | **PHP 8.1** + **Laravel 10** | Framework chính |
+| 🗄️ | **MySQL** | Database quan hệ |
+| 🟥 | **Redis** | Cache & Queue |
+| 📊 | **Laravel Horizon** | Queue monitoring dashboard |
+| ❤️‍🔥 | **Laravel Pulse** | Server & application monitoring |
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### 🔐 Authentication & Security
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| | Package | Mục đích |
+|---|---------|----------|
+| 🔑 | JWT Auth | Xác thực API bằng JSON Web Token |
+| 🛡️ | Laravel Sanctum | API token + SPA authentication |
+| 🌐 | Laravel Socialite | Đăng nhập qua Google, GitHub, Facebook (OAuth) |
+| 👥 | Spatie Laravel Permission | Role-Based Access Control (RBAC) |
+| 🔢 | Google2FA | Xác thực hai yếu tố (TOTP / 2FA) |
 
-## Laravel Sponsors
+### 🟢 Frontend
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| | Công nghệ | Mô tả |
+|---|-----------|-------|
+| 💚 | **Vue 3** | UI framework |
+| 🔗 | **Inertia.js** | Kết nối Laravel + Vue 3 (SPA không cần API riêng) |
+| 🎨 | **Tailwind CSS 3** | Utility-first CSS framework |
+| ⚡ | **Vite** | Build tool |
+| 📡 | **Axios** | HTTP client |
 
-### Premium Partners
+### 📱 Communication
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+| | Package | Mục đích |
+|---|---------|----------|
+| ✉️ | Twilio SDK | Gửi SMS |
+| 📞 | libphonenumber-for-php | Validate & format số điện thoại |
+| 🌍 | Guzzle | HTTP client |
 
-## Contributing
+### 📖 API Documentation
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| | Package | Mục đích |
+|---|---------|----------|
+| 📝 | Scribe | Tạo tài liệu API tự động |
+| 🦢 | L5-Swagger | Giao diện Swagger/OpenAPI |
 
-## Code of Conduct
+### 📦 Infrastructure
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| | Thành phần | Công nghệ |
+|---|------------|-----------|
+| 🗄️ | **Database** | MySQL 8.0+ |
+| 🟥 | **Cache** | Redis 7 |
+| 🟥 | **Queue** | Redis (Laravel Horizon) |
+| 📧 | **Mail** | SMTP |
+| 🐳 | **Container** | Docker + Docker Compose |
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## ✨ Tính năng chính
 
-## License
+- ✅ Đăng nhập / đăng ký (JWT + Sanctum)
+- ✅ Đăng nhập qua mạng xã hội (Google, GitHub, Facebook)
+- ✅ Xác thực hai yếu tố (2FA)
+- ✅ Phân quyền người dùng (RBAC)
+- ✅ Gửi SMS qua Twilio
+- ✅ Queue xử lý bất đồng bộ (Horizon)
+- ✅ API Documentation (Swagger)
+- ✅ Giao diện SPA với Inertia.js + Vue 3
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 🚀 Cài đặt nhanh
+
+```bash
+# 1. Clone repo
+git clone <repo-url>
+cd educonnect
+
+# 2. Cài đặt PHP dependencies
+composer install
+
+# 3. Cài đặt JS dependencies
+npm install
+
+# 4. Sao chép env
+cp .env.example .env
+php artisan key:generate
+
+# 5. Chạy migration
+php artisan migrate
+
+# 6. Build frontend
+npm run build
+
+# 7. Khởi chạy
+php artisan serve
+```
+
+> ⚡ Hoặc dùng Docker: `docker-compose up -d`
+
+---
+
+## 📁 Cấu trúc thư mục
+
+```
+app/           → Laravel application (Controllers, Models, ...)
+config/        → Cấu hình
+database/      → Migrations & Seeders
+resources/js/  → Vue 3 components (Inertia Pages)
+routes/        → Web & API routes
+docker/        → Docker config
+```
+
+---
+
+## 📄 Tài liệu tham khảo
+
+- [TECH-STACK.md](TECH-STACK.md) — Chi tiết phiên bản packages
+- [README-API.md](README-API.md) — Hướng dẫn API
+- [README-setup.md](README-setup.md) — Hướng dẫn cài đặt chi tiết

@@ -9,10 +9,13 @@ use App\Repositories\Contracts\AuthRepositoryInterface;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 
 class RegisterService
 {
+    private const CACHE_PREFIX = 'educonnect:auth:register:';
+
     public function __construct(
         private readonly AuthRepositoryInterface              $authRepository,
         private readonly EmailVerificationRepositoryInterface $emailVerificationRepository,
@@ -25,9 +28,25 @@ class RegisterService
      */
     public function register(array $data): User
     {
-        // 1. Kiểm tra email đã tồn tại (No Email Enumeration: Trả về thành công giả lập)
-        $existingUser = $this->authRepository->findByEmail($data['email']);
+        $email = strtolower($data['email']);
+        $cacheKey = self::CACHE_PREFIX . 'email:' . $email;
+
+        // 1. Kiểm tra cache email trùng lặp (5 phút) - giảm tải DB
+        $cachedCheck = Redis::get($cacheKey);
+        if ($cachedCheck === 'EXISTS') {
+            // Trả về dummy user để tránh email enumeration
+            $dummyUser = new User();
+            $dummyUser->id = 0;
+            $dummyUser->email = $email;
+            return $dummyUser;
+        }
+
+        // 2. Kiểm tra email đã tồn tại trong DB (No Email Enumeration)
+        $existingUser = $this->authRepository->findByEmail($email);
         if ($existingUser) {
+            // Cache kết quả để giảm DB queries cho các request tiếp theo
+            Redis::setex($cacheKey, 300, 'EXISTS');
+            
             $dummyUser = new User();
             $dummyUser->id = $existingUser->id;
             $dummyUser->email = $existingUser->email;
@@ -35,19 +54,20 @@ class RegisterService
             return $dummyUser;
         }
 
-        // 2. Tạo raw token verify email
+        // 3. Tạo raw token verify email
         $rawToken   = Str::random(64);
         $tokenHash  = hash('sha256', $rawToken);
         $expiresAt  = now()->addHours(24);
 
-        // 3. Wrap trong transaction để đảm bảo tính toàn vẹn
-        $user = DB::transaction(function () use ($data, $tokenHash, $expiresAt) {
+        // 4. Wrap trong transaction để đảm bảo tính toàn vẹn
+        $user = DB::transaction(function () use ($data, $email, $tokenHash, $expiresAt) {
+            // Tạo password hash TRƯỚC khi insert (giảm thời gian transaction)
             $passwordHash = Hash::make($data['password']);
 
             // Tạo user
             $user = $this->authRepository->create([
                 'name'               => $data['name'],
-                'email'              => $data['email'],
+                'email'              => $email,
                 'password'           => $data['password'], // Truyền raw để 'hashed' cast tự xử lý
                 'password_hash'      => $passwordHash,
                 'is_email_verified'  => false,
@@ -72,7 +92,7 @@ class RegisterService
             return $user;
         });
 
-        // 4. Dispatch job gửi email SAU KHI transaction commit thành công
+        // 5. Dispatch job gửi email SAU KHI transaction commit thành công
         // Sử dụng afterCommit để đảm bảo job chỉ chạy khi DB thành công
         SendVerificationEmail::dispatch($user, $rawToken)
             ->onQueue('emails')

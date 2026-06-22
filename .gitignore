@@ -12,10 +12,7 @@ __pycache__/
 
 # Dependencies
 vendor/
-node_modules/
-.env
-.env.local
-.env.*
+composer.lock
 
 # Logs and temp files
 *.log
@@ -23,42 +20,48 @@ node_modules/
 *.swp
 *.swo
 
+# Environment
+.env
+.env.local
+.env.*
+
 # Editors
 .vscode/
 .idea/
-
-# OS generated files
-.DS_Store
-Thumbs.db
+*.swp
+*.swo
 
 # Coverage reports
 coverage/
 htmlcov/
 .coverage
 
-# Build directories
+# Distribution / packaging
 dist/
 build/
-target/
 *.tar.gz
 *.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+
+# Testing
+.phpunit.result.cache
+.phpunit_coverage/
+
+# Laravel specific (if applicable)
+storage/
+bootstrap/cache/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+.nfs*
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+*.swp
+*.swo
+*~
+.sw?

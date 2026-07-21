@@ -141,6 +141,19 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
+        // === School Domain Bindings ===
+        $this->app->bind(\App\Domains\School\Repositories\Contracts\ScheduleRepositoryInterface::class, \App\Domains\School\Repositories\Eloquent\ScheduleRepository::class);
+        $this->app->bind(\App\Domains\School\Repositories\Contracts\GradeRepositoryInterface::class, \App\Domains\School\Repositories\Eloquent\GradeRepository::class);
+        $this->app->bind(\App\Domains\School\Repositories\Contracts\DisciplineRepositoryInterface::class, \App\Domains\School\Repositories\Eloquent\DisciplineRepository::class);
+        $this->app->bind(\App\Domains\School\Repositories\Contracts\ConductScoreRepositoryInterface::class, \App\Domains\School\Repositories\Eloquent\ConductScoreRepository::class);
+        $this->app->bind(\App\Domains\School\Repositories\Contracts\DisciplineTypeRepositoryInterface::class, \App\Domains\School\Repositories\Eloquent\DisciplineTypeRepository::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\ScheduleServiceInterface::class, \App\Domains\School\Services\ScheduleService::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\GradeServiceInterface::class, \App\Domains\School\Services\GradeService::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\DisciplineServiceInterface::class, \App\Domains\School\Services\DisciplineService::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\ConductScoreServiceInterface::class, \App\Domains\School\Services\ConductScoreService::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\StudentServiceInterface::class, \App\Domains\School\Services\StudentService::class);
+        $this->app->bind(\App\Domains\School\Services\Interface\DashBoardServiceInterface::class, \App\Domains\School\Services\DashBoardService::class);
+
         // === Identity Domain Bindings ===
         $this->app->bind(IdentityUserRepositoryInterface::class, IdentityUserRepository::class);
         $this->app->bind(IdentityAuthRepositoryInterface::class, IdentityAuthRepository::class);

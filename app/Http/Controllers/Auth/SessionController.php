@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\UserSession;
-use App\Models\RefreshToken;
+use App\Domains\Identity\Models\UserSession;
+use App\Domains\Identity\Models\RefreshToken;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 

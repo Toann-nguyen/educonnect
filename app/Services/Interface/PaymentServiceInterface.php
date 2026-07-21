@@ -3,7 +3,7 @@
 namespace App\Services\Interface;
 
 use App\Repositories\Contracts\PaymentRepositoryInterface;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\Payment;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 

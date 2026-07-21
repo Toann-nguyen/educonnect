@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use \App\Models\Grade;
 use Exception;
 use App\Repositories\Contracts\GradeRepositoryInterface;

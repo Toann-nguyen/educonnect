@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Repositories\Contracts\GradeRepositoryInterface;
 use App\Services\Interface\GradeServiceInterface;

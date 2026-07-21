@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Discipline;
 use App\Models\DisciplineAppeal;
 use App\Models\DisciplineType;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\DisciplineRepositoryInterface;
 use App\Services\Interface\DisciplineServiceInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\Student;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\Invoice;
 use App\Models\Grade;
 

@@ -6,7 +6,7 @@ use App\Http\Requests\AssignRoleRequest;
 use App\Http\Requests\StoreUserByAdminRequest;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Resources\UserResource;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Services\Interface\UserServiceInterface;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;

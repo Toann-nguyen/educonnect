@@ -3,7 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use App\Models\Discipline;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 use Illuminate\Support\Collection;

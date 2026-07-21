@@ -6,7 +6,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Services\Interface\AuthServiceInterface;
 use App\Services\PermissionCacheService;
 use Exception;

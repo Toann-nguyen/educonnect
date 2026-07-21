@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Domains\Identity\Models;
 
 use App\Models\Schedule;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +14,7 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
+    protected $connection = 'identity';
     use HasFactory, Notifiable, SoftDeletes, HasRoles;
 
     // Guard name cho Spatie Permission phải khớp với config/auth.php

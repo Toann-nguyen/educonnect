@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 
 interface AuthRepositoryInterface
 {

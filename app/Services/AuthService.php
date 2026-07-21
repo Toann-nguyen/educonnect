@@ -20,9 +20,9 @@ use Illuminate\Support\Str;
 use Exception;
 use App\Jobs\SendVerificationEmail;
 use App\Jobs\WriteAuditLog;
-use App\Models\RefreshToken;
-use App\Models\UserSession;
-use App\Models\User;
+use App\Domains\Identity\Models\RefreshToken;
+use App\Domains\Identity\Models\UserSession;
+use App\Domains\Identity\Models\User;
 
 class AuthService implements AuthServiceInterface
 {

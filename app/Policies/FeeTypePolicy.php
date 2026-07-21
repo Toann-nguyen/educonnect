@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\FeeType;
 
 class FeeTypePolicy

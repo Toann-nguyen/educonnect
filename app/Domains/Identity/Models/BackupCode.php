@@ -1,27 +1,27 @@
 <?php
 
-namespace App\Models;
+namespace App\Domains\Identity\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AuditLog extends Model
+class BackupCode extends Model
 {
+    protected $connection = 'identity';
     use HasFactory;
 
-    public $timestamps = false;
+    public $timestamps = false; // Chỉ có created_at tự xử lý
 
     protected $fillable = [
         'user_id',
-        'action',
-        'ip_address',
-        'user_agent',
-        'metadata',
+        'code_hash',
+        'used_at',
+        'created_at',
     ];
 
     protected $casts = [
-        'metadata' => 'array',
+        'used_at' => 'datetime',
         'created_at' => 'datetime',
     ];
 

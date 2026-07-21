@@ -3,7 +3,7 @@
 namespace App\Services\Interface;
 
 use App\Models\StudentConductScore;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 

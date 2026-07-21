@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Services\Interface\InvoiceServiceInterface;
-use \App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\Invoice;
 use \Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;

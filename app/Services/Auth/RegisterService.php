@@ -4,7 +4,7 @@ namespace App\Services\Auth;
 
 use App\Events\UserRegistered;
 use App\Jobs\SendVerificationEmail;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use Illuminate\Support\Facades\DB;

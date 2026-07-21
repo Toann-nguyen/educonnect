@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Permission;
+use App\Domains\Identity\Models\Permission;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

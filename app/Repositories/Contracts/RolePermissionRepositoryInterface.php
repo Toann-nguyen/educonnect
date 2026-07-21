@@ -4,7 +4,7 @@ namespace App\Repositories\Contracts;
 
 use Exception;
 use Spatie\Permission\Models\Role;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Support\Facades\DB;
 
 interface RolePermissionRepositoryInterface

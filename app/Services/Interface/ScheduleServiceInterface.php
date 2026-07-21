@@ -4,7 +4,7 @@ namespace App\Services\Interface;
 
 use App\Models\Schedule;
 use App\Models\SchoolClass;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
 interface ScheduleServiceInterface

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\Interface\UserServiceInterface;
 use Exception;

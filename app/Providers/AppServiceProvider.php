@@ -15,6 +15,27 @@ use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\RolePermissionRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\AuthRepositoryInterface as IdentityAuthRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\EmailVerificationRepositoryInterface as IdentityEmailVerificationRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\PermissionRepositoryInterface as IdentityPermissionRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\RolePermissionRepositoryInterface as IdentityRolePermissionRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\RoleRepositoryInterface as IdentityRoleRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\UserRepositoryInterface as IdentityUserRepositoryInterface;
+use App\Domains\Identity\Repositories\Auth\AuthRepository as IdentityAuthRepository;
+use App\Domains\Identity\Repositories\Auth\EmailVerificationRepository as IdentityEmailVerificationRepository;
+use App\Domains\Identity\Repositories\Eloquent\PermissionRepository as IdentityPermissionRepository;
+use App\Domains\Identity\Repositories\Eloquent\RolePermissionRepository as IdentityRolePermissionRepository;
+use App\Domains\Identity\Repositories\Eloquent\RoleRepository as IdentityRoleRepository;
+use App\Domains\Identity\Repositories\Eloquent\UserRepository as IdentityUserRepository;
+use App\Domains\Identity\Services\AuthService as IdentityAuthService;
+use App\Domains\Identity\Services\Interface\AuthServiceInterface as IdentityAuthServiceInterface;
+use App\Domains\Identity\Services\Interface\PermissionServiceInterface as IdentityPermissionServiceInterface;
+use App\Domains\Identity\Services\Interface\RoleServiceInterface as IdentityRoleServiceInterface;
+use App\Domains\Identity\Services\Interface\UserRoleServiceInterface as IdentityUserRoleServiceInterface;
+use App\Domains\Identity\Services\PermissionService as IdentityPermissionService;
+use App\Domains\Identity\Services\RoleService as IdentityRoleService;
+use App\Domains\Identity\Services\UserRoleService as IdentityUserRoleService;
+use App\Domains\Identity\Services\PermissionCacheService as IdentityPermissionCacheService;
 use App\Repositories\Eloquent\ConductScoreRepository;
 use App\Repositories\Eloquent\DisciplineRepository;
 use App\Repositories\Eloquent\GradeRepository;
@@ -42,7 +63,7 @@ use App\Services\Interface\StudentServiceInterface;
 use App\Services\Interface\UserServiceInterface;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Observers\UserObserver;
 use App\Services\PermissionCacheService;
 use App\Services\RolePermissionService;
@@ -119,6 +140,19 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(\App\Repositories\Contracts\RolePermissionRepositoryInterface::class)
             );
         });
+
+        // === Identity Domain Bindings ===
+        $this->app->bind(IdentityUserRepositoryInterface::class, IdentityUserRepository::class);
+        $this->app->bind(IdentityAuthRepositoryInterface::class, IdentityAuthRepository::class);
+        $this->app->bind(IdentityEmailVerificationRepositoryInterface::class, IdentityEmailVerificationRepository::class);
+        $this->app->bind(IdentityRoleRepositoryInterface::class, IdentityRoleRepository::class);
+        $this->app->bind(IdentityPermissionRepositoryInterface::class, IdentityPermissionRepository::class);
+        $this->app->bind(IdentityRolePermissionRepositoryInterface::class, IdentityRolePermissionRepository::class);
+
+        $this->app->bind(IdentityAuthServiceInterface::class, IdentityAuthService::class);
+        $this->app->bind(IdentityRoleServiceInterface::class, IdentityRoleService::class);
+        $this->app->bind(IdentityPermissionServiceInterface::class, IdentityPermissionService::class);
+        $this->app->bind(IdentityUserRoleServiceInterface::class, IdentityUserRoleService::class);
     }
 
     /**

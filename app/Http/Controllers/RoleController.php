@@ -7,7 +7,7 @@ use App\Services\RoleService;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
 use App\Http\Requests\AssignPermissionsRequest;
-use App\Models\Role;
+use App\Domains\Identity\Models\Role;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;

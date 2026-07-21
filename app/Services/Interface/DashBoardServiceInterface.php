@@ -2,7 +2,7 @@
 
 namespace App\Services\Interface;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 
 interface DashBoardServiceInterface
 {

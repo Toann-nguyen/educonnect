@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Domains\Identity\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmailVerification extends Model
 {
+    protected $connection = 'identity';
     use HasFactory;
 
     public $timestamps = false; // chỉ có created_at, tự xử lý

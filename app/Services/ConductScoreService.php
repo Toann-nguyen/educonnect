@@ -6,7 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\Discipline;
 use App\Models\StudentConductScore;
 use App\Models\Student;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\ConductScoreRepositoryInterface;
 use App\Services\Interface\ConductScoreServiceInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

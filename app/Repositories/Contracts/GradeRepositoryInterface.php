@@ -4,7 +4,7 @@ namespace App\Repositories\Contracts;
 
 use  \Illuminate\Database\Eloquent\Collection;
 use App\Models\Grade;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 
 interface GradeRepositoryInterface
 {

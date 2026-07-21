@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Services\PermissionCacheService;
 use Illuminate\Support\Facades\DB;
 

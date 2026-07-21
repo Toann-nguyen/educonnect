@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\RolePermissionRepositoryInterface;
 // THAY ĐỔI: Sử dụng User Model thay vì DB facade để tận dụng relationship
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Services\Interface\UserRoleServiceInterface;
 use App\Services\PermissionCacheService;
 use Illuminate\Support\Facades\DB;

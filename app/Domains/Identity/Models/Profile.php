@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace App\Domains\Identity\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Profile extends Model
 {
+    protected $connection = 'identity';
     use HasFactory;
 
     public $timestamps = false; // Thường profile không cần timestamps riêng

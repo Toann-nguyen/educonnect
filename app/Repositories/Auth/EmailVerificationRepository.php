@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Auth;
 
-use App\Models\EmailVerification;
+use App\Domains\Identity\Models\EmailVerification;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use Carbon\Carbon;
 

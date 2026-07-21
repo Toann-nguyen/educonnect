@@ -3,7 +3,7 @@
 namespace App\Services\Interface;
 
 use \Illuminate\Database\Eloquent\Collection;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\Invoice;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 

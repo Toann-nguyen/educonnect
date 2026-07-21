@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-use App\Models\EmailVerification;
+use App\Domains\Identity\Models\EmailVerification;
 
 interface EmailVerificationRepositoryInterface
 {

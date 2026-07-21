@@ -2,7 +2,7 @@
 
 namespace App\Services\Interface;
 
-use App\Models\Role;
+use App\Domains\Identity\Models\Role;
 use Illuminate\Contracts\Pagination\Paginator;
 
 interface RoleServiceInterface

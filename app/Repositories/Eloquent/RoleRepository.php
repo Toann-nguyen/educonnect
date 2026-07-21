@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Eloquent;
 
-use App\Models\Role;
+use App\Domains\Identity\Models\Role;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;

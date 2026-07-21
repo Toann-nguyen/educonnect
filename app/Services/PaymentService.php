@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Services\Interface\PaymentServiceInterface;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Models\Payment;
 use App\Models\Invoice;
 use App\Repositories\Contracts\PaymentRepositoryInterface;

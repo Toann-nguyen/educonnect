@@ -3,7 +3,7 @@
 namespace App\Services\Interface;
 
 use App\Models\Discipline;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface DisciplineServiceInterface

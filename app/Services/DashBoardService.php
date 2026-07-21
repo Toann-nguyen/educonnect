@@ -8,7 +8,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Services\Interface\DashBoardServiceInterface;
 use Carbon\Carbon;
 

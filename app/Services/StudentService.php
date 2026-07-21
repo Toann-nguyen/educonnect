@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Services\Interface\StudentServiceInterface;
-use \App\Models\User;
+use App\Domains\Identity\Models\User;
 
 class StudentService implements StudentServiceInterface
 {

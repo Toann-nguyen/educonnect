@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
 use Illuminate\Contracts\Pagination\Paginator;
-use App\Models\Role;
+use App\Domains\Identity\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RoleService implements RoleServiceInterface

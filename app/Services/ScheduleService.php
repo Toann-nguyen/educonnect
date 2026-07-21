@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Schedule;
 use App\Models\SchoolClass;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\ScheduleRepositoryInterface;
 use App\Services\Interface\ScheduleServiceInterface;
 use Carbon\Carbon;

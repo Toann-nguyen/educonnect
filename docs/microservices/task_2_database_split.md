@@ -52,7 +52,7 @@ protected $connection = 'identity';
 ```
 2. Mở các file Model thuộc School domain (hiện đang nằm ở `app/Models/` hoặc `app/Domains/School/Models/`) và thêm:
 ```php
-protected $connection = 'school';
+protected $connection = 'school';$
 ```
 
 ---

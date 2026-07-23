@@ -79,3 +79,11 @@
 4. **Reset Spatie RBAC Cache**:
    - Chạy `php artisan permission:cache-reset` sau khi refactor namespace model User/Role/Permission để tránh lỗi cache cũ.
 
+## 10. DANH SÁCH FILE HƯỚNG DẪN CHI TIẾT (TASK GUIDES FOR AGENTS)
+Dành cho AI Agent hoặc Dev thực hiện từng nhiệm vụ nhỏ:
+- 📄 **Task 1: Merge Identity Service**: [task_1_identity_merge.md](file:///home/robert/educonnect/docs/microservices/task_1_identity_merge.md)
+- 📄 **Task 2: Setup Per-Service Database & Migrations**: [task_2_database_split.md](file:///home/robert/educonnect/docs/microservices/task_2_database_split.md)
+- 📄 **Task 3: Production Docker & Nginx Deployment**: [task_3_production_deploy.md](file:///home/robert/educonnect/docs/microservices/task_3_production_deploy.md)
+
+
+

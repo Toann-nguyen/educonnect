@@ -49,7 +49,26 @@ class AuthService implements AuthServiceInterface
         // 2. Gán vai trò mặc định
         $user->assignRole('student');
 
-        // 3. Tạo token xác minh email
+        // 3. Publish event UserCreated lên Redis Stream để Finance/Notify service consume
+        Redis::xadd('user.created', '*', [
+            'user_id'    => $user->id,
+            'email'      => $user->email,
+            'name'       => $user->name,
+            'role'       => 'student',
+            'created_at' => now()->toIso8601String(),
+        ]);
+
+        // 4. Publish notification xác minh email lên Redis Stream để Notify service gửi
+        Redis::xadd('notifications', '*', [
+            'payload' => json_encode([
+                'type'    => 'email',
+                'to'      => $user->email,
+                'subject' => 'Xác minh tài khoản EduConnect của bạn',
+                'body'    => "Xin chào {$user->name},<br>Vui lòng xác minh email của bạn.",
+            ]),
+        ]);
+
+        // 5. Tạo token xác minh email
         $rawToken = Str::random(60);
         $tokenHash = hash('sha256', $rawToken);
 
@@ -59,10 +78,10 @@ class AuthService implements AuthServiceInterface
             now()->addHours(24)
         );
 
-        // 4. Gửi email xác minh qua Queue Job
+        // 6. Gửi email xác minh qua Queue Job (fallback nếu Notify service chưa lên)
         SendVerificationEmail::dispatch($user, $rawToken);
 
-        // 5. Tự động tạo Access Token (Auto-login)
+        // 7. Tự động tạo Access Token (Auto-login)
         $token = auth('api')->login($user);
 
         return [

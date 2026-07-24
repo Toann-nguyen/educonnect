@@ -2,7 +2,7 @@
 
 namespace App\Domains\Identity\Models;
 
-use App\Models\Schedule;
+// Cross-domain relationships trỏ qua user_id, không import model của domain khác
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -132,7 +132,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     // -------------------------------------------------------
-    // Existing Relationships & Scopes (EduConnect Legacy)
+    // Identity Domain Relationships (chỉ quan hệ trong Identity)
     // -------------------------------------------------------
 
     /** Mối quan hệ 1-1 với Profile */
@@ -141,85 +141,14 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(Profile::class);
     }
 
-    /** Mối quan hệ 1-1 với Student (nếu user này là học sinh) */
-    public function student()
-    {
-        return $this->hasOne(Student::class);
-    }
+    // -------------------------------------------------------
+    // Cross-domain: chỉ expose user_id, không import Model ngoài domain
+    // School/Finance truy vấn bằng user_id qua service của chính chúng
+    // -------------------------------------------------------
 
-    /** Các thanh toán cho hóa đơn này */
-    public function payments()
+    /** Lấy user_id để School domain tự truy vấn student tương ứng */
+    public function getUserIdAttribute(): int
     {
-        return $this->hasMany(Payment::class);
-    }
-
-    public function teacheringSchedules()
-    {
-        return $this->hasOne(Schedule::class, 'teacher_id');
-    }
-
-    public function reportedDisciplines()
-    {
-        return $this->hasMany(Discipline::class, 'reporter_user_id');
-    }
-
-    public function guardianStudents()
-    {
-        return $this->belongsToMany(
-            Student::class,
-            'student_guardians',    // Tên bảng trung gian
-            'guardian_user_id',     // Khóa ngoại trên bảng trung gian trỏ về User (phụ huynh)
-            'student_id'
-        );
-    }
-
-    /** Lấy điểm số do giáo viên này chấm */
-    public function gradedScores()
-    {
-        return $this->hasMany(Grade::class, 'teacher_id');
-    }
-
-    /** Lấy các lớp học mà user này làm GVCN */
-    public function homeroomClasses()
-    {
-        return $this->hasMany(SchoolClass::class, 'homeroom_teacher_id');
-    }
-
-    /** Scope lọc theo lớp học */
-    public function scopeByClass($query, $classId)
-    {
-        return $query->whereHas('student', function ($q) use ($classId) {
-            $q->where('class_id', $classId);
-        });
-    }
-
-    /** THÊM: Các khiếu nại do user này tạo */
-    public function disciplineAppeals()
-    {
-        return $this->hasMany(DisciplineAppeal::class, 'appellant_user_id');
-    }
-
-    /** THÊM: Các khiếu nại mà user này xem xét */
-    public function reviewedAppeals()
-    {
-        return $this->hasMany(DisciplineAppeal::class, 'reviewed_by_user_id');
-    }
-
-    /** THÊM: Các bản ghi kỷ luật mà user này duyệt */
-    public function reviewedDisciplines()
-    {
-        return $this->hasMany(Discipline::class, 'reviewed_by_user_id');
-    }
-
-    /** THÊM: Các hành động xử lý do user này thực hiện */
-    public function executedDisciplineActions()
-    {
-        return $this->hasMany(DisciplineAction::class, 'executed_by_user_id');
-    }
-
-    /** THÊM: Các điểm hạnh kiểm do user này phê duyệt */
-    public function approvedConductScores()
-    {
-        return $this->hasMany(StudentConductScore::class, 'approved_by_user_id');
+        return $this->id;
     }
 }

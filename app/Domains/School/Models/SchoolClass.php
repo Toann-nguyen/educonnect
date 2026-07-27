@@ -18,11 +18,6 @@ class SchoolClass extends Model
         return $this->hasMany(Student::class, 'class_id');
     }
 
-    /** Lấy thông tin giáo viên chủ nhiệm */
-    public function homeroomTeacher()
-    {
-        return $this->belongsTo(User::class, 'homeroom_teacher_id');
-    }
 
     /** Lấy năm học */
     public function academicYear()

@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\FeeType;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Models\Payment;
-use App\Models\Student;
-use App\Models\User;
+use App\Domains\Finance\Models\FeeType;
+use App\Domains\Finance\Models\Invoice;
+use App\Domains\Finance\Models\InvoiceItem;
+use App\Domains\Finance\Models\Payment;
+use App\Domains\School\Models\Student;
+use App\Domains\Identity\Models\User;
 use Illuminate\Database\Seeder;
 
 class InvoiceAndPaymentSeeder extends Seeder

@@ -34,6 +34,5 @@ class LibraryTransaction extends Model
     /** Lấy người mượn */
     public function user()
     {
-        return $this->belongsTo(User::class);
     }
 }

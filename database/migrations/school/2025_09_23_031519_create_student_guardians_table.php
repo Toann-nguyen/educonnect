@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('student_guardians', function (Blueprint $table) {
         $table->id();
         $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
-        $table->foreignId('guardian_user_id')->constrained('users')->onDelete('cascade');
+        $table->foreignId('guardian_user_id')->onDelete('cascade');
         $table->string('relationship'); // e.g., "Bố", "Mẹ", "Người giám hộ"
         $table->timestamps();
         });

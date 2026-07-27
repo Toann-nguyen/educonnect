@@ -2,14 +2,14 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Redis;
 use App\Jobs\SendVerificationEmail;
-use App\Events\UserRegistered;
+use App\Domains\Identity\Events\UserRegistered;
 use Tests\TestCase;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Str;

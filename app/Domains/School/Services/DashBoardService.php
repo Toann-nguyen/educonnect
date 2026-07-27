@@ -4,8 +4,8 @@ namespace App\Domains\School\Services;
 
 use App\Domains\School\Models\AcademicYear;
 use App\Domains\School\Models\Event;
-use App\Models\Invoice;
-use App\Models\Payment;
+use App\Domains\Finance\Models\Invoice;
+use App\Domains\Finance\Models\Payment;
 use App\Domains\School\Models\SchoolClass;
 use App\Domains\School\Models\Student;
 use App\Domains\Identity\Models\User;

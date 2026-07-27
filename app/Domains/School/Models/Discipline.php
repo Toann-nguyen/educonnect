@@ -49,18 +49,6 @@ class Discipline extends Model
         return $this->belongsTo(DisciplineType::class);
     }
 
-    /** Người báo cáo (Giáo viên) */
-    public function reporter()
-    {
-        return $this->belongsTo(User::class, 'reporter_user_id');
-    }
-
-    /** Người duyệt (Hiệu trưởng/BGH) */
-    public function reviewer()
-    {
-        return $this->belongsTo(User::class, 'reviewed_by_user_id');
-    }
-
     /** Các hành động xử lý */
     public function actions()
     {

@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Profile;
-use App\Models\User;
+use App\Domains\Identity\Models\Profile;
+use App\Domains\Identity\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 

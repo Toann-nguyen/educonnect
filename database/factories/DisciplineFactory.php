@@ -3,12 +3,12 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use App\Models\DisciplineType;
-use App\Models\Student;
-use App\Models\User;
+use App\Domains\School\Models\DisciplineType;
+use App\Domains\School\Models\Student;
+use App\Domains\Identity\Models\User;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Discipline>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domains\School\Models\Discipline>
  */
 class DisciplineFactory extends Factory
 {

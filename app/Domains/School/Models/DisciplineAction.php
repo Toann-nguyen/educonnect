@@ -28,12 +28,6 @@ class DisciplineAction extends Model
         return $this->belongsTo(Discipline::class);
     }
 
-    /** Người thực hiện */
-    public function executor()
-    {
-        return $this->belongsTo(User::class, 'executed_by_user_id');
-    }
-
     /** Scope lọc theo loại hành động */
     public function scopeByActionType($query, $type)
     {

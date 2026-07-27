@@ -13,12 +13,6 @@ class Student extends Model
     protected $fillable = ['user_id', 'class_id', 'student_code', 'status'];
 
 
-    /** Lấy tài khoản user của học sinh */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
     /** Lấy lớp học */
     public function schoolClass()
     {
@@ -41,12 +35,6 @@ class Student extends Model
     public function attendances()
     {
         return $this->hasMany(Attendance::class);
-    }
-
-    /** THÊM: Lấy hóa đơn của học sinh */
-    public function invoices()
-    {
-        return $this->hasMany(Invoice::class);
     }
 
     /** THÊM: Lấy vi phạm kỷ luật */

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('conduct_grade', 50)->nullable(); // Nên dùng string thay vì enum
 
             $table->text('teacher_comment')->nullable();
-            $table->foreignId('approved_by_user_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('approved_by_user_id')->nullable()->onDelete('set null');
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
 

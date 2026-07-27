@@ -4,12 +4,12 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Student;
-use App\Models\Profile;
-use App\Models\SchoolClass;
-use App\Models\AcademicYear;
-use App\Models\StudentGuardian;
+use App\Domains\Identity\Models\User;
+use App\Domains\School\Models\Student;
+use App\Domains\Identity\Models\Profile;
+use App\Domains\School\Models\SchoolClass;
+use App\Domains\School\Models\AcademicYear;
+use App\Domains\School\Models\StudentGuardian;
 
 class StructureSeeder extends Seeder
 {

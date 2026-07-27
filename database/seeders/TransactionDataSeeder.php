@@ -2,22 +2,22 @@
 
 namespace Database\Seeders;
 
-use App\Models\Attendance;
+use App\Domains\School\Models\Attendance;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use App\Models\User;
-use App\Models\Event;
-use App\Models\FeeType;
-use App\Models\Grade;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\Student;
-use App\Models\Subject;
-use App\Models\Schedule;
-use App\Models\Discipline;
-use App\Models\LibraryBook;
-use App\Models\SchoolClass;
-use App\Models\EventRegistration;
-use App\Models\LibraryTransaction;
+use App\Domains\Identity\Models\User;
+use App\Domains\School\Models\Event;
+use App\Domains\Finance\Models\FeeType;
+use App\Domains\School\Models\Grade;
+use App\Domains\Finance\Models\Invoice;
+use App\Domains\Finance\Models\Payment;
+use App\Domains\School\Models\Student;
+use App\Domains\School\Models\Subject;
+use App\Domains\School\Models\Schedule;
+use App\Domains\School\Models\Discipline;
+use App\Domains\School\Models\LibraryBook;
+use App\Domains\School\Models\SchoolClass;
+use App\Domains\School\Models\EventRegistration;
+use App\Domains\School\Models\LibraryTransaction;
 use Illuminate\Database\Seeder;
 
 

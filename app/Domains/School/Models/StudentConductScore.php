@@ -38,11 +38,6 @@ class StudentConductScore extends Model
         return $this->belongsTo(AcademicYear::class);
     }
 
-    /** Người phê duyệt */
-    public function approver()
-    {
-        return $this->belongsTo(User::class, 'approved_by_user_id');
-    }
 
     /** Tính điểm hạnh kiểm dựa trên tổng điểm trừ */
     public function calculateConductGrade(): string

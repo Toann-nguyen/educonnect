@@ -32,18 +32,6 @@ class DisciplineAppeal extends Model
         return $this->belongsTo(Discipline::class);
     }
 
-    /** Người khiếu nại */
-    public function appellant()
-    {
-        return $this->belongsTo(User::class, 'appellant_user_id');
-    }
-
-    /** Người xem xét khiếu nại */
-    public function reviewer()
-    {
-        return $this->belongsTo(User::class, 'reviewed_by_user_id');
-    }
-
     /** Scope lấy các khiếu nại chưa xem xét */
     public function scopePending($query)
     {

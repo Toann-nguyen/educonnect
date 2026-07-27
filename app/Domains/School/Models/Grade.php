@@ -35,11 +35,6 @@ class Grade extends Model
         return $this->belongsTo(Subject::class);
     }
 
-    /** Giáo viên chấm điểm */
-    public function teacher()
-    {
-        return $this->belongsTo(User::class, 'teacher_id');
-    }
 
     /** Scope để lọc theo học kỳ */
     public function scopeBySemester($query, $semester)

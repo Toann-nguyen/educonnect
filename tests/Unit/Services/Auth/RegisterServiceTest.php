@@ -2,9 +2,9 @@
 
 namespace Tests\Unit\Services\Auth;
 
-use App\Events\UserRegistered;
+use App\Domains\Identity\Events\UserRegistered;
 use App\Jobs\SendVerificationEmail;
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use App\Services\Auth\RegisterService;

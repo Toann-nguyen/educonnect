@@ -13,7 +13,7 @@ class UserRegistered
     /**
      * Tạo một instance event mới.
      *
-     * @param \App\Models\User $user
+     * @param App\Domains\Identity\Models\User $user
      */
     public function __construct(
         public User $user

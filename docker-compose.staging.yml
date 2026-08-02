@@ -1,14 +1,13 @@
 # ============================================================
-# docker-compose.prod.yml — PRODUCTION (microservice-split)
+# docker-compose.staging.yml — STAGING (microservice-split)
 # ------------------------------------------------------------
-# - API Gateway (Task 2.1): nginx + gateway.conf.template
-# - Identity / Finance / Notify / Realtime services
-# - RabbitMQ CLUSTER 3 node (Task 2.2)
-# - Horizon + Scheduler + Certbot (Let's Encrypt)
-# Usage: docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# - RabbitMQ CLUSTER 3 node (rabbitmq-1/2/3, quorum queues)
+# - Build production (không bind-mount source)
+# - Không expose DB/Redis/RabbitMQ ra ngoài
+# Usage: docker compose -f docker-compose.staging.yml up -d --build
 # ============================================================
 
-name: educonnect
+name: educonnect-staging
 
 services:
 
@@ -226,7 +225,6 @@ services:
   mysql:
     image: mysql/mysql-server:8.0
     restart: unless-stopped
-    # KHÔNG expose port ra ngoài — chỉ internal network
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: "%"
@@ -256,7 +254,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    # KHÔNG expose port ra ngoài
     command: >
       redis-server
       --maxmemory 256mb
@@ -357,99 +354,6 @@ services:
       retries: 5
       start_period: 45s
 
-  # ── Queue Worker (Horizon) ─────────────────────────────────
-  horizon:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      target: production
-    restart: unless-stopped
-    command: php /var/www/html/artisan horizon
-    volumes:
-      - storage_data:/var/www/html/storage/app
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      REDIS_HOST: redis
-      CACHE_DRIVER: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - educonnect
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 256M
-    healthcheck:
-      test: ["CMD", "php", "artisan", "horizon:status"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # ── Scheduler ───────────────────────────────────────────────
-  scheduler:
-    build:
-      context: .
-      dockerfile: docker/php/Dockerfile
-      target: production
-    restart: unless-stopped
-    command: >
-      sh -c "while true; do
-        php /var/www/html/artisan schedule:run --no-interaction;
-        sleep 60;
-      done"
-    volumes:
-      - storage_data:/var/www/html/storage/app
-    environment:
-      APP_ENV: production
-      APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      REDIS_HOST: redis
-      CACHE_DRIVER: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - educonnect
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
-
-  # ── Certbot (Let's Encrypt — tự động renew) ──────────────────
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - ./docker/ssl:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    # Chạy thủ công lần đầu:
-    # docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d yourdomain.com
-    # Cron renew: 0 12 * * * docker compose run --rm certbot renew
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - educonnect
-
-# ── Networks ─────────────────────────────────────────────────
 networks:
   educonnect:
     driver: bridge
@@ -457,7 +361,6 @@ networks:
       config:
         - subnet: 172.21.0.0/16
 
-# ── Volumes ──────────────────────────────────────────────────
 volumes:
   mysql_data:
     driver: local
@@ -474,6 +377,4 @@ volumes:
   rabbitmq2_data:
     driver: local
   rabbitmq3_data:
-    driver: local
-  certbot_www:
     driver: local

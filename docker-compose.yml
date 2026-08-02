@@ -1,138 +1,283 @@
+# ============================================================
+# docker-compose.yml — DEV environment (microservice-split)
+# Usage:  docker compose up -d --build
+# Gateway: http://localhost:${GATEWAY_PORT:-8080}
+# RabbitMQ mgmt: http://localhost:${RABBITMQ_MGMT_PORT:-15672} (educonnect / educonnect_dev)
+# MySQL: localhost:${FORWARD_DB_PORT:-3307} (root / ${MYSQL_ROOT_PASSWORD:-root})
+# ============================================================
+
+name: educonnect-dev
+
 services:
-    laravel.test:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.2'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.2/app'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
-        ports:
-            - '${APP_PORT:-8080}:80'
-            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
-            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
-            IGNITION_LOCAL_SITES_PATH: '${PWD}'
-        volumes:
-            - '.:/var/www/html'
-        networks:
-            - sail
-        depends_on:
-            - mysql
-            - redis
-            - mailpit
 
-    mysql:
-        image: 'mysql/mysql-server:8.0'
-        ports:
-            - '${FORWARD_DB_PORT:-3307}:3306'
-        environment:
-            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_ROOT_HOST: '%'
-            MYSQL_DATABASE: '${DB_DATABASE}'
-            MYSQL_USER: '${DB_USERNAME}'
-            MYSQL_PASSWORD: '${DB_PASSWORD}'
-            MYSQL_ALLOW_EMPTY_PASSWORD: 1
-            MYSQL_EXTRA_OPTIONS: '${MYSQL_EXTRA_OPTIONS}'
-        volumes:
-            - 'sail-mysql:/var/lib/mysql'
-            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - mysqladmin
-                - ping
-                - '-p${DB_PASSWORD}'
-            retries: 3
-            timeout: 5s
+  # ── API Gateway (Task 2.1) ────────────────────────────────
+  gateway:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    # Xoá default.conf của image để tránh xung đột server block, rồi chạy entrypoint (envsubst templates)
+    command: /bin/sh -c "rm -f /etc/nginx/conf.d/default.conf && exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/gateway.conf.template:/etc/nginx/templates/gateway.conf.template:ro
+      - gateway_logs:/var/log/nginx
+    environment:
+      NGINX_HOST: ${NGINX_HOST:-localhost}
+      GATEWAY_DOMAIN: ${GATEWAY_DOMAIN:-localhost}
+    depends_on:
+      php:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      finance:
+        condition: service_started
+      notify:
+        condition: service_started
+      realtime:
+        condition: service_started
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-    redis:
-        image: 'redis:alpine'
-        ports:
-            - '${FORWARD_REDIS_PORT:-6379}:6379'
-        volumes:
-            - 'sail-redis:/data'
-        networks:
-            - sail
-        healthcheck:
-            test:
-                - CMD
-                - redis-cli
-                - ping
-            retries: 3
-            timeout: 5s
+  # ── School / Monolith Laravel (PHP-FPM) ───────────────────
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # cho Xdebug
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: ${APP_KEY}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      DB_IDENTITY_DATABASE: identity_db
+      DB_SCHOOL_DATABASE: school_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
-    mailpit:
-        image: 'axllent/mailpit:latest'
-        ports:
-            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
-        networks:
-            - sail
+  # ── Identity Service (Laravel — JWT auth) ─────────────────
+  identity:
+    build:
+      context: ${IDENTITY_PATH:-../educonnect-identity}
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ${IDENTITY_PATH:-../educonnect-identity}:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_KEY: ${IDENTITY_APP_KEY:-base64:/W15yCoflO1wlbfc7O9Q3zE+n31z8OQl4/K7SeiG+L4=}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: identity_db
+      DB_USERNAME: identity_user
+      DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: file
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      MIGRATE_ON_START: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-    phpmyadmin:
-        image: 'phpmyadmin:latest'
-        ports:
-            - '${FORWARD_PHPMYADMIN_PORT:-8081}:80'
-        environment:
-            PMA_HOST: mysql
-            PMA_USER: '${DB_USERNAME}'
-            PMA_PASSWORD: '${DB_PASSWORD}'
-        networks:
-            - sail
-        depends_on:
-            - mysql
+  # ── Finance Service (Go) ──────────────────────────────────
+  finance:
+    build: ./services/finance
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: finance_db
+      DB_USERNAME: finance_user
+      DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-    queue:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.2'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.2/app'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-        volumes:
-            - '.:/var/www/html'
-        networks:
-            - sail
-        depends_on:
-            - mysql
-            - redis
-        command: php /var/www/html/artisan horizon
+  # ── Notify Service (Go — RabbitMQ consumer) ───────────────
+  notify:
+    build: ./services/notify
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      MAIL_USERNAME: ""
+      MAIL_PASSWORD: ""
+      MAIL_FROM: no-reply@educonnect.local
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-    scheduler:
-        build:
-            context: './vendor/laravel/sail/runtimes/8.2'
-            dockerfile: Dockerfile
-            args:
-                WWWGROUP: '${WWWGROUP}'
-        image: 'sail-8.2/app'
-        environment:
-            WWWUSER: '${WWWUSER}'
-            LARAVEL_SAIL: 1
-        volumes:
-            - '.:/var/www/html'
-        networks:
-            - sail
-        depends_on:
-            - mysql
-            - redis
-        command: php /var/www/html/artisan schedule:work
+  # ── Realtime Service (Node — Socket.IO + RabbitMQ) ────────
+  realtime:
+    build: ./services/realtime
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── MySQL (3 DB: identity_db, school_db, finance_db) ──────
+  mysql:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_DB_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: laravel
+      MYSQL_ALLOW_EMPTY_PASSWORD: "0"
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      SCHOOL_DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ── Redis (cache + queue) ─────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── RabbitMQ (Task 2.2) — 1 node cho dev ──────────────────
+  # Cluster 3 node → docker-compose.staging.yml
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: rabbitmq-1
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+    volumes:
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Mailpit (bắt mail dev — notify/identity gửi vào đây) ──
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - educonnect
 
 networks:
-    sail:
-        driver: bridge
-volumes:
-    sail-mysql:
-        driver: local
-    sail-redis:
-        driver: local
+  educonnect:
+    driver: bridge
 
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  gateway_logs:
+    driver: local

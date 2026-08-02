@@ -1,0 +1,218 @@
+# ============================================================
+# gateway.conf.template — Nginx API Gateway (microservice-split)
+# ------------------------------------------------------------
+# Routing:
+#   /api/auth/*    → identity (Laravel PHP-FPM :9000)
+#   /api/finance/* → finance  (Go :8080)
+#   /api/* (còn lại)→ school   (monolith Laravel PHP-FPM :9000)
+#   /socket.io/*   → realtime (Node Socket.IO :3000)
+#   /health/*      → health checks upstream
+#
+# Envsubst (nginx image): NGINX_HOST, GATEWAY_DOMAIN
+# ============================================================
+
+# ── CORS: chỉ cho origin khớp domain (envsubst) ─────────────
+map $http_origin $cors_origin {
+    default "";
+    "~^https?://${GATEWAY_DOMAIN}(:\d+)?$" $http_origin;
+    "~^https?://localhost(:\d+)?$" $http_origin;
+}
+
+# ── Upstreams ────────────────────────────────────────────────
+upstream identity_svc { server identity:9000;  keepalive 32; }
+upstream school_svc   { server php:9000;       keepalive 32; }
+upstream finance_svc  { server finance:8080;   keepalive 32; }
+upstream notify_svc   { server notify:8081;    keepalive 32; }
+upstream realtime_svc { server realtime:3000;  keepalive 32; }
+
+# ── Log format riêng cho gateway (kèm correlation_id) ────────
+log_format json_gateway escape=json
+    '{'
+        '"time":"$time_iso8601",'
+        '"correlation_id":"$correlation_id",'
+        '"remote_addr":"$remote_addr",'
+        '"method":"$request_method",'
+        '"uri":"$request_uri",'
+        '"status":$status,'
+        '"response_time":$request_time,'
+        '"upstream_time":"$upstream_response_time",'
+        '"upstream_addr":"$upstream_addr",'
+        '"user_agent":"$http_user_agent"'
+    '}';
+
+server {
+    listen      80;
+    listen      [::]:80;
+    server_name ${NGINX_HOST};
+
+    access_log /var/log/nginx/gateway.access.log json_gateway;
+    error_log  /var/log/nginx/gateway.error.log  warn;
+
+    # ── Correlation ID ───────────────────────────────────────
+    # Luôn trả X-Correlation-ID cho client (để trace end-to-end)
+    add_header X-Correlation-ID $correlation_id always;
+
+    # ── CORS headers (toàn bộ response) ──────────────────────
+    add_header Access-Control-Allow-Origin  $cors_origin always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
+    add_header Access-Control-Expose-Headers "X-Correlation-ID" always;
+    add_header Access-Control-Max-Age        86400 always;
+
+    # ── Security headers ─────────────────────────────────────
+    add_header X-Frame-Options           "SAMEORIGIN"                      always;
+    add_header X-Content-Type-Options    "nosniff"                         always;
+    add_header X-XSS-Protection          "1; mode=block"                   always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy        "camera=(), microphone=(), geolocation=()" always;
+
+    # ── Gateway health ───────────────────────────────────────
+    location = /health {
+        access_log off;
+        add_header Content-Type application/json;
+        return 200 '{"status":"healthy","service":"api-gateway"}';
+    }
+
+    # Upstream health checks (proxy — Go/Node HTTP)
+    location = /health/finance {
+        access_log off;
+        proxy_pass http://finance_svc/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+    }
+    location = /health/notify {
+        access_log off;
+        proxy_pass http://notify_svc/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+    }
+    location = /health/realtime {
+        access_log off;
+        proxy_pass http://realtime_svc/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+    }
+
+    # Upstream health checks (fastcgi — Laravel, override REQUEST_URI)
+    location = /health/identity {
+        access_log off;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param REQUEST_URI      /api/health;
+        fastcgi_pass identity_svc;
+    }
+    location = /health/school {
+        access_log off;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_param REQUEST_URI      /api/health;
+        fastcgi_pass school_svc;
+    }
+
+    # ── WebSocket (Socket.IO realtime) ───────────────────────
+    location /socket.io/ {
+        limit_req zone=gw_api burst=30 nodelay;
+
+        proxy_pass http://realtime_svc;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host       $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+        proxy_set_header X-Real-IP       $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # ── Identity service: /api/auth/* ────────────────────────
+    location /api/auth/ {
+        limit_req zone=gw_auth burst=10 nodelay;
+
+        # CORS preflight
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Content-Length 0 always;
+            add_header Content-Type   text/plain always;
+            return 204;
+        }
+
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_pass identity_svc;
+        fastcgi_keep_conn on;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        fastcgi_connect_timeout 10s;
+        fastcgi_send_timeout 60s;
+        fastcgi_read_timeout 60s;
+        fastcgi_param HTTP_X_CORRELATION_ID $correlation_id;
+        fastcgi_param HTTP_X_REAL_IP        $remote_addr;
+        fastcgi_param HTTP_X_FORWARDED_FOR  $proxy_add_x_forwarded_for;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+    }
+
+    # ── Finance service (Go): /api/finance/* ─────────────────
+    location /api/finance/ {
+        limit_req zone=gw_api burst=30 nodelay;
+
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Content-Length 0 always;
+            add_header Content-Type   text/plain always;
+            return 204;
+        }
+
+        proxy_pass http://finance_svc;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Correlation-ID  $correlation_id;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 10s;
+        proxy_send_timeout    60s;
+        proxy_read_timeout    60s;
+    }
+
+    # ── School / monolith (Laravel): mọi /api/* còn lại ──────
+    location /api/ {
+        limit_req zone=gw_api burst=30 nodelay;
+
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Content-Length 0 always;
+            add_header Content-Type   text/plain always;
+            return 204;
+        }
+
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_pass school_svc;
+        fastcgi_keep_conn on;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        fastcgi_connect_timeout 10s;
+        fastcgi_send_timeout 60s;
+        fastcgi_read_timeout 60s;
+        fastcgi_param HTTP_X_CORRELATION_ID $correlation_id;
+        fastcgi_param HTTP_X_REAL_IP        $remote_addr;
+        fastcgi_param HTTP_X_FORWARDED_FOR  $proxy_add_x_forwarded_for;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+    }
+
+    # ── Không phải API → 404 JSON (kiến trúc API-first) ──────
+    location / {
+        add_header Content-Type application/json;
+        return 404 '{"error":"not_found","message":"API gateway only. Use /api/*"}';
+    }
+}

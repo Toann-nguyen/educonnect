@@ -1,0 +1,23 @@
+{
+  "name": "educonnect-realtime",
+  "version": "1.0.0",
+  "description": "Realtime notification gateway — Socket.IO + RabbitMQ consumer",
+  "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/consumer.test.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

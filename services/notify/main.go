@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,23 +10,99 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-var ctx = context.Background()
+// ─── Broker topology (khớp docker/rabbitmq/definitions.json) ──
 
-// ─── Notification Payload ─────────────────────────────────────────────────────
+const (
+	exchangeUser    = "user_events"
+	exchangeFinance = "finance_events"
+	queueNotify     = "notification_queue"
+)
+
+// ─── Notification Payload ─────────────────────────────────────
 
 type NotifyPayload struct {
-	Type    string `json:"type"`    // "email" | "sms"
+	Type    string `json:"type"` // "email" | "sms"
 	To      string `json:"to"`
 	Subject string `json:"subject"`
 	Body    string `json:"body"`
+	UserID  uint   `json:"user_id"` // để realtime route theo user
 }
 
-// ─── Email Sender ─────────────────────────────────────────────────────────────
+// ─── RabbitMQ connection (retry chờ broker khởi động) ─────────
 
-func sendEmail(payload NotifyPayload) error {
+func rabbitURL() string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/",
+		os.Getenv("RABBITMQ_USER"),
+		os.Getenv("RABBITMQ_PASSWORD"),
+		os.Getenv("RABBITMQ_HOST"),
+		os.Getenv("RABBITMQ_PORT"),
+	)
+}
+
+func connectRabbit() (*amqp.Connection, *amqp.Channel, error) {
+	var conn *amqp.Connection
+	var err error
+	// Broker có thể khởi động chậm hơn container này — retry 60s
+	for i := 0; i < 30; i++ {
+		conn, err = amqp.Dial(rabbitURL())
+		if err == nil {
+			break
+		}
+		log.Printf("RabbitMQ chưa sẵn sàng (%d/30): %v", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect RabbitMQ: %w", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return nil, nil, fmt.Errorf("open channel: %w", err)
+	}
+
+	// Đảm bảo topology tồn tại (idempotent — an toàn kể cả khi definitions.json chưa load)
+	if err := declareTopology(ch); err != nil {
+		return nil, nil, err
+	}
+	return conn, ch, nil
+}
+
+func declareTopology(ch *amqp.Channel) error {
+	exchanges := []struct{ name, typ string }{
+		{exchangeUser, "topic"},
+		{exchangeFinance, "topic"},
+	}
+	for _, ex := range exchanges {
+		if err := ch.ExchangeDeclare(ex.name, ex.typ, true, false, false, false, nil); err != nil {
+			return fmt.Errorf("declare exchange %s: %w", ex.name, err)
+		}
+	}
+	if _, err := ch.QueueDeclare(queueNotify, true, false, false, false, amqp.Table{
+		"x-queue-type":             "quorum",
+		"x-dead-letter-exchange":   "educonnect.dlx",
+	}); err != nil {
+		return fmt.Errorf("declare queue: %w", err)
+	}
+	// Bind: user_events + finance_events → notification_queue
+	bindings := []struct{ ex, key string }{
+		{exchangeUser, "user.#"},
+		{exchangeFinance, "finance.#"},
+	}
+	for _, b := range bindings {
+		if err := ch.QueueBind(queueNotify, b.key, b.ex, false, nil); err != nil {
+			return fmt.Errorf("bind %s → %s (%s): %w", b.ex, queueNotify, b.key, err)
+		}
+	}
+	return nil
+}
+
+// ─── Email Sender ─────────────────────────────────────────────
+
+func sendEmail(p NotifyPayload) error {
 	host := os.Getenv("MAIL_HOST")
 	port := os.Getenv("MAIL_PORT")
 	user := os.Getenv("MAIL_USERNAME")
@@ -37,76 +112,54 @@ func sendEmail(payload NotifyPayload) error {
 	auth := smtp.PlainAuth("", user, pass, host)
 	msg := []byte(fmt.Sprintf(
 		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n%s",
-		from, payload.To, payload.Subject, payload.Body,
+		from, p.To, p.Subject, p.Body,
 	))
-
 	addr := fmt.Sprintf("%s:%s", host, port)
-	return smtp.SendMail(addr, auth, from, []string{payload.To}, msg)
+	return smtp.SendMail(addr, auth, from, []string{p.To}, msg)
 }
 
-// ─── Redis Stream Consumer ────────────────────────────────────────────────────
+// ─── Consumer loop ────────────────────────────────────────────
 
-func consumeStream(rdb *redis.Client) {
-	streamKey := "notifications"
-	groupName := "notify-service"
-	consumerName := "notify-worker-1"
+func consume(ch *amqp.Channel) error {
+	msgs, err := ch.Consume(queueNotify, "notify-worker", false, false, false, false, nil)
+	if err != nil {
+		return fmt.Errorf("consume %s: %w", queueNotify, err)
+	}
 
-	// Tạo consumer group nếu chưa có
-	rdb.XGroupCreateMkStream(ctx, streamKey, groupName, "$")
-
-	log.Printf("Listening to Redis Stream '%s'...", streamKey)
-	for {
-		streams, err := rdb.XReadGroup(ctx, &redis.XReadGroupArgs{
-			Group:    groupName,
-			Consumer: consumerName,
-			Streams:  []string{streamKey, ">"},
-			Count:    10,
-			Block:    5 * time.Second,
-		}).Result()
-
-		if err != nil && err != redis.Nil {
-			log.Printf("Stream read error: %v", err)
-			time.Sleep(2 * time.Second)
+	log.Printf("📬 Đang lắng nghe %s (user_events + finance_events)...", queueNotify)
+	for msg := range msgs {
+		var p NotifyPayload
+		if err := json.Unmarshal(msg.Body, &p); err != nil {
+			log.Printf("⚠️ payload lỗi (msg %s): %v", msg.MessageId, err)
+			msg.Nack(false, false) // → DLX
 			continue
 		}
 
-		for _, stream := range streams {
-			for _, msg := range stream.Messages {
-				log.Printf("Processing message: %s", msg.ID)
+		// Correlation ID để trace (nếu publisher gửi header)
+		corrID := ""
+		if v, ok := msg.Headers["x-correlation-id"]; ok {
+			corrID = fmt.Sprintf("%v", v)
+		}
+		log.Printf("[corr=%s] nhận %s → %s (%s)", corrID, msg.RoutingKey, p.To, p.Type)
 
-				payloadJSON, ok := msg.Values["payload"].(string)
-				if !ok {
-					log.Printf("Invalid payload in message %s", msg.ID)
-					rdb.XAck(ctx, streamKey, groupName, msg.ID)
-					continue
-				}
-
-				var p NotifyPayload
-				if err := json.Unmarshal([]byte(payloadJSON), &p); err != nil {
-					log.Printf("Failed to parse payload: %v", err)
-					rdb.XAck(ctx, streamKey, groupName, msg.ID)
-					continue
-				}
-
-				switch p.Type {
-				case "email":
-					if err := sendEmail(p); err != nil {
-						log.Printf("Failed to send email to %s: %v", p.To, err)
-					} else {
-						log.Printf("Email sent to %s", p.To)
-					}
-				default:
-					log.Printf("Unknown notification type: %s", p.Type)
-				}
-
-				// Ack message sau khi xử lý
-				rdb.XAck(ctx, streamKey, groupName, msg.ID)
+		switch p.Type {
+		case "email":
+			if err := sendEmail(p); err != nil {
+				log.Printf("❌ email thất bại → %s: %v", p.To, err)
+				msg.Nack(false, false) // dead-letter để xử lý sau
+			} else {
+				log.Printf("✅ email đã gửi → %s", p.To)
+				msg.Ack(false)
 			}
+		default:
+			log.Printf("⚠️ loại notification không hỗ trợ: %s", p.Type)
+			msg.Ack(false) // không phải lỗi broker — ack để không loop
 		}
 	}
+	return fmt.Errorf("consumer channel đóng")
 }
 
-// ─── HTTP Health Server ───────────────────────────────────────────────────────
+// ─── HTTP Health Server ───────────────────────────────────────
 
 func setupHTTP(port string) {
 	r := gin.Default()
@@ -114,14 +167,15 @@ func setupHTTP(port string) {
 		c.JSON(http.StatusOK, gin.H{
 			"service": "notify-service",
 			"status":  "healthy",
-			"mode":    "redis-stream-consumer",
+			"mode":    "rabbitmq-consumer",
+			"queue":   queueNotify,
 		})
 	})
 	log.Printf("Notify HTTP health server on port %s", port)
 	r.Run(fmt.Sprintf(":%s", port))
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────
 
 func main() {
 	port := os.Getenv("PORT")
@@ -129,21 +183,30 @@ func main() {
 		port = "8081"
 	}
 
-	// Kết nối Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       0,
-	})
-
-	if _, err := rdb.Ping(ctx).Result(); err != nil {
-		log.Fatalf("Cannot connect to Redis: %v", err)
+	conn, ch, err := connectRabbit()
+	if err != nil {
+		log.Fatalf("💥 Không kết nối được RabbitMQ: %v", err)
 	}
-	log.Println("Redis connected")
+	defer conn.Close()
+	defer ch.Close()
 
-	// Chạy Redis Stream consumer trong goroutine
-	go consumeStream(rdb)
+	go func() {
+		for {
+			if err := consume(ch); err != nil {
+				log.Printf("Consumer dừng (%v) — reconnect sau 5s...", err)
+			}
+			time.Sleep(5 * time.Second)
+			// Reconnect: đóng channel cũ, mở lại
+			conn2, ch2, err2 := connectRabbit()
+			if err2 != nil {
+				log.Printf("Reconnect thất bại: %v", err2)
+				continue
+			}
+			conn.Close()
+			ch.Close()
+			conn, ch = conn2, ch2
+		}
+	}()
 
-	// HTTP server cho health check
 	setupHTTP(port)
 }

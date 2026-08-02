@@ -1,0 +1,100 @@
+{
+  "rabbit_version": "3.13",
+  "users": [
+    {
+      "name": "educonnect",
+      "password_hash": "IGsEI4aRTKgE9QDQ9QbtKZdrvltwIqkdv6VtLY/tnu0ZgQIZ",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator"
+    }
+  ],
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "permissions": [
+    {
+      "user": "educonnect",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "user_events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "finance_events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "educonnect.dlx",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "notification_queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "educonnect.dlx"
+      }
+    },
+    {
+      "name": "notification_queue.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "user_events",
+      "vhost": "/",
+      "destination": "notification_queue",
+      "destination_type": "queue",
+      "routing_key": "user.#",
+      "arguments": {}
+    },
+    {
+      "source": "finance_events",
+      "vhost": "/",
+      "destination": "notification_queue",
+      "destination_type": "queue",
+      "routing_key": "finance.#",
+      "arguments": {}
+    },
+    {
+      "source": "educonnect.dlx",
+      "vhost": "/",
+      "destination": "notification_queue.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ],
+  "policies": []
+}

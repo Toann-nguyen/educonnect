@@ -1,6 +1,6 @@
 <?php
 
-use App\Domains\Identity\Http\Controllers\Auth\AuthController;
+use App\Domains\Identity\Http\Controllers\AuthController;
 use App\Domains\Identity\Http\Controllers\Auth\EmailController;
 use App\Domains\Identity\Http\Controllers\Auth\PasswordController;
 use App\Domains\Identity\Http\Controllers\Auth\TwoFactorController;

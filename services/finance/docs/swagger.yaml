@@ -1,0 +1,204 @@
+openapi: 3.0.0
+info:
+  title: Finance API
+  version: 1.0.0
+  description: Go Finance Service API — handles fee types, invoices, payments, and user read-model sync via RabbitMQ
+basePath: /api/v1
+servers:
+  - url: http://finance:8080
+    description: Internal Docker network
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                  status:
+                    type: string
+  /fee-types:
+    get:
+      summary: List all fee types
+      responses:
+        '200':
+          description: List of fee types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeeType'
+    post:
+      summary: Create a new fee type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeeTypeInput'
+      responses:
+        '201':
+          description: Created fee type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeType'
+  /fee-types/{id}:
+    get:
+      summary: Get a single fee type by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Fee type details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeType'
+  /invoices:
+    post:
+      summary: Create a new invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceInput'
+      responses:
+        '201':
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+  /students/{id}/invoices:
+    get:
+      summary: Get invoices by student ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of invoices for the student
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+  /payments:
+    get:
+      summary: List all payments
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Payment'
+components:
+  schemas:
+    FeeType:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    FeeTypeInput:
+      type: object
+      required: [name, amount]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        isActive:
+          type: boolean
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        feeTypeId:
+          type: integer
+        amount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        paidAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    InvoiceInput:
+      type: object
+      required: [student_id, fee_type_id, amount]
+      properties:
+        student_id:
+          type: integer
+        fee_type_id:
+          type: integer
+        amount:
+          type: number
+        due_date:
+          type: string
+          format: date
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        invoice_id:
+          type: integer
+        amount:
+          type: number
+        method:
+          type: string
+        status:
+          type: string
+        paid_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time

@@ -134,6 +134,26 @@ return [
             ]) : [],
         ],
 
+        'finance' => [
+            'driver' => 'mysql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_FINANCE_HOST', 'mysql'),
+            'port' => env('DB_FINANCE_PORT', '3306'),
+            'database' => env('DB_FINANCE_DATABASE', 'finance_db'),
+            'username' => env('DB_FINANCE_USERNAME', 'educonnect'),
+            'password' => env('DB_FINANCE_PASSWORD', ''),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
     ],
 
     /*

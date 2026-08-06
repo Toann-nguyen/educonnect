@@ -269,7 +269,11 @@ func setupRoutes(r *gin.Engine, db *gorm.DB) {
 
 		// Invoice
 		api.GET("/invoices", func(c *gin.Context) {
+			studentID, _ := strconv.Atoi(c.Query("student_id"))
 			var invoices []Invoice
+			if studentID > 0 {
+				db = db.Where("student_id = ?", studentID)
+			}
 			db.Find(&invoices)
 			c.JSON(http.StatusOK, gin.H{"data": invoices})
 		})
@@ -288,8 +292,15 @@ func setupRoutes(r *gin.Engine, db *gorm.DB) {
 				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 				return
 			}
+			if inv.StudentID == 0 || inv.FeeTypeID == 0 || inv.Amount <= 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"message": "student_id, fee_type_id and amount are required"})
+				return
+			}
 			inv.Status = "pending"
-			db.Create(&inv)
+			if err := db.Create(&inv).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create invoice"})
+				return
+			}
 			c.JSON(http.StatusCreated, gin.H{"data": inv})
 		})
 		api.PUT("/invoices/:id", func(c *gin.Context) {
@@ -314,6 +325,10 @@ func setupRoutes(r *gin.Engine, db *gorm.DB) {
 			var p Payment
 			if err := c.ShouldBindJSON(&p); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+				return
+			}
+			if p.InvoiceID == 0 || p.Amount <= 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"message": "invoice_id and amount are required"})
 				return
 			}
 			// Cập nhật invoice sang paid
@@ -350,11 +365,11 @@ func main() {
 
 	// Kết nối finance_db
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USERNAME"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_DATABASE"),
+		os.Getenv("DB_FINANCE_USERNAME"),
+		os.Getenv("DB_FINANCE_PASSWORD"),
+		os.Getenv("DB_FINANCE_HOST"),
+		os.Getenv("DB_FINANCE_PORT"),
+		os.Getenv("DB_FINANCE_DATABASE"),
 	)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})

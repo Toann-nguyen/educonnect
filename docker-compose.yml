@@ -61,9 +61,9 @@ services:
       APP_KEY: ${APP_KEY}
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      DB_DATABASE: school_db
+      DB_USERNAME: school_user
+      DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
       DB_IDENTITY_DATABASE: identity_db
       DB_SCHOOL_DATABASE: school_db
       REDIS_HOST: redis
@@ -72,6 +72,8 @@ services:
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    command: ["sh", "-c", "php artisan consume:user-events & exec php-fpm"]
     depends_on:
       mysql:
         condition: service_healthy
@@ -108,6 +110,7 @@ services:
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: file
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       MIGRATE_ON_START: "true"
     depends_on:
       mysql:
@@ -127,6 +130,8 @@ services:
   finance:
     build: ./services/finance
     restart: unless-stopped
+    volumes:
+      - ./storage/certs/jwt-rsa-4096-public.pem:/certs/jwt-rsa-4096-public.pem:ro
     environment:
       PORT: "8080"
       DB_HOST: mysql
@@ -134,7 +139,8 @@ services:
       DB_DATABASE: finance_db
       DB_USERNAME: finance_user
       DB_PASSWORD: ${FINANCE_DB_PASSWORD}
-      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      JWT_PUBLIC_KEY_PATH: /certs/jwt-rsa-4096-public.pem
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     depends_on:
       mysql:
         condition: service_healthy

@@ -134,11 +134,11 @@ services:
       - ./storage/certs/jwt-rsa-4096-public.pem:/certs/jwt-rsa-4096-public.pem:ro
     environment:
       PORT: "8080"
-      DB_HOST: mysql
-      DB_PORT: "3306"
-      DB_DATABASE: finance_db
-      DB_USERNAME: finance_user
-      DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+      DB_FINANCE_HOST: mysql
+      DB_FINANCE_PORT: "3306"
+      DB_FINANCE_DATABASE: finance_db
+      DB_FINANCE_USERNAME: finance_user
+      DB_FINANCE_PASSWORD: ${FINANCE_DB_PASSWORD}
       JWT_PUBLIC_KEY_PATH: /certs/jwt-rsa-4096-public.pem
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     depends_on:

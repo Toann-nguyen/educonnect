@@ -124,7 +124,9 @@ class AuthService implements AuthServiceInterface
 
         // Step 10: 2FA
         if ($user->totp_enabled || $user->phone_2fa_enabled) {
-            $preAuthToken = auth('api')->claims(['pre_auth' => true])->setTTL(5)->fromUser($user);
+            /** @var \PHPOpenSourceSaver\JWTAuth\JWTGuard $guard */
+            $guard        = auth('api');
+            $preAuthToken = $guard->claims(['pre_auth' => true])->setTTL(5)->fromUser($user);
             return [
                 'requires_2fa'   => true,
                 'pre_auth_token' => $preAuthToken,

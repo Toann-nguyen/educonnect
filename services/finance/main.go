@@ -1,126 +1,28 @@
 package main
 
 import (
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	"educonnect/finance/internal/auth"
+	"educonnect/finance/internal/model"
+	"educonnect/finance/internal/router"
 )
-
-// ─── Models ──────────────────────────────────────────────────────────────────
-
-type FeeType struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Amount      float64   `json:"amount"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type Invoice struct {
-	ID        uint       `json:"id" gorm:"primaryKey"`
-	StudentID uint       `json:"student_id"`
-	FeeTypeID uint       `json:"fee_type_id"`
-	Amount    float64    `json:"amount"`
-	Status    string     `json:"status"` // pending, paid, overdue, cancelled
-	DueDate   time.Time  `json:"due_date"`
-	PaidAt    *time.Time `json:"paid_at,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-}
-
-type Payment struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	InvoiceID uint      `json:"invoice_id"`
-	Amount    float64   `json:"amount"`
-	Method    string    `json:"method"` // cash, bank_transfer, vnpay
-	Note      string    `json:"note"`
-	PaidBy    uint      `json:"paid_by"` // user_id từ identity_db (tham chiếu)
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// UserReadModel — bảng bóng (read model) sync từ Identity qua user_events
-type UserReadModel struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Roles     string    `json:"roles"` // JSON array string, vd: ["student"]
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-// TableName — cố định tên bảng (GORM mặc định pluralize thành user_read_models)
-func (UserReadModel) TableName() string { return "users_read_model" }
-
-// ─── JWT Middleware (RS256 — verify bằng public key của Identity) ────────────
-
-var jwtPublicKey *rsa.PublicKey
-
-func loadJWTPublicKey() error {
-	pemPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
-	if pemPath == "" {
-		pemPath = "/certs/jwt-rsa-4096-public.pem"
-	}
-	pemBytes, err := os.ReadFile(pemPath)
-	if err != nil {
-		return fmt.Errorf("read public key %s: %w", pemPath, err)
-	}
-	jwtPublicKey, err = jwt.ParseRSAPublicKeyFromPEM(pemBytes)
-	if err != nil {
-		return fmt.Errorf("parse public key: %w", err)
-	}
-	return nil
-}
-
-func jwtMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenStr := c.GetHeader("Authorization")
-		if tokenStr == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Authorization header required"})
-			c.Abort()
-			return
-		}
-		// Strip "Bearer "
-		if len(tokenStr) > 7 && tokenStr[:7] == "Bearer " {
-			tokenStr = tokenStr[7:]
-		}
-
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
-			}
-			return jwtPublicKey, nil
-		})
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid or expired token"})
-			c.Abort()
-			return
-		}
-
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("user_id", claims["sub"])
-		}
-		c.Next()
-	}
-}
 
 // ─── User Sync Consumer (Event-Driven — Task 3.2) ────────────────────────────
 
-// UserEvent — payload chuẩn từ Identity (user_events exchange)
+// UserEvent — payload chuẩn từ Identity (user_events exchange).
 type UserEvent struct {
 	Event         string        `json:"event"` // user.created | user.updated
 	Version       int           `json:"version"`
@@ -142,7 +44,7 @@ const (
 	financeUsersQueue  = "finance_users_sync"
 )
 
-// startUserSyncConsumer — consume user_events → upsert users_read_model
+// startUserSyncConsumer — consume user_events → upsert users_read_model.
 func startUserSyncConsumer(db *gorm.DB) {
 	url := os.Getenv("RABBITMQ_URL")
 	if url == "" {
@@ -208,17 +110,16 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 	}
 	rolesJSON, _ := json.Marshal(ev.User.Roles)
 
-	u := UserReadModel{
+	u := model.UserReadModel{
 		ID:       ev.User.ID,
 		Name:     ev.User.Name,
 		Email:    ev.User.Email,
 		Roles:    string(rolesJSON),
 		IsActive: ev.User.IsActive,
 	}
-	var existing UserReadModel
+	var existing model.UserReadModel
 	err := db.Where("id = ?", ev.User.ID).First(&existing).Error
 	if err != nil {
-		// chưa có → insert
 		if err := db.Create(&u).Error; err != nil {
 			log.Printf("❌ insert users_read_model id=%d: %v", ev.User.ID, err)
 			ch.Nack(msg.DeliveryTag, false, false)
@@ -226,7 +127,7 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 		}
 	} else {
 		u.CreatedAt = existing.CreatedAt
-		if err := db.Model(&UserReadModel{}).Where("id = ?", ev.User.ID).Updates(map[string]interface{}{
+		if err := db.Model(&model.UserReadModel{}).Where("id = ?", ev.User.ID).Updates(map[string]interface{}{
 			"name":       ev.User.Name,
 			"email":      ev.User.Email,
 			"roles":      string(rolesJSON),
@@ -242,113 +143,6 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 	log.Printf("[corr=%v] sync user.# → users_read_model id=%d (%s)", corrID, ev.User.ID, ev.User.Email)
 }
 
-// ─── Handlers ────────────────────────────────────────────────────────────────
-
-func setupRoutes(r *gin.Engine, db *gorm.DB) {
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"service": "finance-service", "status": "healthy"})
-	})
-
-	api := r.Group("/api/finance").Use(jwtMiddleware())
-	{
-		// FeeType
-		api.GET("/fee-types", func(c *gin.Context) {
-			var feeTypes []FeeType
-			db.Find(&feeTypes)
-			c.JSON(http.StatusOK, gin.H{"data": feeTypes})
-		})
-		api.POST("/fee-types", func(c *gin.Context) {
-			var ft FeeType
-			if err := c.ShouldBindJSON(&ft); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-				return
-			}
-			db.Create(&ft)
-			c.JSON(http.StatusCreated, gin.H{"data": ft})
-		})
-
-		// Invoice
-		api.GET("/invoices", func(c *gin.Context) {
-			studentID, _ := strconv.Atoi(c.Query("student_id"))
-			var invoices []Invoice
-			if studentID > 0 {
-				db = db.Where("student_id = ?", studentID)
-			}
-			db.Find(&invoices)
-			c.JSON(http.StatusOK, gin.H{"data": invoices})
-		})
-		api.GET("/invoices/:id", func(c *gin.Context) {
-			id, _ := strconv.Atoi(c.Param("id"))
-			var inv Invoice
-			if err := db.First(&inv, id).Error; err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Invoice not found"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"data": inv})
-		})
-		api.POST("/invoices", func(c *gin.Context) {
-			var inv Invoice
-			if err := c.ShouldBindJSON(&inv); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-				return
-			}
-			if inv.StudentID == 0 || inv.FeeTypeID == 0 || inv.Amount <= 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"message": "student_id, fee_type_id and amount are required"})
-				return
-			}
-			inv.Status = "pending"
-			if err := db.Create(&inv).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create invoice"})
-				return
-			}
-			c.JSON(http.StatusCreated, gin.H{"data": inv})
-		})
-		api.PUT("/invoices/:id", func(c *gin.Context) {
-			id, _ := strconv.Atoi(c.Param("id"))
-			var inv Invoice
-			if err := db.First(&inv, id).Error; err != nil {
-				c.JSON(http.StatusNotFound, gin.H{"message": "Invoice not found"})
-				return
-			}
-			c.ShouldBindJSON(&inv)
-			db.Save(&inv)
-			c.JSON(http.StatusOK, gin.H{"data": inv})
-		})
-
-		// Payment
-		api.GET("/payments", func(c *gin.Context) {
-			var payments []Payment
-			db.Find(&payments)
-			c.JSON(http.StatusOK, gin.H{"data": payments})
-		})
-		api.POST("/payments", func(c *gin.Context) {
-			var p Payment
-			if err := c.ShouldBindJSON(&p); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-				return
-			}
-			if p.InvoiceID == 0 || p.Amount <= 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"message": "invoice_id and amount are required"})
-				return
-			}
-			// Cập nhật invoice sang paid
-			db.Create(&p)
-			db.Model(&Invoice{}).Where("id = ?", p.InvoiceID).Updates(map[string]interface{}{
-				"status":  "paid",
-				"paid_at": time.Now(),
-			})
-			c.JSON(http.StatusCreated, gin.H{"data": p})
-		})
-
-		// Users read model (Task 3.2 — sync từ Identity)
-		api.GET("/users", func(c *gin.Context) {
-			var users []UserReadModel
-			db.Find(&users)
-			c.JSON(http.StatusOK, gin.H{"data": users})
-		})
-	}
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 func main() {
@@ -358,7 +152,7 @@ func main() {
 	}
 
 	// JWT public key (RS256) — load 1 lần lúc start
-	if err := loadJWTPublicKey(); err != nil {
+	if err := auth.LoadJWTPublicKey(); err != nil {
 		log.Fatalf("JWT public key: %v", err)
 	}
 	log.Println("JWT RS256 public key loaded")
@@ -378,14 +172,30 @@ func main() {
 	}
 
 	// Auto-migrate tables (gồm users_read_model)
-	db.AutoMigrate(&FeeType{}, &Invoice{}, &Payment{}, &UserReadModel{})
+	db.AutoMigrate(&model.FeeType{}, &model.Invoice{}, &model.Payment{}, &model.UserReadModel{})
 	log.Println("finance_db connected and migrated")
 
 	// User sync consumer (RabbitMQ — không block main)
 	go startUserSyncConsumer(db)
 
 	r := gin.Default()
-	setupRoutes(r, db)
+
+	engine := fuego.NewEngine(fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
+		SpecURL:          "/docs/openapi.json",
+		DisableSwaggerUI: true,
+		Info: &openapi3.Info{
+			Title:       "Finance API",
+			Version:     "1.0.0",
+			Description: "Finance microservice — quản lý hoá đơn, loại phí và thanh toán.",
+		},
+	}))
+	engine.OpenAPI.Description().Servers = []*openapi3.Server{{URL: "/api/finance"}}
+
+	router.Setup(engine, r, db)
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"service": "finance-service", "status": "healthy"})
+	})
 
 	log.Printf("Finance Go Service starting on port %s...", port)
 	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {

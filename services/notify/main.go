@@ -10,7 +10,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
+
+	"educonnect/notify/internal/router"
+	"educonnect/notify/internal/template"
 )
 
 // ─── Broker topology (khớp docker/rabbitmq/definitions.json) ──
@@ -159,9 +165,10 @@ func consume(ch *amqp.Channel) error {
 	return fmt.Errorf("consumer channel đóng")
 }
 
-// ─── HTTP Health Server ───────────────────────────────────────
+// ─── HTTP Server (health + /api/notify templates API) ────────
 
-func setupHTTP(port string) {
+func setupHTTP(port string, store *template.Store) {
+	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -171,7 +178,20 @@ func setupHTTP(port string) {
 			"queue":   queueNotify,
 		})
 	})
-	log.Printf("Notify HTTP health server on port %s", port)
+
+	engine := fuego.NewEngine(fuego.WithOpenAPIConfig(fuego.OpenAPIConfig{
+		SpecURL:          "/docs/openapi.json",
+		DisableSwaggerUI: true,
+		Info: &openapi3.Info{
+			Title:       "Notify API",
+			Version:     "1.0.0",
+			Description: "Notify microservice — quản lý mẫu thông báo (email/SMS).",
+		},
+	}))
+	engine.OpenAPI.Description().Servers = []*openapi3.Server{{URL: "/api/notify"}}
+	router.Setup(engine, r, store)
+
+	log.Printf("Notify HTTP server on port %s", port)
 	r.Run(fmt.Sprintf(":%s", port))
 }
 
@@ -183,30 +203,48 @@ func main() {
 		port = "8081"
 	}
 
-	conn, ch, err := connectRabbit()
-	if err != nil {
-		log.Fatalf("💥 Không kết nối được RabbitMQ: %v", err)
-	}
-	defer conn.Close()
-	defer ch.Close()
-
+	// Consumer chạy nền — kết nối RabbitMQ không chặn HTTP server.
+	// Nếu broker chưa sẵn sàng, retry vô hạn thay vì fatal (service vẫn phục vụ API).
 	go func() {
 		for {
-			if err := consume(ch); err != nil {
-				log.Printf("Consumer dừng (%v) — reconnect sau 5s...", err)
-			}
-			time.Sleep(5 * time.Second)
-			// Reconnect: đóng channel cũ, mở lại
-			conn2, ch2, err2 := connectRabbit()
-			if err2 != nil {
-				log.Printf("Reconnect thất bại: %v", err2)
+			conn, ch, err := connectRabbit()
+			if err != nil {
+				log.Printf("RabbitMQ chưa sẵn sàng (retry 10s): %v", err)
+				time.Sleep(10 * time.Second)
 				continue
 			}
-			conn.Close()
-			ch.Close()
-			conn, ch = conn2, ch2
+			log.Printf("✅ RabbitMQ connected — bắt đầu consume %s", queueNotify)
+			for {
+				if err := consume(ch); err != nil {
+					log.Printf("Consumer dừng (%v) — reconnect sau 5s...", err)
+				}
+				time.Sleep(5 * time.Second)
+				// Reconnect: đóng channel cũ, mở lại
+				conn2, ch2, err2 := connectRabbit()
+				if err2 != nil {
+					log.Printf("Reconnect thất bại: %v", err2)
+					continue
+				}
+				conn.Close()
+				ch.Close()
+				conn, ch = conn2, ch2
+			}
 		}
 	}()
 
-	setupHTTP(port)
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "redis"
+	}
+	redisPort := os.Getenv("REDIS_PORT")
+	if redisPort == "" {
+		redisPort = "6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: os.Getenv("REDIS_PASSWORD"),
+	})
+	log.Println("Redis client created")
+
+	setupHTTP(port, template.NewStore(rdb))
 }

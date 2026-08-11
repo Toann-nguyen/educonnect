@@ -88,6 +88,7 @@ use App\Repositories\Contracts\AuthRepositoryInterface;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use App\Repositories\Auth\AuthRepository;
 use App\Repositories\Auth\EmailVerificationRepository;
+use Dedoc\Scramble\Scramble;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -174,6 +175,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         User::observe(UserObserver::class);
+
+        Scramble::configure()->routes(
+            fn ($route) => str_starts_with($route->uri, 'api/')
+        );
 
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());

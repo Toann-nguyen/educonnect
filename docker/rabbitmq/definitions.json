@@ -3,7 +3,7 @@
   "users": [
     {
       "name": "educonnect",
-      "password_hash": "IGsEI4aRTKgE9QDQ9QbtKZdrvltwIqkdv6VtLY/tnu0ZgQIZ",
+      "password_hash": "iWECSnIqyLzDrLA8/W52kc+o4BT9kBviITBMWsYET/gG14tz",
       "hashing_algorithm": "rabbit_password_hashing_sha256",
       "tags": "administrator"
     }

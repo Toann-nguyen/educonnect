@@ -191,6 +191,15 @@ func setupHTTP(port string, store *template.Store) {
 	engine.OpenAPI.Description().Servers = []*openapi3.Server{{URL: "/api/notify"}}
 	router.Setup(engine, r, store)
 
+	// Stoplight Elements UI — đăng ký trực tiếp trên gin tại cả /docs và /docs/
+	// để tránh redirect trailing-slash của gin khi truy cập qua nginx.
+	// Spec URL tương đối (./openapi.json) để nginx proxy /docs/notify/ → /docs/.
+	openapiUI := func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(fuego.DefaultOpenAPIHTML("openapi.json")))
+	}
+	r.GET("/docs", openapiUI)
+	r.GET("/docs/", openapiUI)
+
 	log.Printf("Notify HTTP server on port %s", port)
 	r.Run(fmt.Sprintf(":%s", port))
 }

@@ -193,6 +193,15 @@ func main() {
 
 	router.Setup(engine, r, db)
 
+	// Stoplight Elements UI — đăng ký trực tiếp trên gin tại cả /docs và /docs/
+	// để tránh redirect trailing-slash của gin khi truy cập qua nginx.
+	// Spec URL tương đối (./openapi.json) để nginx proxy /docs/finance/ → /docs/.
+	openapiUI := func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(fuego.DefaultOpenAPIHTML("openapi.json")))
+	}
+	r.GET("/docs", openapiUI)
+	r.GET("/docs/", openapiUI)
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"service": "finance-service", "status": "healthy"})
 	})

@@ -94,6 +94,8 @@ services:
       context: ${IDENTITY_PATH:-../educonnect-identity}
       dockerfile: Dockerfile
     restart: unless-stopped
+    # Chạy queue worker (emails: verification, etc.) song song với php-fpm
+    command: ["sh", "-c", "php artisan queue:work --queue=emails --tries=3 --sleep=3 & exec php-fpm"]
     volumes:
       - ${IDENTITY_PATH:-../educonnect-identity}:/var/www/html
     environment:

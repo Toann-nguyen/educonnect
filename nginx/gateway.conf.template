@@ -53,7 +53,8 @@ server {
     add_header X-Correlation-ID $correlation_id always;
 
     # ── CORS headers (toàn bộ response) ──────────────────────
-    add_header Access-Control-Allow-Origin  $cors_origin always;
+    add_header Access-Control-Allow-Origin      $cors_origin always;
+    add_header Access-Control-Allow-Credentials "true" always;
     add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
     add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
     add_header Access-Control-Expose-Headers "X-Correlation-ID" always;
@@ -131,7 +132,8 @@ server {
 
         # CORS preflight
         if ($request_method = OPTIONS) {
-            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Origin      $cors_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
             add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
             add_header Access-Control-Max-Age 86400 always;
@@ -149,6 +151,9 @@ server {
         fastcgi_connect_timeout 10s;
         fastcgi_send_timeout 60s;
         fastcgi_read_timeout 60s;
+        # Upstream Laravel HandleCors cũng trả ACAO:* → strip để nginx là nguồn CORS duy nhất
+        fastcgi_hide_header Access-Control-Allow-Origin;
+        fastcgi_hide_header Access-Control-Allow-Credentials;
         fastcgi_param HTTP_X_CORRELATION_ID $correlation_id;
         fastcgi_param HTTP_X_REAL_IP        $remote_addr;
         fastcgi_param HTTP_X_FORWARDED_FOR  $proxy_add_x_forwarded_for;
@@ -160,7 +165,8 @@ server {
         limit_req zone=gw_api burst=30 nodelay;
 
         if ($request_method = OPTIONS) {
-            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Origin      $cors_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
             add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
             add_header Access-Control-Max-Age 86400 always;
@@ -186,7 +192,8 @@ server {
         limit_req zone=gw_api burst=30 nodelay;
 
         if ($request_method = OPTIONS) {
-            add_header Access-Control-Allow-Origin  $cors_origin always;
+            add_header Access-Control-Allow-Origin      $cors_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
             add_header Access-Control-Allow-Headers "Authorization, Content-Type, X-Correlation-ID, Idempotency-Key, X-Requested-With" always;
             add_header Access-Control-Max-Age 86400 always;
@@ -204,6 +211,9 @@ server {
         fastcgi_connect_timeout 10s;
         fastcgi_send_timeout 60s;
         fastcgi_read_timeout 60s;
+        # Upstream Laravel HandleCors cũng trả ACAO:* → strip để nginx là nguồn CORS duy nhất
+        fastcgi_hide_header Access-Control-Allow-Origin;
+        fastcgi_hide_header Access-Control-Allow-Credentials;
         fastcgi_param HTTP_X_CORRELATION_ID $correlation_id;
         fastcgi_param HTTP_X_REAL_IP        $remote_addr;
         fastcgi_param HTTP_X_FORWARDED_FOR  $proxy_add_x_forwarded_for;

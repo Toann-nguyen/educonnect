@@ -59,12 +59,16 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
+      DB_HOST: mysql-school
       DB_PORT: 3306
       DB_DATABASE: school_db
       DB_USERNAME: school_user
       DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      DB_IDENTITY_HOST: mysql-identity
+      DB_IDENTITY_PORT: 3306
       DB_IDENTITY_DATABASE: identity_db
+      DB_IDENTITY_USERNAME: identity_user
+      DB_IDENTITY_PASSWORD: ${IDENTITY_DB_PASSWORD}
       DB_SCHOOL_DATABASE: school_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -72,10 +76,13 @@ services:
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      JWT_ALGO: RS256
+      JWT_PUBLIC_KEY: file://../storage/certs/jwt-rsa-4096-public.pem
+      JWT_PRIVATE_KEY: file://../storage/certs/jwt-rsa-4096-private.pem
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     command: ["sh", "-c", "php artisan consume:user-events & exec php-fpm"]
     depends_on:
-      mysql:
+      mysql-school:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -102,7 +109,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_KEY: ${IDENTITY_APP_KEY:-base64:/W15yCoflO1wlbfc7O9Q3zE+n31z8OQl4/K7SeiG+L4=}
-      DB_HOST: mysql
+      DB_HOST: mysql-identity
       DB_PORT: 3306
       DB_DATABASE: identity_db
       DB_USERNAME: identity_user
@@ -115,7 +122,7 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       MIGRATE_ON_START: "true"
     depends_on:
-      mysql:
+      mysql-identity:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -136,7 +143,7 @@ services:
       - ./storage/certs/jwt-rsa-4096-public.pem:/certs/jwt-rsa-4096-public.pem:ro
     environment:
       PORT: "8080"
-      DB_FINANCE_HOST: mysql
+      DB_FINANCE_HOST: mysql-finance
       DB_FINANCE_PORT: "3306"
       DB_FINANCE_DATABASE: finance_db
       DB_FINANCE_USERNAME: finance_user
@@ -144,7 +151,7 @@ services:
       JWT_PUBLIC_KEY_PATH: /certs/jwt-rsa-4096-public.pem
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     depends_on:
-      mysql:
+      mysql-finance:
         condition: service_healthy
     networks:
       - educonnect
@@ -202,10 +209,12 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── MySQL (3 DB: identity_db, school_db, finance_db) ──────
+  # ── MySQL per microservice (DB-per-service — B1) ──────────
+  # Legacy single MySQL (giữ để migrate dữ liệu, có thể xoá sau khi verify 3 DB mới)
   mysql:
     image: mysql/mysql-server:8.0
     restart: unless-stopped
+    profiles: ["legacy"]
     ports:
       - "${FORWARD_DB_PORT:-3307}:3306"
     environment:
@@ -219,6 +228,75 @@ services:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mysql-identity:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_IDENTITY_DB_PORT:-3308}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: identity_db
+      MYSQL_ALLOW_EMPTY_PASSWORD: "0"
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+    volumes:
+      - mysql_identity_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/identity-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mysql-school:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_SCHOOL_DB_PORT:-3309}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: school_db
+      MYSQL_ALLOW_EMPTY_PASSWORD: "0"
+      SCHOOL_DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+    volumes:
+      - mysql_school_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/school-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mysql-finance:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    ports:
+      - "${FORWARD_FINANCE_DB_PORT:-3310}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: finance_db
+      MYSQL_ALLOW_EMPTY_PASSWORD: "0"
+      FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+    volumes:
+      - mysql_finance_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/finance-init:/docker-entrypoint-initdb.d:ro
     networks:
       - educonnect
     healthcheck:
@@ -282,6 +360,12 @@ networks:
 
 volumes:
   mysql_data:
+    driver: local
+  mysql_identity_data:
+    driver: local
+  mysql_school_data:
+    driver: local
+  mysql_finance_data:
     driver: local
   redis_data:
     driver: local

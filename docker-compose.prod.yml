@@ -66,12 +66,16 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
+      DB_HOST: mysql-school
       DB_PORT: 3306
-      DB_DATABASE: laravel
-      DB_USERNAME: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_DATABASE: school_db
+      DB_USERNAME: school_user
+      DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      DB_IDENTITY_HOST: mysql-identity
+      DB_IDENTITY_PORT: 3306
       DB_IDENTITY_DATABASE: identity_db
+      DB_IDENTITY_USERNAME: identity_user
+      DB_IDENTITY_PASSWORD: ${IDENTITY_DB_PASSWORD}
       DB_SCHOOL_DATABASE: school_db
       REDIS_HOST: redis
       CACHE_DRIVER: redis
@@ -79,7 +83,7 @@ services:
       QUEUE_CONNECTION: redis
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
     depends_on:
-      mysql:
+      mysql-school:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -109,7 +113,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${IDENTITY_APP_KEY}
-      DB_HOST: mysql
+      DB_HOST: mysql-identity
       DB_DATABASE: identity_db
       DB_USERNAME: identity_user
       DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
@@ -118,7 +122,7 @@ services:
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
       MIGRATE_ON_START: "true"
     depends_on:
-      mysql:
+      mysql-identity:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -142,14 +146,14 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8080"
-      DB_HOST: mysql
+      DB_HOST: mysql-finance
       DB_PORT: "3306"
       DB_DATABASE: finance_db
       DB_USERNAME: finance_user
       DB_PASSWORD: ${FINANCE_DB_PASSWORD}
       JWT_SECRET: ${IDENTITY_JWT_SECRET}
     depends_on:
-      mysql:
+      mysql-finance:
         condition: service_healthy
     networks:
       - educonnect
@@ -222,11 +226,90 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── MySQL ─────────────────────────────────────────────────
+  # ── MySQL per microservice (prod — DB-per-service) ──────────
+  mysql-identity:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: identity_db
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+    volumes:
+      - mysql_identity_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/identity-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mysql-school:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: school_db
+      SCHOOL_DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+    volumes:
+      - mysql_school_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/school-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  mysql-finance:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: finance_db
+      FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+    volumes:
+      - mysql_finance_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/finance-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # Legacy single MySQL (giữ để migrate, xoá sau khi verify)
   mysql:
     image: mysql/mysql-server:8.0
     restart: unless-stopped
-    # KHÔNG expose port ra ngoài — chỉ internal network
+    profiles: ["legacy"]
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: "%"
@@ -371,16 +454,16 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
-      DB_DATABASE: laravel
-      DB_USERNAME: root
+      DB_HOST: mysql-school
+      DB_DATABASE: school_db
+      DB_USERNAME: school_user
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       REDIS_HOST: redis
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
     depends_on:
-      mysql:
+      mysql-school:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -415,16 +498,16 @@ services:
     environment:
       APP_ENV: production
       APP_KEY: ${APP_KEY}
-      DB_HOST: mysql
-      DB_DATABASE: laravel
-      DB_USERNAME: root
+      DB_HOST: mysql-school
+      DB_DATABASE: school_db
+      DB_USERNAME: school_user
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       REDIS_HOST: redis
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
     depends_on:
-      mysql:
+      mysql-school:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -460,6 +543,12 @@ networks:
 # ── Volumes ──────────────────────────────────────────────────
 volumes:
   mysql_data:
+    driver: local
+  mysql_identity_data:
+    driver: local
+  mysql_school_data:
+    driver: local
+  mysql_finance_data:
     driver: local
   redis_data:
     driver: local

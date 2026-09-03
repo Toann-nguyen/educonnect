@@ -80,7 +80,6 @@ services:
       JWT_PUBLIC_KEY: file://../storage/certs/jwt-rsa-4096-public.pem
       JWT_PRIVATE_KEY: file://../storage/certs/jwt-rsa-4096-private.pem
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
-    command: ["sh", "-c", "php artisan consume:user-events & exec php-fpm"]
     depends_on:
       mysql-school:
         condition: service_healthy
@@ -94,6 +93,35 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+  # ── School Worker (consume user_events → users_read_model) ──
+  school-worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: development
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: local
+      APP_KEY: ${APP_KEY}
+      DB_HOST: mysql-school
+      DB_PORT: 3306
+      DB_DATABASE: school_db
+      DB_USERNAME: school_user
+      DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    command: ["php", "artisan", "consume:user-events"]
+    depends_on:
+      mysql-school:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - educonnect
 
   # ── Identity Service (Laravel — JWT auth) ─────────────────
   identity:

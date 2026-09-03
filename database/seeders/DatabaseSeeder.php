@@ -27,7 +27,6 @@ class DatabaseSeeder extends Seeder
             $this->call([
                 RoleAndPermissionSeeder::class,
                 SubjectSeeder::class,
-                FeeTypeSeeder::class,
                 DisciplineTypeSeeder::class,
             ]);
 
@@ -50,11 +49,7 @@ class DatabaseSeeder extends Seeder
             $this->command->info('🏫 Step 4: Setting up school structure...');
             $this->call(StructureSeeder::class);
 
-            // BƯỚC 5: TẠO DỮ LIỆU HÓA ĐƠN VÀ THANH TOÁN
-            $this->command->info('💰 Step 5: Creating invoices and payments...');
-            $this->call(InvoiceAndPaymentSeeder::class);
-
-            // BƯỚC 5: TẠO CÁC DỮ LIỆU GIAO DỊCH (Điểm, Hóa đơn, Thư viện, Sự kiện...)
+            // BƯỚC 5: TẠO CÁC DỮ LIỆU GIAO DỊCH (Điểm, Thư viện, Sự kiện...)
             $this->command->info('📊 Step 5: Creating transactional data...');
             $this->call(TransactionDataSeeder::class);
 
@@ -94,8 +89,6 @@ class DatabaseSeeder extends Seeder
             'Schedules' => \App\Domains\School\Models\Schedule::count(),
             'Grades' => \App\Domains\School\Models\Grade::count(),
             'Attendances' => \App\Domains\School\Models\Attendance::count(),
-            'Invoices' => \App\Domains\Finance\Models\Invoice::count(),
-            'Payments' => App\Domains\Finance\Models\Payment::count(),
             'Library Books' => \App\Domains\School\Models\LibraryBook::count(),
             'Library Transactions' => \App\Domains\School\Models\LibraryTransaction::count(),
             'Events' => \App\Domains\School\Models\Event::count(),

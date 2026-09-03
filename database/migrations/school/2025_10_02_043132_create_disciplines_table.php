@@ -33,10 +33,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Indexes
+            // Indexes (reporter_user_id already indexed via ->index() above)
             $table->index(['student_id', 'status']);
             $table->index('incident_date');
-            $table->index('reporter_user_id');
         });
     }
 

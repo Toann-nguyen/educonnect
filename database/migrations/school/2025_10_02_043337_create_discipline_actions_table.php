@@ -24,8 +24,7 @@ return new class extends Migration
             $table->enum('completion_status', ['scheduled', 'in_progress', 'completed', 'cancelled'])->default('scheduled');
             $table->timestamps();
 
-            // Indexes
-            $table->index('discipline_id');
+            // Indexes (discipline_id already indexed via foreignId, keep only compound)
             $table->index(['action_type', 'completion_status']);
         });
     }

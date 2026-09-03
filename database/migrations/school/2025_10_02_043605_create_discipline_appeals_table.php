@@ -27,9 +27,8 @@ return new class extends Migration
             $table->text('review_response')->nullable();
             $table->timestamps();
 
-            // Indexes
+            // Indexes (appellant_user_id already indexed via ->index() above)
             $table->index(['discipline_id', 'status']);
-            $table->index('appellant_user_id');
         });
     }
 

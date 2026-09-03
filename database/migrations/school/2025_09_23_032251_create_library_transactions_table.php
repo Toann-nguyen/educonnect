@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('library_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('book_id')->constrained('library_books')->onDelete('cascade');
-            $table->foreignId('user_id')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->date('borrow_date');
             $table->date('due_date');
             $table->date('return_date')->nullable();

@@ -27,7 +27,7 @@ return new class extends Migration
             $table->string('conduct_grade', 50)->nullable(); // Nên dùng string thay vì enum
 
             $table->text('teacher_comment')->nullable();
-            $table->foreignId('approved_by_user_id')->nullable()->onDelete('set null');
+            $table->unsignedBigInteger('approved_by_user_id')->nullable()->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
 

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignId('subject_id')->constrained('subjects')->onDelete('cascade');
-            $table->foreignId('teacher_id')->onDelete('cascade');
+            $table->unsignedBigInteger('teacher_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->decimal('score', 4, 2);
             $table->string('type')->comment('quiz, 15min, midterm, final');
             $table->tinyInteger('semester');

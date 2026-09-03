@@ -18,7 +18,7 @@ return new class extends Migration
         $table->id();
         $table->string('name'); // e.g., "10A1"
         $table->foreignId('academic_year_id')->constrained('academic_years')->onDelete('cascade');
-        $table->foreignId('homeroom_teacher_id')->nullable()->onDelete('set null');
+        $table->unsignedBigInteger('homeroom_teacher_id')->nullable()->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
         $table->timestamps();
         });
     }

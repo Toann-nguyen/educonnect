@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('student_guardians', function (Blueprint $table) {
         $table->id();
         $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
-        $table->foreignId('guardian_user_id')->onDelete('cascade');
+        $table->unsignedBigInteger('guardian_user_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
         $table->string('relationship'); // e.g., "Bố", "Mẹ", "Người giám hộ"
         $table->timestamps();
         });

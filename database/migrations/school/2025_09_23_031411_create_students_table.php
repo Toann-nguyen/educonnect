@@ -16,7 +16,7 @@ return new class extends Migration
     {
         Schema::create('students', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->onDelete('cascade');
+            $table->unsignedBigInteger('user_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->foreignId('class_id')->nullable()->constrained('classes')->onDelete('set null');
             $table->string('student_code')->unique();
             $table->string('status')->default('studying'); // e.g., studying, graduated, dropped

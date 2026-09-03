@@ -18,7 +18,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('class_id')->constrained('classes')->onDelete('cascade');
             $table->foreignId('subject_id')->constrained('subjects')->onDelete('cascade');
-            $table->foreignId('teacher_id')->onDelete('cascade');
+            $table->unsignedBigInteger('teacher_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->tinyInteger('day_of_week')->comment('2: Monday, 3: Tuesday...');
             $table->tinyInteger('period')->comment('Tiết học số mấy');
             $table->string('room')->nullable();

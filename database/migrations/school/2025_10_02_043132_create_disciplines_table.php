@@ -18,13 +18,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->foreignId('discipline_type_id')->constrained('discipline_types')->onDelete('restrict');
-            $table->foreignId('reporter_user_id')->onDelete('restrict');
+            $table->unsignedBigInteger('reporter_user_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->date('incident_date');
             $table->string('incident_location')->nullable();
             $table->text('description');
             $table->integer('penalty_points')->default(0);
             $table->enum('status', ['pending', 'confirmed', 'rejected', 'appealed'])->default('pending');
-            $table->foreignId('reviewed_by_user_id')->nullable()->onDelete('set null');
+            $table->unsignedBigInteger('reviewed_by_user_id')->nullable()->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
             $table->timestamp('reviewed_at')->nullable();
             $table->text('review_note')->nullable();
             $table->boolean('parent_notified')->default(false);

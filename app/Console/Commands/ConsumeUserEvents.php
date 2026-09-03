@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\UsersReadModel;
+use App\Domains\School\Models\UsersReadModel;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Connection\AMQPStreamConnection;

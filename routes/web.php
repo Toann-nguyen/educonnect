@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\JwksController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,3 +24,6 @@ Route::get('/', function () {
     ]);
 });
 
+// Well-known JWKS endpoints — public, no auth (RFC 7517 / OIDC Discovery)
+Route::get('/.well-known/jwks.json', [JwksController::class, 'index']);
+Route::get('/.well-known/openid-configuration', [JwksController::class, 'openIdConfiguration']);

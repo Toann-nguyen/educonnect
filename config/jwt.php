@@ -126,6 +126,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | JWT Issuer / Audience / Key ID
+    |--------------------------------------------------------------------------
+    | iss: token issuer (service identity) — validated by resource servers
+    | aud: intended audience — comma separated or single value
+    | kid: key identifier for JWKS key rotation
+    */
+    'iss' => env('JWT_ISS', env('APP_URL', 'https://educonnect.local')),
+    'aud' => env('JWT_AUD', 'educonnect-api'),
+    'kid' => env('JWT_KID', 'educonnect-rs256-1'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Required Claims
     |--------------------------------------------------------------------------
     |

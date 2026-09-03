@@ -18,7 +18,7 @@
         "laravel/socialite": "^5.27",
         "laravel/tinker": "^2.8",
         "php-amqplib/php-amqplib": "^3.7",
-        "php-open-source-saver/jwt-auth": "^2.3",
+        "php-open-source-saver/jwt-auth": "^2.8.3",
         "pragmarx/google2fa-laravel": "^3.0",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.25",
@@ -75,6 +75,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "block-insecure": false
         }
     },
     "minimum-stability": "stable",

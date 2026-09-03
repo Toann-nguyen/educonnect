@@ -62,3 +62,7 @@ target/
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+# JWT RS256/EdDSA private keys — never commit
+storage/certs/jwt-private.pem
+storage/certs/jwt-eddsa-private.pem
+storage/certs/*.key

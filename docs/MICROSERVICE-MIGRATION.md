@@ -46,3 +46,4 @@ docker exec educonnect-dev-mysql-1 mysqldump -uroot -p$MYSQL_ROOT_PASSWORD ident
 - Thêm endpoint `GET /api/finance/stats` trong Go finance để `FinanceApiClient` lấy revenue thực
 - Xóa hẳn code legacy `AppServiceProvider` imports `App\Repositories\*` và `Identity` bindings chết
 - Tách `.env.example` thêm `FORWARD_*_DB_PORT` và `DB_*_HOST` per service
+- Identity outbox also implemented in ../educonnect-identity (OutboxEvent, PublishUserEventJob, UserObserver, migration 2026_09_03)

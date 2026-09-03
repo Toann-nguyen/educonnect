@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->string('invoice_number', 50)->unique();
-            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
-            $table->foreignId('issued_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('student_id')->onDelete('cascade');
+            $table->foreignId('issued_by')->nullable()->onDelete('set null');
             $table->decimal('total_amount', 15, 2)->default(0);
             $table->decimal('paid_amount', 15, 2)->default(0);
             $table->date('due_date');

@@ -1,0 +1,380 @@
+# ============================================================
+# docker-compose.staging.yml — STAGING (microservice-split)
+# ------------------------------------------------------------
+# - RabbitMQ CLUSTER 3 node (rabbitmq-1/2/3, quorum queues)
+# - Build production (không bind-mount source)
+# - Không expose DB/Redis/RabbitMQ ra ngoài
+# Usage: docker compose -f docker-compose.staging.yml up -d --build
+# ============================================================
+
+name: educonnect-staging
+
+services:
+
+  # ── API Gateway (Task 2.1) ────────────────────────────────
+  gateway:
+    image: nginx:1.25-alpine
+    restart: unless-stopped
+    # Xoá default.conf của image để tránh xung đột server block, rồi chạy entrypoint (envsubst templates)
+    command: /bin/sh -c "rm -f /etc/nginx/conf.d/default.conf && exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/gateway.conf.template:/etc/nginx/templates/gateway.conf.template:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+      - gateway_logs:/var/log/nginx
+    environment:
+      NGINX_HOST: ${NGINX_HOST}
+      GATEWAY_DOMAIN: ${GATEWAY_DOMAIN}
+    depends_on:
+      php:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      finance:
+        condition: service_started
+      notify:
+        condition: service_started
+      realtime:
+        condition: service_started
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── School / Monolith (production build) ──────────────────
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: production
+    restart: unless-stopped
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY}
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_IDENTITY_DATABASE: identity_db
+      DB_SCHOOL_DATABASE: school_db
+      REDIS_HOST: redis
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Identity Service (production build) ───────────────────
+  identity:
+    build:
+      context: ${IDENTITY_PATH:-../educonnect-identity}
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - identity_storage:/var/www/html/storage/app
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${IDENTITY_APP_KEY}
+      DB_HOST: mysql
+      DB_DATABASE: identity_db
+      DB_USERNAME: identity_user
+      DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      REDIS_HOST: redis
+      QUEUE_CONNECTION: redis
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      MIGRATE_ON_START: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "php-fpm", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Finance Service (Go) ──────────────────────────────────
+  finance:
+    build: ./services/finance
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: finance_db
+      DB_USERNAME: finance_user
+      DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Notify Service (Go — RabbitMQ consumer) ───────────────
+  notify:
+    build: ./services/notify
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      RABBITMQ_HOST: rabbitmq-1
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_FROM: ${MAIL_FROM}
+    depends_on:
+      rabbitmq-1:
+        condition: service_healthy
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Realtime Service (Node — Socket.IO) ───────────────────
+  realtime:
+    build: ./services/realtime
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      RABBITMQ_HOST: rabbitmq-1
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+    depends_on:
+      rabbitmq-1:
+        condition: service_healthy
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── MySQL ─────────────────────────────────────────────────
+  mysql:
+    image: mysql/mysql-server:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: laravel
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      SCHOOL_DB_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      FINANCE_DB_PASSWORD: ${FINANCE_DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ── Redis ─────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis_data:/data
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── RabbitMQ CLUSTER 3 node (Task 2.2) ────────────────────
+  rabbitmq-1:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: rabbitmq-1
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+    volumes:
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq1_data:/var/lib/rabbitmq
+    networks:
+      - educonnect
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  rabbitmq-2:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: rabbitmq-2
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+    volumes:
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq2_data:/var/lib/rabbitmq
+    networks:
+      - educonnect
+    depends_on:
+      rabbitmq-1:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  rabbitmq-3:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    hostname: rabbitmq-3
+    environment:
+      RABBITMQ_ERLANG_COOKIE: ${RABBITMQ_ERLANG_COOKIE}
+    volumes:
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitmq3_data:/var/lib/rabbitmq
+    networks:
+      - educonnect
+    depends_on:
+      rabbitmq-1:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+networks:
+  educonnect:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  storage_data:
+    driver: local
+  identity_storage:
+    driver: local
+  gateway_logs:
+    driver: local
+  rabbitmq1_data:
+    driver: local
+  rabbitmq2_data:
+    driver: local
+  rabbitmq3_data:
+    driver: local

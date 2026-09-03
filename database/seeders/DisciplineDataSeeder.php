@@ -4,14 +4,14 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\AcademicYear;
-use App\Models\Discipline;
-use App\Models\DisciplineAction;
-use App\Models\DisciplineAppeal;
-use App\Models\DisciplineType;
-use App\Models\Student;
-use App\Models\StudentConductScore;
-use App\Models\User;
+use App\Domains\School\Models\AcademicYear;
+use App\Domains\School\Models\Discipline;
+use App\Domains\School\Models\DisciplineAction;
+use App\Domains\School\Models\DisciplineAppeal;
+use App\Domains\School\Models\DisciplineType;
+use App\Domains\School\Models\Student;
+use App\Domains\School\Models\StudentConductScore;
+use App\Domains\Identity\Models\User;
 
 class DisciplineDataSeeder extends Seeder
 {

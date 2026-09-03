@@ -7,7 +7,11 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan optimize:clear
     php artisan config:cache
     php artisan route:cache
-    php artisan view:cache
+    if [ -d resources/views ]; then
+        php artisan view:cache
+    else
+        echo "ℹ️ Skipping view:cache (no resources/views)"
+    fi
     php artisan event:cache
 else
     echo "🛠️ Clearing cache for development environment..."

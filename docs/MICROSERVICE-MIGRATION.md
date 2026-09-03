@@ -47,3 +47,8 @@ docker exec educonnect-dev-mysql-1 mysqldump -uroot -p$MYSQL_ROOT_PASSWORD ident
 - Xóa hẳn code legacy `AppServiceProvider` imports `App\Repositories\*` và `Identity` bindings chết
 - Tách `.env.example` thêm `FORWARD_*_DB_PORT` và `DB_*_HOST` per service
 - Identity outbox also implemented in ../educonnect-identity (OutboxEvent, PublishUserEventJob, UserObserver, migration 2026_09_03)
+## Step C — Finance Go canonical 2026-09-03T18:51:31+07:00
+
+- PHP Finance stub (Models/Repo/Service) deleted in earlier commit, only FinanceApiClient remains as HTTP client
+- DashboardService uses FinanceApiClient->getDashboardFinancials() -> Go /api/finance/stats
+- Go health healthy, stats fallback 0, no direct finance_db query from PHP

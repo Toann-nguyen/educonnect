@@ -39,6 +39,10 @@ func Setup(engine *fuego.Engine, ginRouter *gin.Engine, db *gorm.DB) {
 	fuegogin.Post(engine, api, "/payments", payment.Create,
 		option.Tags("payments"), option.Summary("Create payment"), option.DefaultStatusCode(201))
 
+	stats := handler.StatsHandler{DB: db}
+	fuegogin.Get(engine, api, "/stats", stats.Get,
+		option.Tags("stats"), option.Summary("Dashboard stats: revenue + overdue"))
+
 	user := handler.UserHandler{DB: db}
 	fuegogin.Get(engine, api, "/users", user.List,
 		option.Tags("users"), option.Summary("List synced users"))

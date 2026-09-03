@@ -2,10 +2,9 @@
 
 namespace App\Domains\School\Services;
 
+use App\Domains\Finance\Services\FinanceApiClient;
 use App\Domains\School\Models\AcademicYear;
 use App\Domains\School\Models\Event;
-use App\Domains\Finance\Models\Invoice;
-use App\Domains\Finance\Models\Payment;
 use App\Domains\School\Models\SchoolClass;
 use App\Domains\School\Models\Student;
 use App\Domains\Identity\Models\User;
@@ -47,16 +46,18 @@ class DashBoardService implements DashBoardServiceInterface
             ];
         });
 
-        // Lấy dữ liệu tài chính không nên cache quá lâu
-        $financials = [
-            'revenue_today' => Payment::whereDate('payment_date', today())->sum('amount_paid'),
-            'revenue_this_month' => Payment::whereYear('payment_date', today()->year)
-                ->whereMonth('payment_date', today()->month)
-                ->sum('amount_paid'),
-            'overdue_invoices' => Invoice::where('status', 'overdue')->orWhere(function ($query) {
-                $query->where('status', 'unpaid')->where('due_date', '<', today());
-            })->count(),
-        ];
+        // Lấy dữ liệu tài chính qua Finance microservice (Go) — không truy cập DB trực tiếp
+        // Nếu Finance service chưa sẵn sàng, trả về 0 để không block dashboard
+        $financials = ['revenue_today' => 0, 'revenue_this_month' => 0, 'overdue_invoices' => 0];
+        try {
+            $client = app(FinanceApiClient::class);
+            $stats = $client->getDashboardFinancials();
+            if (!empty($stats)) {
+                $financials = array_merge($financials, $stats);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Dashboard finance fetch failed', ['msg' => $e->getMessage()]);
+        }
 
         // Lấy 5 sự kiện sắp diễn ra gần nhất
         $upcomingEvents = Event::where('date', '>=', now())

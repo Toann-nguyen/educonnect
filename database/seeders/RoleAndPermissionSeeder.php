@@ -18,6 +18,20 @@ class RoleAndPermissionSeeder extends Seeder
      */
     public function run(): void
     {
+        // Ensure identity connection when monolith runs with split DBs (default=school)
+        $prevDefault = config('database.default');
+        if (config('database.connections.identity') && $prevDefault !== 'identity') {
+            // Spatie uses default connection; switch temporarily if permissions table not in default
+            try {
+                \Illuminate\Support\Facades\Schema::hasTable('permissions');
+            } catch (\Throwable $e) {
+                config(['database.default' => 'identity']);
+            }
+            // If identity has permissions table, prefer it
+            if (\Illuminate\Support\Facades\Schema::connection('identity')->hasTable('permissions')) {
+                config(['database.default' => 'identity']);
+            }
+        }
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // ── 1. Permissions ──────────────────────────────────────────────
@@ -51,7 +65,9 @@ class RoleAndPermissionSeeder extends Seeder
 
         // ── 3. §10.2 Permission matrix ─────────────────────────────────
         // Principal: full school authority — all enum perms + legacy spaced
-        $principalPerms = PermissionEnum::values();
+        // (legacy spaced names included: SchedulePolicy/Discipline routes check
+        // 'view schedules', 'manage schedules', 'record discipline', etc.)
+        $principalPerms = array_merge(PermissionEnum::values(), $legacy);
 
         // Homeroom (GVCN): class management, grades, attendance, discipline, schedules
         $homeroomPerms = [
@@ -128,6 +144,8 @@ class RoleAndPermissionSeeder extends Seeder
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         $this->command?->info('✓ T1.4 RBAC seeded: roles=' . Role::where('guard_name', 'api')->count() . ' perms=' . Permission::where('guard_name', 'api')->count());
+        // restore default
+        if (isset($prevDefault)) config(['database.default' => $prevDefault]);
     }
 
     private function syncRole(string $roleName, array $permissions): void

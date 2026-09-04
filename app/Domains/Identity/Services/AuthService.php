@@ -24,6 +24,7 @@ use App\Domains\Identity\Models\RefreshToken;
 use App\Domains\Identity\Models\UserSession;
 use App\Domains\Identity\Models\User;
 use App\Domains\Identity\Services\Auth\RefreshRotationService;
+use App\Domains\Identity\Services\PermissionCacheService;
 
 class AuthService implements AuthServiceInterface
 {

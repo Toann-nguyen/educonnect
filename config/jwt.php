@@ -138,6 +138,9 @@ return [
 
     'jwks_ttl' => env('JWT_JWKS_TTL', 3600),
 
+    // T1.3 — refresh rotation grace 10-30s (idempotent retry window)
+    'refresh_grace' => env('JWT_REFRESH_GRACE', 30),
+
     /*
     |--------------------------------------------------------------------------
     | Required Claims

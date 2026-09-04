@@ -91,11 +91,18 @@ class User extends Authenticatable implements JWTSubject
 
     public function getJWTCustomClaims(): array
     {
+        // iss/aud/jti handled by jwt-auth (jti auto), sid/tv/roles are injected
+        // per-token in AuthService::issueTokens. Here we provide tv/ver and
+        // stable fallback claims; sid/roles are overridden per login/refresh.
         return [
             'iss'  => config('jwt.iss'),
             'aud'  => config('jwt.aud'),
             'type' => 'access',
-            'ver'  => $this->token_version,
+            'ver'  => (int) $this->token_version,
+            'tv'   => (int) $this->token_version,
+            'roles'=> $this->relationLoaded('roles')
+                ? $this->roles->pluck('name')->values()->toArray()
+                : $this->getRoleNames()->toArray(),
         ];
     }
 

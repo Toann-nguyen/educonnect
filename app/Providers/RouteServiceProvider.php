@@ -59,9 +59,9 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
-            // Identity routes handled by dedicated identity service (../educonnect-identity) via gateway
-            // School monolith only serves school domain; /api/auth/* → identity:9000
-            // Route::middleware('api')->prefix('api')->group(base_path('routes/identity.php'));
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/identity.php'));
 
             Route::middleware('api')
                 ->prefix('api')

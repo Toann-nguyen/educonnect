@@ -56,7 +56,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(DashBoardServiceInterface::class, DashBoardService::class);
 
         // Finance via Go microservice — không bind repository/service trực tiếp
-        // Identity đã tách microservice — không bind repository/service tại monolith
+        // Identity — T1.2: re-enable for feature/auth (gateway still proxies in prod)
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\AuthRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\AuthRepository::class);
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\EmailVerificationRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\EmailVerificationRepository::class);
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\UserRepositoryInterface::class, \App\Domains\Identity\Repositories\Eloquent\UserRepository::class);
+        $this->app->bind(\App\Domains\Identity\Services\Interface\AuthServiceInterface::class, \App\Domains\Identity\Services\AuthService::class);
     }
 
     /**

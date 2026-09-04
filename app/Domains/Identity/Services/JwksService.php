@@ -12,8 +12,9 @@ class JwksService
 {
     public function getJwks(): array
     {
+        $ttl = (int) env('JWT_JWKS_TTL', config('jwt.jwks_ttl', 3600));
         try {
-            return Cache::remember('jwks', 3600, fn () => $this->buildJwks());
+            return Cache::remember('jwks', $ttl, fn () => $this->buildJwks());
         } catch (\Throwable $e) {
             return $this->buildJwks();
         }

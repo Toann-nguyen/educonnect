@@ -14,6 +14,11 @@ class RefreshToken extends Model
     protected $fillable = [
         'user_id',
         'token_hash',
+        'sid',
+        'jti',
+        'family',
+        'tv',
+        'replaced_by',
         'device_info',
         'device_fingerprint',
         'ip_address',

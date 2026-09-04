@@ -29,7 +29,7 @@ class JwtMiddleware
                 return response()->json(['message' => '2FA verification required'], 401);
             }
 
-            $tokenVersion = $payload->get('ver');
+            $tokenVersion = $payload->get('tv', $payload->get('ver'));
             if ($tokenVersion !== null && (int) $tokenVersion !== (int) $user->token_version) {
                 return response()->json(['message' => 'Token has been revoked'], 401);
             }

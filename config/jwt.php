@@ -89,7 +89,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 15),
+    'ttl' => env('JWT_TTL', 10),
 
     /*
     |--------------------------------------------------------------------------
@@ -135,6 +135,8 @@ return [
     'iss' => env('JWT_ISS', env('APP_URL', 'https://educonnect.local')),
     'aud' => env('JWT_AUD', 'educonnect-api'),
     'kid' => env('JWT_KID', 'educonnect-rs256-1'),
+
+    'jwks_ttl' => env('JWT_JWKS_TTL', 3600),
 
     /*
     |--------------------------------------------------------------------------

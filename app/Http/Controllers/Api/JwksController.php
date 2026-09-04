@@ -15,8 +15,9 @@ class JwksController
      */
     public function index(): JsonResponse
     {
+        $ttl = (int) config('jwt.jwks_ttl', 3600);
         return response()->json($this->jwks->getJwks(), 200, [
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => "public, max-age={$ttl}",
             'Content-Type' => 'application/json',
         ]);
     }
@@ -34,10 +35,10 @@ class JwksController
             'issuer' => $issuer,
             'jwks_uri' => $base . '/.well-known/jwks.json',
             'id_token_signing_alg_values_supported' => [config('jwt.algo', 'RS256'), 'EdDSA'],
-            'claims_supported' => ['sub', 'iss', 'aud', 'iat', 'exp', 'jti', 'ver', 'type'],
+            'claims_supported' => ['sub', 'iss', 'aud', 'iat', 'exp', 'jti', 'sid', 'tv', 'ver', 'roles', 'type'],
             'subject_types_supported' => ['public'],
         ], 200, [
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => 'public, max-age=' . (int) config('jwt.jwks_ttl', 3600),
         ]);
     }
 
@@ -50,9 +51,10 @@ class JwksController
         if (! $pem) {
             return response('Public key not configured', 404);
         }
+        $ttl = (int) config('jwt.jwks_ttl', 3600);
         return response($pem, 200, [
             'Content-Type' => 'text/plain',
-            'Cache-Control' => 'public, max-age=3600',
+            'Cache-Control' => "public, max-age={$ttl}",
         ]);
     }
 }

@@ -6,6 +6,7 @@ enum RoleEnum: string
 {
     case ADMIN = 'admin';
     case PRINCIPAL = 'principal';
+    case HOMEROOM = 'homeroom';
     case TEACHER = 'teacher';
     case STUDENT = 'student';
     case PARENT = 'parent';
@@ -18,6 +19,7 @@ enum RoleEnum: string
         return match ($this) {
             self::ADMIN => 'Quản trị viên',
             self::PRINCIPAL => 'Hiệu trưởng',
+            self::HOMEROOM => 'Giáo viên chủ nhiệm',
             self::TEACHER => 'Giáo viên',
             self::STUDENT => 'Học sinh',
             self::PARENT => 'Phụ huynh',
@@ -32,5 +34,3 @@ enum RoleEnum: string
         return array_map(fn($case) => $case->value, self::cases());
     }
 }
-
-

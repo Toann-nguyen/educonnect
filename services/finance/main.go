@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -151,11 +152,12 @@ func main() {
 		port = "8080"
 	}
 
-	// JWT public key (RS256) — load 1 lần lúc start
-	if err := auth.LoadJWTPublicKey(); err != nil {
-		log.Fatalf("JWT public key: %v", err)
-	}
-	log.Println("JWT RS256 public key loaded")
+	// JWKS cache (RS256) — MicahParks/keyfunc, tự refresh 15m, kiểm tra iss/aud/exp/kid/tv/sid
+	ctx := context.Background()
+	auth.MustInitJWKS(ctx)
+	defer auth.CloseJWKS()
+	log.Println("JWKS RS256 cache ready")
+
 
 	// Kết nối finance_db
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",

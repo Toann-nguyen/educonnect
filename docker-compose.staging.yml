@@ -146,7 +146,9 @@ services:
       DB_DATABASE: finance_db
       DB_USERNAME: finance_user
       DB_PASSWORD: ${FINANCE_DB_PASSWORD}
-      JWT_SECRET: ${IDENTITY_JWT_SECRET}
+      AUTH_ISSUER: ${JWT_ISS:-http://localhost}
+      AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}
     depends_on:
       mysql:
         condition: service_healthy
@@ -169,6 +171,9 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8081"
+      AUTH_ISSUER: ${JWT_ISS:-http://localhost}
+      AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}
       RABBITMQ_HOST: rabbitmq-1
       RABBITMQ_PORT: "5672"
       RABBITMQ_USER: ${RABBITMQ_USER}

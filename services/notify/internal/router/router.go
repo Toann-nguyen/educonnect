@@ -6,15 +6,18 @@ import (
 	"github.com/go-fuego/fuego/extra/fuegogin"
 	"github.com/go-fuego/fuego/option"
 
+	"educonnect/notify/internal/auth"
 	"educonnect/notify/internal/handler"
 	"educonnect/notify/internal/template"
 )
 
 // Setup — đăng ký API /api/notify vào gin + spec OpenAPI vào engine.
+// T3.1: bảo vệ bằng JWKS (MicahParks/keyfunc) — kiểm tra iss/aud/exp/kid/tv/sid.
 func Setup(engine *fuego.Engine, ginRouter *gin.Engine, store *template.Store) {
 	h := handler.TemplateHandler{Store: store}
 
 	api := ginRouter.Group("/api/notify")
+	api.Use(auth.JWT())
 	fuegogin.Get(engine, api, "/templates", h.List,
 		option.Tags("templates"), option.Summary("List notification templates"))
 	fuegogin.Get(engine, api, "/templates/:name", h.Get,

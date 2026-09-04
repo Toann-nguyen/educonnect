@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 
+	"educonnect/notify/internal/auth"
 	"educonnect/notify/internal/router"
 	"educonnect/notify/internal/template"
 )
@@ -211,6 +213,12 @@ func main() {
 	if port == "" {
 		port = "8081"
 	}
+
+	// JWKS cache (RS256) — MicahParks/keyfunc, tự refresh 15m, kiểm tra iss/aud/exp/kid/tv/sid
+	ctx := context.Background()
+	auth.MustInitJWKS(ctx)
+	defer auth.CloseJWKS()
+	log.Println("JWKS RS256 cache ready (notify)")
 
 	// Consumer chạy nền — kết nối RabbitMQ không chặn HTTP server.
 	// Nếu broker chưa sẵn sàng, retry vô hạn thay vì fatal (service vẫn phục vụ API).

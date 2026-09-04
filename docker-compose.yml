@@ -167,8 +167,6 @@ services:
   finance:
     build: ./services/finance
     restart: unless-stopped
-    volumes:
-      - ./storage/certs/jwt-rsa-4096-public.pem:/certs/jwt-rsa-4096-public.pem:ro
     environment:
       PORT: "8080"
       DB_FINANCE_HOST: mysql-finance
@@ -176,7 +174,9 @@ services:
       DB_FINANCE_DATABASE: finance_db
       DB_FINANCE_USERNAME: finance_user
       DB_FINANCE_PASSWORD: ${FINANCE_DB_PASSWORD}
-      JWT_PUBLIC_KEY_PATH: /certs/jwt-rsa-4096-public.pem
+      AUTH_ISSUER: ${JWT_ISS:-http://localhost}
+      AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     depends_on:
       mysql-finance:
@@ -195,6 +195,9 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8081"
+      AUTH_ISSUER: ${JWT_ISS:-http://localhost}
+      AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
+      AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USER: ${RABBITMQ_USER}

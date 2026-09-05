@@ -97,7 +97,7 @@ func declareAuthTopology(ch *amqp.Channel) error {
 	if err := ch.QueueBind(AuthQueueFinance+".dlq", "", "educonnect.dlx", false, nil); err != nil {
 		return err
 	}
-	return ch.QueueBind(AuthQueueFinance, "auth.#", AuthExchange, false, nil)
+	return ch.QueueBind(AuthQueueFinance, "user.#", AuthExchange, false, nil)
 }
 
 func handleAuthMessage(ctx context.Context, ch *amqp.Channel, msg amqp.Delivery, rdb *redis.Client) {

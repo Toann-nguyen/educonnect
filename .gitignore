@@ -66,3 +66,9 @@ target/
 storage/certs/jwt-private.pem
 storage/certs/jwt-eddsa-private.pem
 storage/certs/*.key
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+

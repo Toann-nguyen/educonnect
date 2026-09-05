@@ -1,0 +1,23 @@
+---
+# Role: deploy — compose up idempotent, KHÔNG provision mới.
+# CẤM: không đọc/template .env, không động vào data/* (mysql_data, redis_data).
+# project_src PHẢI là /home/robert/production/docker vì .env, ./data, ./redis.conf
+# đều là path tương đối từ đó. horizon/scheduler dùng image 'docker-app' có sẵn
+# local nên build: never — playbook không rebuild/xóa image đó, chỉ restart.
+
+- name: Compose up production educonnect (idempotent)
+  community.docker.docker_compose_v2:
+    project_src: "{{ project_src }}"
+    state: present
+    pull: missing
+    build: never
+    recreate: auto
+    remove_orphans: true
+    wait: true
+    wait_timeout: 120
+
+- name: Verify containers running va healthy
+  ansible.builtin.command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.State}}"
+  register: docker_ps
+  changed_when: false
+  failed_when: docker_ps.rc != 0 or "unhealthy" in docker_ps.stdout | lower or "exited" in docker_ps.stdout | lower

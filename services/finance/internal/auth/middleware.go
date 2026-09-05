@@ -144,6 +144,23 @@ func JWT() gin.HandlerFunc {
 		c.Set("claims", claims)
 		c.Set("user_id", claims["sub"])
 		c.Set("sid", claims["sid"])
+		// T3.2: expose roles để RBAC/ownership không phải parse lại claims
+		if roles, ok := claims["roles"]; ok {
+			switch v := roles.(type) {
+			case []interface{}:
+				rs := make([]string, 0, len(v))
+				for _, e := range v {
+					if s, ok := e.(string); ok {
+						rs = append(rs, s)
+					}
+				}
+				c.Set("roles", rs)
+			case []string:
+				c.Set("roles", v)
+			case string:
+				c.Set("roles", []string{v})
+			}
+		}
 		if v, ok := claims["tv"]; ok {
 			c.Set("tv", v)
 		} else {
@@ -172,6 +189,9 @@ func ChiJWT(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), "claims", claims)
 		ctx = context.WithValue(ctx, "user_id", claims["sub"])
 		ctx = context.WithValue(ctx, "sid", claims["sid"])
+		if roles, ok := claims["roles"]; ok {
+			ctx = context.WithValue(ctx, "roles", roles)
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

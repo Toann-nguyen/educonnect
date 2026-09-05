@@ -18,6 +18,7 @@ type Template struct {
 	Subject   string    `json:"subject" example:"Chào mừng đến EduConnect" validate:"required"`
 	Body      string    `json:"body" example:"Xin chào {{name}}, cảm ơn bạn đã đăng ký!" validate:"required"`
 	Channels  []string  `json:"channels" example:"email"`
+	CreatedBy uint      `json:"created_by" example:"1"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 

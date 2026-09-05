@@ -263,5 +263,8 @@ func main() {
 	})
 	log.Println("Redis client created")
 
+	// T6.1: auth.events consumer riêng per service — DLQ + idempotency + invalidate permission cache
+	go auth.StartAuthConsumer(context.Background(), rdb)
+
 	setupHTTP(port, template.NewStore(rdb))
 }

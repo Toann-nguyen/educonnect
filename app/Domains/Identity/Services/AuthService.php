@@ -525,8 +525,31 @@ class AuthService implements AuthServiceInterface
 
     public function logout($user, ?string $refreshToken = null)
     {
-        // Vô hiệu hóa access token hiện tại (blacklist JWT)
+        // T5.1: lưu jti/sid/exp để blacklist jti (TTL = còn lại access) + revoke sid trước khi tymon xoá token
+        $jti = null; $sid = null; $exp = null;
+        try {
+            $payload = auth('api')->getPayload();
+            if ($payload) {
+                $jti = $payload->get('jti');
+                $sid = $payload->get('sid');
+                $exp = $payload->get('exp');
+            }
+        } catch (\Throwable $e) {}
+
+        // Vô hiệu hóa access token hiện tại (blacklist JWT tymon)
         auth('api')->logout();
+
+        // T5.1 hybrid: blacklist jti với TTL còn lại của access token + revoke sid
+        try {
+            $revoke = app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class);
+            if (!empty($jti)) {
+                $ttl = \App\Domains\Identity\Services\Auth\TokenRevocationService::remainingTtlFromExp(is_numeric($exp) ? (int) $exp : null);
+                $revoke->blacklistJti((string) $jti, $ttl);
+            }
+            if (!empty($sid)) {
+                $revoke->revokeSid((string) $sid);
+            }
+        } catch (\Throwable $e) {}
 
         // Thu hồi refresh token (session) của thiết bị hiện tại — revoke 1
         if ($refreshToken) {
@@ -535,6 +558,10 @@ class AuthService implements AuthServiceInterface
             if ($record) {
                 $record->update(['revoked_at' => now()]);
                 app(RefreshRotationService::class)->revokeOne($tokenHash, $user?->id);
+                // đảm bảo sid của refresh cũng bị revoke (Go sẽ chặn)
+                if (!empty($record->sid)) {
+                    try { app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->revokeSid((string) $record->sid); } catch (\Throwable $e) {}
+                }
                 UserSession::where('refresh_token_id', $record->id)->delete();
             }
         }
@@ -550,17 +577,43 @@ class AuthService implements AuthServiceInterface
      */
     public function logoutAll($user)
     {
+        // T5.1: blacklist jti hiện tại trước khi revoke all
+        try {
+            $payload = auth('api')->getPayload();
+            if ($payload) {
+                $jti = $payload->get('jti');
+                $exp = $payload->get('exp');
+                if (!empty($jti)) {
+                    $ttl = \App\Domains\Identity\Services\Auth\TokenRevocationService::remainingTtlFromExp(is_numeric($exp) ? (int) $exp : null);
+                    app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->blacklistJti((string) $jti, $ttl);
+                }
+            }
+        } catch (\Throwable $e) {}
+
         auth('api')->logout();
 
         // T1.3: Redis revoke all families + sid + grace
         app(RefreshRotationService::class)->revokeAll((int) $user->id);
 
-        // Raw update để không trigger UserObserver (tránh đệ quy events)
+        // Raw update để không trigger UserObserver (tránh đệ quy events) + đồng bộ Redis tv
         DB::table('users')
             ->where('id', $user->id)
             ->update(['token_version' => DB::raw('token_version + 1')]);
+        try {
+            $fresh = \App\Domains\Identity\Models\User::on('identity')->find($user->id);
+            $newTv = (int) ($fresh?->token_version ?? 1);
+            app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->setUserTv((int) $user->id, $newTv);
+        } catch (\Throwable $e) {}
 
         app(PermissionCacheService::class)->clearUser($user->id);
+
+        // T6.1: publish auth.events for Go consumers to invalidate permission cache + idempotency
+        try {
+            $fresh2 = \App\Domains\Identity\Models\User::on('identity')->find($user->id);
+            $newTv2 = (int)($fresh2?->token_version ?? $user->token_version + 1);
+            \App\Services\AuthEventPublisher::tokenVersionBumped((int)$user->id, $newTv2, 'logout_all');
+            \App\Services\AuthEventPublisher::permissionsChanged((int)$user->id, [], 'logout_all');
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('AuthEventPublisher logoutAll failed: '.$e->getMessage()); }
 
         $this->dispatchAudit($user->id, 'LOGOUT_ALL', []);
 
@@ -614,6 +667,15 @@ class AuthService implements AuthServiceInterface
         });
         $email = strtolower($data['email'] ?? '');
         if ($status === Password::PASSWORD_RESET) {
+            // T5.1: đổi pass → bump tv để revoke toàn bộ access token đang lưu hành
+            try {
+                $u = $this->authRepository->findByEmail($email);
+                if ($u) {
+                    app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->bumpTokenVersion($u);
+                    // revoke all refresh sessions của user này
+                    app(\App\Domains\Identity\Services\Auth\RefreshRotationService::class)->revokeAll((int) $u->id);
+                }
+            } catch (\Throwable $e) {}
             // resolve user for audit (email unique)
             $u = $this->authRepository->findByEmail($email);
             $this->dispatchAudit($u?->id, 'PASSWORD_RESET', ['email_hash' => hash('sha256', $email)]);
@@ -621,6 +683,18 @@ class AuthService implements AuthServiceInterface
             $this->dispatchAudit(null, 'PASSWORD_RESET_FAILED', ['email_hash' => hash('sha256', $email), 'status' => $status]);
         }
         return $status;
+    }
+
+    /**
+     * T5.1: đổi mật khẩu khi đã đăng nhập — bump tv + revoke all (giữ session hiện tại? revoke all theo spec)
+     */
+    public function changePassword(User $user, string $hashedPassword): void
+    {
+        $this->userRepository->updateUser($user->id, ['password' => $hashedPassword]);
+        // bump tv + revoke all refresh ngoại trừ có thể giữ? spec: tăng tv khi đổi pass → tất cả token cũ vô hiệu
+        app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->bumpTokenVersion($user);
+        app(\App\Domains\Identity\Services\Auth\RefreshRotationService::class)->revokeAll((int) $user->id);
+        $this->dispatchAudit($user->id, 'PASSWORD_CHANGED', []);
     }
 
     // ========================================================================

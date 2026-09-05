@@ -19,8 +19,8 @@ class UserObserver
 
     public function updated(User $user): void
     {
-        // Preserve existing cache clear + token_version bump for auth-relevant fields
-        $authChanged = $user->wasChanged(['is_active', 'is_locked', 'status']);
+        // T5.1 + T6.1: auth revoke hybrid (jti+tv+sid) — tăng tv khi đổi pass/khóa/logout all + publish auth.events
+        $authChanged = $user->wasChanged(['is_active', 'is_locked', 'status', 'password', 'password_hash']);
         if ($authChanged) {
             try {
                 app(PermissionCacheService::class)->clearUser($user->id);
@@ -32,6 +32,25 @@ class UserObserver
             DB::connection('identity')->table('users')
                 ->where('id', $user->id)
                 ->update(['token_version' => DB::raw('token_version + 1')]);
+
+            // T5.1: đồng bộ tv lên Redis để Go check ngay (trước khi DB fallback)
+            try {
+                $newTv = (int) (DB::connection('identity')->table('users')->where('id', $user->id)->value('token_version') ?? $user->token_version + 1);
+                app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->setUserTv((int) $user->id, $newTv);
+            } catch (\Throwable $e) {}
+
+            // T6.1: publish auth.events (idempotency + outbox) for Go consumers to invalidate cache
+            try {
+                $newTv = (int) (DB::connection('identity')->table('users')->where('id', $user->id)->value('token_version') ?? $user->token_version + 1);
+                if (!$user->is_active || $user->is_locked) {
+                    \App\Services\AuthEventPublisher::userDeactivated($user->id, $user->is_locked ? 'locked' : 'deactivated');
+                } else {
+                    \App\Services\AuthEventPublisher::tokenVersionBumped($user->id, $newTv, 'status_changed');
+                }
+                \App\Services\AuthEventPublisher::permissionsChanged($user->id, [], 'observer');
+            } catch (\Throwable $e) {
+                Log::warning('AuthEventPublisher failed in UserObserver: ' . $e->getMessage());
+            }
         }
 
         // Outbox publish only when meaningful fields changed (avoid noise)

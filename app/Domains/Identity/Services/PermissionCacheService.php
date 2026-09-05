@@ -51,6 +51,15 @@ class PermissionCacheService
     public function clearUser(int $userId): void
     {
         Redis::del($this->key($userId));
+        // T6.1: also publish auth event for Go consumers (idempotent, deduped by consumer Redis NX)
+        // Guard to avoid recursion when called from ConsumeAuthEvents
+        if (!app()->bound('consume.auth.events.reentry')) {
+            try {
+                \App\Services\AuthEventPublisher::permissionsChanged($userId, [], 'cache_clear');
+            } catch (\Throwable $e) {
+                // best-effort, không block cache invalidation
+            }
+        }
     }
 
     public function clearAll(): void

@@ -40,6 +40,15 @@
       "arguments": {}
     },
     {
+      "name": "auth.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
       "name": "educonnect.dlx",
       "vhost": "/",
       "type": "fanout",
@@ -68,6 +77,82 @@
       "arguments": {
         "x-queue-type": "quorum"
       }
+    },
+    {
+      "name": "finance_auth_events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "educonnect.dlx"
+      }
+    },
+    {
+      "name": "finance_auth_events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "notify_auth_events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "educonnect.dlx"
+      }
+    },
+    {
+      "name": "notify_auth_events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "school_auth_events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "educonnect.dlx"
+      }
+    },
+    {
+      "name": "school_auth_events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    },
+    {
+      "name": "realtime_auth_events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "educonnect.dlx"
+      }
+    },
+    {
+      "name": "realtime_auth_events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
     }
   ],
   "bindings": [
@@ -88,9 +173,73 @@
       "arguments": {}
     },
     {
+      "source": "auth.events",
+      "vhost": "/",
+      "destination": "finance_auth_events",
+      "destination_type": "queue",
+      "routing_key": "auth.#",
+      "arguments": {}
+    },
+    {
+      "source": "auth.events",
+      "vhost": "/",
+      "destination": "notify_auth_events",
+      "destination_type": "queue",
+      "routing_key": "auth.#",
+      "arguments": {}
+    },
+    {
+      "source": "auth.events",
+      "vhost": "/",
+      "destination": "school_auth_events",
+      "destination_type": "queue",
+      "routing_key": "auth.#",
+      "arguments": {}
+    },
+    {
+      "source": "auth.events",
+      "vhost": "/",
+      "destination": "realtime_auth_events",
+      "destination_type": "queue",
+      "routing_key": "auth.#",
+      "arguments": {}
+    },
+    {
       "source": "educonnect.dlx",
       "vhost": "/",
       "destination": "notification_queue.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "educonnect.dlx",
+      "vhost": "/",
+      "destination": "finance_auth_events.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "educonnect.dlx",
+      "vhost": "/",
+      "destination": "notify_auth_events.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "educonnect.dlx",
+      "vhost": "/",
+      "destination": "school_auth_events.dlq",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "educonnect.dlx",
+      "vhost": "/",
+      "destination": "realtime_auth_events.dlq",
       "destination_type": "queue",
       "routing_key": "",
       "arguments": {}

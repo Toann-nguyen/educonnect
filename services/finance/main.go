@@ -13,6 +13,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -179,6 +180,21 @@ func main() {
 
 	// User sync consumer (RabbitMQ — không block main)
 	go startUserSyncConsumer(db)
+
+	// T6.1: auth.events consumer — queue riêng finance_auth_events, DLQ, idempotency, invalidate permission cache
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "redis"
+	}
+	redisPort := os.Getenv("REDIS_PORT")
+	if redisPort == "" {
+		redisPort = "6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: os.Getenv("REDIS_PASSWORD"),
+	})
+	go auth.StartAuthConsumer(context.Background(), rdb)
 
 	r := gin.Default()
 

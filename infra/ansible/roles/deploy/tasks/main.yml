@@ -17,7 +17,8 @@
     wait_timeout: 120
 
 - name: Verify containers running va healthy
-  ansible.builtin.command: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.State}}"
+  ansible.builtin.command: 'docker ps --format "{% raw %}table {{.Names}}\t{{.Status}}\t{{.State}}{% endraw %}"'
+
   register: docker_ps
   changed_when: false
   failed_when: docker_ps.rc != 0 or "unhealthy" in docker_ps.stdout | lower or "exited" in docker_ps.stdout | lower

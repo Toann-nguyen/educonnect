@@ -662,8 +662,12 @@ class AuthService implements AuthServiceInterface
 
     public function resetPassword(array $data)
     {
+        // T5.1: Password::reset -> UserObserver already bumps tv on password change; we suppress observer double-bump
+        // by doing the password update without events, then bump once explicitly.
         $status = Password::reset($data, function ($user, $password) {
-            $this->userRepository->updateUser($user->id, ['password' => $password]);
+            \App\Domains\Identity\Models\User::withoutEvents(function () use ($user, $password) {
+                $this->userRepository->updateUser($user->id, ['password' => $password]);
+            });
         });
         $email = strtolower($data['email'] ?? '');
         if ($status === Password::PASSWORD_RESET) {
@@ -686,12 +690,20 @@ class AuthService implements AuthServiceInterface
     }
 
     /**
-     * T5.1: đổi mật khẩu khi đã đăng nhập — bump tv + revoke all (giữ session hiện tại? revoke all theo spec)
+     * T5.1: đổi mật khẩu khi đã đăng nhập — bump tv + revoke all
+     * Note: hashedPassword already hashed via Hash::make in controller; avoid double-hash by direct DB update withoutEvents.
      */
     public function changePassword(User $user, string $hashedPassword): void
     {
-        $this->userRepository->updateUser($user->id, ['password' => $hashedPassword]);
-        // bump tv + revoke all refresh ngoại trừ có thể giữ? spec: tăng tv khi đổi pass → tất cả token cũ vô hiệu
+        // Avoid double bump: UserObserver would bump on password change, so suppress events and bump once explicitly.
+        \App\Domains\Identity\Models\User::withoutEvents(function () use ($user, $hashedPassword) {
+            \Illuminate\Support\Facades\DB::connection('identity')->table('users')
+                ->where('id', $user->id)
+                ->update(['password' => $hashedPassword]);
+        });
+        // Refresh model password attribute for consistency
+        $user->setAttribute('password', $hashedPassword);
+        // bump tv + revoke all refresh → tất cả token cũ vô hiệu
         app(\App\Domains\Identity\Services\Auth\TokenRevocationService::class)->bumpTokenVersion($user);
         app(\App\Domains\Identity\Services\Auth\RefreshRotationService::class)->revokeAll((int) $user->id);
         $this->dispatchAudit($user->id, 'PASSWORD_CHANGED', []);

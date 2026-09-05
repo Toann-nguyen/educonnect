@@ -2,6 +2,7 @@
 
 namespace App\Domains\Identity\Middleware;
 
+use App\Domains\Identity\Services\Auth\TokenRevocationService;
 use App\Domains\Identity\Services\PermissionCacheService;
 use Closure;
 use Illuminate\Http\Request;
@@ -29,9 +30,29 @@ class JwtMiddleware
                 return response()->json(['message' => '2FA verification required'], 401);
             }
 
+            // T5.1 hybrid revoke: jti blacklist + sid revoked + tv check (Redis trước, DB fallback)
+            $revoke = app(TokenRevocationService::class);
+
+            $jti = (string) ($payload->get('jti') ?? '');
+            if ($jti !== '' && $revoke->isJtiBlacklisted($jti)) {
+                return response()->json(['message' => 'Token has been revoked (jti blacklisted)'], 401);
+            }
+
+            $sid = (string) ($payload->get('sid') ?? '');
+            if ($sid !== '' && $revoke->isSidRevoked($sid)) {
+                return response()->json(['message' => 'Token has been revoked (session revoked)'], 401);
+            }
+
             $tokenVersion = $payload->get('tv', $payload->get('ver'));
-            if ($tokenVersion !== null && (int) $tokenVersion !== (int) $user->token_version) {
-                return response()->json(['message' => 'Token has been revoked'], 401);
+            if ($tokenVersion !== null) {
+                // Redis fast-path: nếu có cache tv mà lệch → revoked
+                if ($revoke->isTvStale((int) $user->id, (int) $tokenVersion)) {
+                    return response()->json(['message' => 'Token has been revoked'], 401);
+                }
+                // DB fallback (source of truth)
+                if ((int) $tokenVersion !== (int) $user->token_version) {
+                    return response()->json(['message' => 'Token has been revoked'], 401);
+                }
             }
 
             // 1 round-trip Redis: lấy cả roles + permissions từ 1 key.

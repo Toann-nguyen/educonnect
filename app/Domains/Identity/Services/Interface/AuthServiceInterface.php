@@ -2,6 +2,8 @@
 
 namespace App\Domains\Identity\Services\Interface;
 
+use App\Domains\Identity\Models\User;
+
 interface AuthServiceInterface
 {
     public function register(array $data);
@@ -12,4 +14,5 @@ interface AuthServiceInterface
     public function forgotPassword(array $data);
     public function verifyEmail(string $token);
     public function resetPassword(array $data);
+    public function changePassword(User $user, string $hashedPassword): void;
 }

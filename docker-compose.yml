@@ -178,8 +178,13 @@ services:
       AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     depends_on:
       mysql-finance:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - educonnect
@@ -202,6 +207,9 @@ services:
       RABBITMQ_PORT: "5672"
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       MAIL_HOST: mailpit
       MAIL_PORT: "1025"
       MAIL_USERNAME: ""

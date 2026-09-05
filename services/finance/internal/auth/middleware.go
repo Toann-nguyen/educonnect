@@ -141,9 +141,66 @@ func JWT() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		// T5.1 hybrid revoke: jti blacklist + sid revoked + tv stale (Redis)
+		if jti, _ := claims["jti"].(string); IsJTIBlacklisted(jti) {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been revoked (jti blacklisted)"})
+			c.Abort()
+			return
+		}
+		if sid, _ := claims["sid"].(string); IsSidRevoked(sid) {
+			c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been revoked (session revoked)"})
+			c.Abort()
+			return
+		}
+		if tvRaw, ok := claims["tv"]; ok {
+			if sid, _ := claims["sid"].(string); sid == "" {
+				_ = sid
+			}
+			var tvFloat float64
+			switch v := tvRaw.(type) {
+			case float64:
+				tvFloat = v
+			case int:
+				tvFloat = float64(v)
+			case int64:
+				tvFloat = float64(v)
+			}
+			if sub, _ := claims["sub"].(string); sub != "" && IsTVStale(sub, tvFloat) {
+				c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been revoked (token version stale)"})
+				c.Abort()
+				return
+			}
+			// string sub fallback (numeric)
+			if subF, ok := claims["sub"].(float64); ok {
+				if IsTVStale(fmt.Sprint(int(subF)), tvFloat) {
+					c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been revoked (token version stale)"})
+					c.Abort()
+					return
+				}
+			}
+		} else if verRaw, ok := claims["ver"]; ok {
+			var tvFloat float64
+			switch v := verRaw.(type) {
+			case float64:
+				tvFloat = v
+			case int:
+				tvFloat = float64(v)
+			}
+			if sub, _ := claims["sub"].(string); sub != "" && IsTVStale(sub, tvFloat) {
+				c.JSON(http.StatusUnauthorized, gin.H{"message": "Token has been revoked (token version stale)"})
+				c.Abort()
+				return
+			}
+		}
 		c.Set("claims", claims)
 		c.Set("user_id", claims["sub"])
 		c.Set("sid", claims["sid"])
+		// T6.1: near-realtime revoke qua auth.events (user.disabled/password_changed).
+		if IsUserRevoked(fmt.Sprint(claims["sub"])) {
+			c.JSON(http.StatusForbidden, gin.H{"message": "Account revoked — please re-login"})
+			c.Abort()
+			return
+		}
 		// T3.2: expose roles để RBAC/ownership không phải parse lại claims
 		if roles, ok := claims["roles"]; ok {
 			switch v := roles.(type) {
@@ -186,9 +243,50 @@ func ChiJWT(next http.Handler) http.Handler {
 			http.Error(w, fmt.Sprintf(`{"message":"Invalid or expired token","detail":%q}`, err.Error()), http.StatusUnauthorized)
 			return
 		}
+		// T5.1 hybrid: jti/sid/tv
+		if jti, _ := claims["jti"].(string); IsJTIBlacklisted(jti) {
+			http.Error(w, `{"message":"Token has been revoked (jti blacklisted)"}`, http.StatusUnauthorized)
+			return
+		}
+		if sid, _ := claims["sid"].(string); IsSidRevoked(sid) {
+			http.Error(w, `{"message":"Token has been revoked (session revoked)"}`, http.StatusUnauthorized)
+			return
+		}
+		if tvRaw, ok := claims["tv"]; ok {
+			var tvFloat float64
+			switch v := tvRaw.(type) {
+			case float64:
+				tvFloat = v
+			case int:
+				tvFloat = float64(v)
+			case int64:
+				tvFloat = float64(v)
+			}
+			if sub, _ := claims["sub"].(string); sub != "" && IsTVStale(sub, tvFloat) {
+				http.Error(w, `{"message":"Token has been revoked (token version stale)"}`, http.StatusUnauthorized)
+				return
+			}
+		} else if verRaw, ok := claims["ver"]; ok {
+			var tvFloat float64
+			switch v := verRaw.(type) {
+			case float64:
+				tvFloat = v
+			case int:
+				tvFloat = float64(v)
+			}
+			if sub, _ := claims["sub"].(string); sub != "" && IsTVStale(sub, tvFloat) {
+				http.Error(w, `{"message":"Token has been revoked (token version stale)"}`, http.StatusUnauthorized)
+				return
+			}
+		}
 		ctx := context.WithValue(r.Context(), "claims", claims)
 		ctx = context.WithValue(ctx, "user_id", claims["sub"])
 		ctx = context.WithValue(ctx, "sid", claims["sid"])
+		// T6.1: near-realtime revoke qua auth.events.
+		if IsUserRevoked(fmt.Sprint(claims["sub"])) {
+			http.Error(w, `{"message":"Account revoked — please re-login"}`, http.StatusForbidden)
+			return
+		}
 		if roles, ok := claims["roles"]; ok {
 			ctx = context.WithValue(ctx, "roles", roles)
 		}

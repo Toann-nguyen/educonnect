@@ -28,6 +28,9 @@ Verify:
   Password cũ đã lộ trong Git history → coi như vô hiệu (đã rotate).
 
 Chưa xong:
-- Theo dõi OOM 60 phút sau fix.
+- Theo dõi OOM 60 phút sau fix: update 2026-09-09 ~01:00 — sau 53 phút, 0 restart
+  toàn stack, tổng RAM ~836Mi (prometheus 296Mi, grafana 415/768Mi,
+  alertmanager 30Mi, operator 36Mi, kube-state 28Mi, node-exporter 26Mi).
+  Trong budget 1.1Gi. Coi như đạt.
 - Secret `prometheus-stack-grafana-admin` chỉ sống trong cluster — rebuild cluster
   phải tạo lại (ghi vào BACKUP_RESTORE.md ở Step 6).

@@ -1,0 +1,120 @@
+# ==============================================================================
+# Values tối ưu RAM thực tế (700MB - 1.2GB) cho kube-prometheus-stack trên single-node
+# Tắt admission webhook certgen job để tránh lỗi mạng IP k3s và tiết kiệm tài nguyên
+# ==============================================================================
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false
+    k8s: true
+    kubeApiserver: true
+    kubeApiserverAvailability: true
+    kubeApiserverSlos: false
+    kubelet: true
+    kubeProxy: false
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: false
+    kubernetesSystem: true
+    kubeScheduler: false
+    kubeStateMetrics: true
+    network: false
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+
+# 1. Prometheus Server
+prometheus:
+  prometheusSpec:
+    retention: 3d
+    retentionSize: 2GB
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    resources:
+      requests:
+        cpu: 100m
+        memory: 300Mi
+      limits:
+        cpu: 300m
+        memory: 600Mi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+
+# 2. Alertmanager
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+# 3. Grafana (password qua secret riêng, không commit plaintext)
+grafana:
+  enabled: true
+  admin:
+    existingSecret: "prometheus-stack-grafana-admin"
+    userKey: admin-user
+    passwordKey: admin-password
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+  persistence:
+    enabled: true
+    size: 2Gi
+
+# 4. Kube-State-Metrics
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# 5. Node Exporter
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+# 6. Prometheus Operator
+prometheusOperator:
+  admissionWebhooks:
+    enabled: true
+    patch:
+      enabled: true
+    tls:
+      enabled: false
+  resources:
+    requests:
+      cpu: 30m
+      memory: 64Mi
+    limits:
+      cpu: 150m
+      memory: 128Mi
+

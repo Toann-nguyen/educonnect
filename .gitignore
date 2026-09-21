@@ -1,28 +1,59 @@
 ```
-# Compiled/Generated Go files
-*.pb.go
-*_grpc.pb.go
-*_vtproto.pb.go
+# Go build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
 
-# Dependencies
-vendor/
+# Go cache and modules
 go.mod
 go.sum
+vendor/
 
-# Build artifacts
+# Build directories
 bin/
-dist/
-build/
+pkg/
+target/
 
-# IDE
-.vscode/
-.idea/
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.egg-info/
+.Python
 
-# Logs
+# Logs and temporary files
 *.log
+*.tmp
+*.swp
+*.swo
 
-# Environment
+# Environment files
 .env
 .env.local
 *.env.*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Test and build caches
+.mypy_cache/
+.pytest_cache/
+.gradle/
 ```

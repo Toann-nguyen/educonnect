@@ -1,15 +1,19 @@
 module educonnect/finance
 
-go 1.19
+go 1.26.5
+
+replace github.com/educonnect/educonnect/internal/pkg/proto => ../../internal/pkg/proto
 
 require (
 	github.com/MicahParks/keyfunc/v3 v3.8.1
+	github.com/educonnect/educonnect/internal/pkg/proto v0.0.0-00010101000000-000000000000
 	github.com/getkin/kin-openapi v0.142.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-fuego/fuego v0.20.0
 	github.com/go-fuego/fuego/extra/fuegogin v0.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.22.0
 	go.uber.org/zap v1.27.0
@@ -57,11 +61,13 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

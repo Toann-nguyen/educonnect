@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/educonnect/educonnect/internal/pkg/proto/finance"
+	"educonnect/finance/internal/pkg/proto/finance"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

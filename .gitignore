@@ -1,31 +1,29 @@
 ```
-# Go build artifacts
-*.pb.go
-*_grpc.pb.go
-*_vtproto.pb.go
-
 # Dependencies
+node_modules/
 vendor/
-go.sum
-go.mod.bak
+*.sum
+*.lock
 
 # Build directories
 .terraform/
 # Build artifacts
 bin/
-_dist/
-dist/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# Logs
+# Logs and temp files
 *.log
+*.tmp
 
 # Environment
 .env
 .env.local
 *.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
 ```

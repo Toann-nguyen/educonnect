@@ -97,7 +97,12 @@ func declareAuthTopology(ch *amqp.Channel) error {
 	if err := ch.QueueBind(AuthQueueFinance+".dlq", "", "educonnect.dlx", false, nil); err != nil {
 		return err
 	}
-	return ch.QueueBind(AuthQueueFinance, "user.#", AuthExchange, false, nil)
+	// Nhận cả 2 họ event trên auth.events: user.* (observer: created/updated/
+	// deleted) và auth.* (AuthEventPublisher: deactivated/tv_bumped/permissions).
+	if err := ch.QueueBind(AuthQueueFinance, "user.#", AuthExchange, false, nil); err != nil {
+		return err
+	}
+	return ch.QueueBind(AuthQueueFinance, "auth.#", AuthExchange, false, nil)
 }
 
 func handleAuthMessage(ctx context.Context, ch *amqp.Channel, msg amqp.Delivery, rdb *redis.Client) {

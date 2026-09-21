@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/educonnect/educonnect/internal/pkg/proto/common";
+
+// Pagination request
+message PaginationRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string sort_by = 3;
+    string sort_order = 4; // "asc" or "desc"
+}
+
+// Pagination response
+message PaginationResponse {
+    int32 total_items = 1;
+    int32 total_pages = 2;
+    int32 current_page = 3;
+    int32 page_size = 4;
+    bool has_next = 5;
+    bool has_prev = 6;
+}
+
+// Error response
+message ErrorResponse {
+    int32 code = 1;
+    string message = 2;
+    string details = 3;
+}
+
+// Empty message for requests/responses that don't need data
+message Empty {}
+
+// UUID wrapper
+message UUID {
+    string value = 1;
+}
+
+// Timestamp wrapper
+message Timestamp {
+    int64 seconds = 1;
+    int32 nanos = 2;
+}
+
+// Money value
+message Money {
+    int64 amount = 1;        // Amount in smallest currency unit (e.g., cents)
+    string currency = 2;     // ISO 4217 currency code (e.g., "VND", "USD")
+}
+
+// User reference
+message UserRef {
+    string id = 1;
+    string email = 2;
+    string full_name = 3;
+    string role = 4;
+}

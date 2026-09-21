@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package finance;
+
+option go_package = "github.com/educonnect/educonnect/internal/pkg/proto/finance";
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Invoice status enum
+enum InvoiceStatus {
+    INVOICE_STATUS_UNSPECIFIED = 0;
+    INVOICE_STATUS_DRAFT = 1;
+    INVOICE_STATUS_PENDING = 2;
+    INVOICE_STATUS_PAID = 3;
+    INVOICE_STATUS_CANCELLED = 4;
+    INVOICE_STATUS_OVERDUE = 5;
+}
+
+// Fee type
+message FeeType {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    common.Money default_amount = 4;
+    bool is_active = 5;
+    google.protobuf.Timestamp created_at = 6;
+    google.protobuf.Timestamp updated_at = 7;
+}
+
+// Invoice
+message Invoice {
+    string id = 1;
+    string student_id = 2;
+    string user_id = 3;
+    repeated InvoiceItem items = 4;
+    common.Money total_amount = 5;
+    common.Money paid_amount = 6;
+    common.Money remaining_amount = 7;
+    InvoiceStatus status = 8;
+    string description = 9;
+    google.protobuf.Timestamp due_date = 10;
+    google.protobuf.Timestamp issued_date = 11;
+    google.protobuf.Timestamp paid_date = 12;
+    google.protobuf.Timestamp created_at = 13;
+    google.protobuf.Timestamp updated_at = 14;
+    common.UserRef student = 15;
+}
+
+// Invoice item
+message InvoiceItem {
+    string id = 1;
+    string invoice_id = 2;
+    string fee_type_id = 3;
+    string description = 4;
+    common.Money amount = 5;
+    int32 quantity = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+// Payment method enum
+enum PaymentMethod {
+    PAYMENT_METHOD_UNSPECIFIED = 0;
+    PAYMENT_METHOD_CASH = 1;
+    PAYMENT_METHOD_BANK_TRANSFER = 2;
+    PAYMENT_METHOD_CREDIT_CARD = 3;
+    PAYMENT_METHOD_E_WALLET = 4;
+}
+
+// Payment status enum
+enum PaymentStatus {
+    PAYMENT_STATUS_UNSPECIFIED = 0;
+    PAYMENT_STATUS_PENDING = 1;
+    PAYMENT_STATUS_COMPLETED = 2;
+    PAYMENT_STATUS_FAILED = 3;
+    PAYMENT_STATUS_REFUNDED = 4;
+}
+
+// Payment
+message Payment {
+    string id = 1;
+    string invoice_id = 2;
+    string transaction_id = 3;
+    common.Money amount = 4;
+    PaymentMethod method = 5;
+    PaymentStatus status = 6;
+    string description = 7;
+    string payment_gateway = 8;
+    google.protobuf.Timestamp paid_at = 9;
+    google.protobuf.Timestamp created_at = 10;
+    google.protobuf.Timestamp updated_at = 11;
+}
+
+// ============ REQUESTS ============
+
+// Get invoice by ID
+message GetInvoiceRequest {
+    string id = 1;
+}
+
+// Get invoices by student
+message GetInvoicesByStudentRequest {
+    string student_id = 1;
+    common.PaginationRequest pagination = 2;
+}
+
+// Get invoices by user
+message GetInvoicesByUserRequest {
+    string user_id = 1;
+    common.PaginationRequest pagination = 2;
+}
+
+// Create invoice request
+message CreateInvoiceRequest {
+    string student_id = 1;
+    string user_id = 2;
+    repeated CreateInvoiceItemRequest items = 3;
+    string description = 4;
+    google.protobuf.Timestamp due_date = 5;
+}
+
+message CreateInvoiceItemRequest {
+    string fee_type_id = 1;
+    string description = 2;
+    common.Money amount = 3;
+    int32 quantity = 4;
+}
+
+// Update invoice status request
+message UpdateInvoiceStatusRequest {
+    string id = 1;
+    InvoiceStatus status = 2;
+    string reason = 3;
+}
+
+// Create payment request
+message CreatePaymentRequest {
+    string invoice_id = 1;
+    common.Money amount = 2;
+    PaymentMethod method = 3;
+    string transaction_id = 4;
+    string payment_gateway = 5;
+    string description = 6;
+}
+
+// Get payments by invoice
+message GetPaymentsByInvoiceRequest {
+    string invoice_id = 1;
+}
+
+// Get fee types
+message GetFeeTypesRequest {
+    bool active_only = 1;
+    common.PaginationRequest pagination = 2;
+}
+
+// ============ RESPONSES ============
+
+message GetInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message GetInvoicesResponse {
+    repeated Invoice invoices = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message CreateInvoiceResponse {
+    Invoice invoice = 1;
+}
+
+message UpdateInvoiceStatusResponse {
+    Invoice invoice = 1;
+    bool success = 2;
+}
+
+message GetPaymentsResponse {
+    repeated Payment payments = 1;
+}
+
+message CreatePaymentResponse {
+    Payment payment = 1;
+    Invoice updated_invoice = 2;
+}
+
+message GetFeeTypesResponse {
+    repeated FeeType fee_types = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+// ============ SERVICE DEFINITION ============
+
+service InvoiceService {
+    // Get single invoice
+    rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+    
+    // Get invoices by student
+    rpc GetInvoicesByStudent(GetInvoicesByStudentRequest) returns (GetInvoicesResponse);
+    
+    // Get invoices by user
+    rpc GetInvoicesByUser(GetInvoicesByUserRequest) returns (GetInvoicesResponse);
+    
+    // Create new invoice
+    rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+    
+    // Update invoice status
+    rpc UpdateInvoiceStatus(UpdateInvoiceStatusRequest) returns (UpdateInvoiceStatusResponse);
+    
+    // Get all fee types
+    rpc GetFeeTypes(GetFeeTypesRequest) returns (GetFeeTypesResponse);
+}
+
+service PaymentService {
+    // Create payment
+    rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+    
+    // Get payments by invoice
+    rpc GetPaymentsByInvoice(GetPaymentsByInvoiceRequest) returns (GetPaymentsResponse);
+}
+
+service FinanceUserService {
+    // Get user info (for cross-service user lookup)
+    rpc GetUser(common.UUID) returns (common.UserRef);
+}

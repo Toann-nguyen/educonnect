@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/smtp"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,10 +17,13 @@ import (
 	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/grpc"
 
 	"educonnect/notify/internal/auth"
+	"educonnect/notify/internal/grpc"
 	"educonnect/notify/internal/router"
 	"educonnect/notify/internal/template"
+	pb "educonnect/internal/pkg/proto/notify"
 )
 
 // ─── Broker topology (khớp docker/rabbitmq/definitions.json) ──
@@ -167,6 +172,29 @@ func consume(ch *amqp.Channel) error {
 	return fmt.Errorf("consumer channel đóng")
 }
 
+// ─── gRPC Server Setup ────────────────────────────────────────
+
+func setupGRPC(port string, store *template.Store) *grpc.Server {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	if err != nil {
+		log.Fatalf("[gRPC] Failed to listen on port %s: %v", port, err)
+	}
+
+	grpcServer := grpc.NewServer()
+	notifyServer := grpc.NewServer(store)
+	pb.RegisterNotifyServiceServer(grpcServer, notifyServer)
+
+	log.Printf("[gRPC] Notify service listening on port %s", port)
+
+	go func() {
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Printf("[gRPC] Server error: %v", err)
+		}
+	}()
+
+	return grpcServer
+}
+
 // ─── HTTP Server (health + /api/notify templates API) ────────
 
 func setupHTTP(port string, store *template.Store) {
@@ -209,9 +237,14 @@ func setupHTTP(port string, store *template.Store) {
 // ─── Main ─────────────────────────────────────────────────────
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8081"
+	httpPort := os.Getenv("PORT")
+	if httpPort == "" {
+		httpPort = "8081"
+	}
+
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "9081"
 	}
 
 	// JWKS cache (RS256) — MicahParks/keyfunc, tự refresh 15m, kiểm tra iss/aud/exp/kid/tv/sid
@@ -219,6 +252,36 @@ func main() {
 	auth.MustInitJWKS(ctx)
 	defer auth.CloseJWKS()
 	log.Println("JWKS RS256 cache ready (notify)")
+
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "redis"
+	}
+	redisPort := os.Getenv("REDIS_PORT")
+	if redisPort == "" {
+		redisPort = "6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: os.Getenv("REDIS_PASSWORD"),
+	})
+	log.Println("Redis client created")
+
+	// T6.1: auth.events consumer riêng per service — DLQ + idempotency + invalidate permission cache
+	go auth.StartAuthConsumer(context.Background(), rdb)
+
+	store := template.NewStore(rdb)
+
+	// Start gRPC server
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		grpcServer := setupGRPC(grpcPort, store)
+		<-ctx.Done()
+		grpcServer.GracefulStop()
+		log.Println("[gRPC] Notify gRPC server stopped")
+	}()
 
 	// Consumer chạy nền — kết nối RabbitMQ không chặn HTTP server.
 	// Nếu broker chưa sẵn sàng, retry vô hạn thay vì fatal (service vẫn phục vụ API).
@@ -249,22 +312,8 @@ func main() {
 		}
 	}()
 
-	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = "redis"
-	}
-	redisPort := os.Getenv("REDIS_PORT")
-	if redisPort == "" {
-		redisPort = "6379"
-	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
-		Password: os.Getenv("REDIS_PASSWORD"),
-	})
-	log.Println("Redis client created")
+	// Start HTTP server (blocking)
+	setupHTTP(httpPort, store)
 
-	// T6.1: auth.events consumer riêng per service — DLQ + idempotency + invalidate permission cache
-	go auth.StartAuthConsumer(context.Background(), rdb)
-
-	setupHTTP(port, template.NewStore(rdb))
+	wg.Wait()
 }

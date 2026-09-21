@@ -5,8 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -14,10 +18,13 @@ import (
 	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
 	"educonnect/finance/internal/auth"
+	grpcserver "educonnect/finance/internal/grpc"
 	"educonnect/finance/internal/model"
 	"educonnect/finance/internal/router"
 )
@@ -148,9 +155,18 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Setup logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	httpPort := os.Getenv("PORT")
+	if httpPort == "" {
+		httpPort = "8080"
+	}
+
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "8082"
 	}
 
 	// JWKS cache (RS256) — MicahParks/keyfunc, tự refresh 15m, kiểm tra iss/aud/exp/kid/tv/sid
@@ -224,8 +240,61 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"service": "finance-service", "status": "healthy"})
 	})
 
-	log.Printf("Finance Go Service starting on port %s...", port)
-	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
+	// ─── Start HTTP Server ─────────────────────────────────────────────────────
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%s", httpPort),
+		Handler: r,
 	}
+
+	go func() {
+		log.Printf("HTTP Finance Go Service starting on port %s...", httpPort)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to run HTTP server: %v", err)
+		}
+	}()
+
+	// ─── Start gRPC Server ─────────────────────────────────────────────────────
+	grpcServerConfig := grpcserver.Config{
+		Port:           8082, // Will be overridden by env var below
+		MaxRecvMsgSize: 10 << 20, // 10 MB
+		MaxSendMsgSize: 10 << 20, // 10 MB
+	}
+
+	// Override port from environment variable
+	if gp := os.Getenv("GRPC_PORT"); gp != "" {
+		if port, err := strconv.Atoi(gp); err == nil {
+			grpcServerConfig.Port = port
+		}
+	}
+
+	grpcServer := grpcserver.NewServer(grpcServerConfig, logger)
+	grpcServer.RegisterServices()
+
+	go func() {
+		if err := grpcServer.Start(); err != nil {
+			log.Fatalf("Failed to run gRPC server: %v", err)
+		}
+	}()
+
+	log.Printf("Finance Service started - HTTP: :%s, gRPC: :%d", httpPort, grpcServerConfig.Port)
+
+	// ─── Graceful Shutdown ─────────────────────────────────────────────────────
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down servers...")
+
+	ctxShutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Shutdown HTTP server
+	if err := httpServer.Shutdown(ctxShutdown); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+
+	// Shutdown gRPC server
+	grpcServer.Stop()
+
+	log.Println("Finance Service stopped")
 }

@@ -1,22 +1,25 @@
 ```
-# Compiled/Generated Go files
+# Go build artifacts
 *.pb.go
 *_grpc.pb.go
 *_vtproto.pb.go
 
 # Dependencies
 vendor/
-go.mod
 go.sum
+go.mod.bak
 
+# Build directories
+.terraform/
 # Build artifacts
 bin/
+_dist/
 dist/
-build/
 
 # IDE
 .vscode/
 .idea/
+*.swp
 
 # Logs
 *.log

@@ -6,65 +6,90 @@ use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
 class CheckRoleAndPermission
 {
     /**
      * Handle an incoming request.
+     * Checks:
+     * 1) Authentication (user must exist)
+     * 2) Token version (ver/tv claim vs user.token_version) — revocation check
+     * 3) Role/Permission (Spatie OR/AND logic)
+     *
+     * Usage: ->middleware('rbac:principal|homeroom') or 'rbac:manage_users'
+     * Supports '|' = OR, '&' = AND within a single segment.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next, ...$rolesOrPermissions): Response
     {
-        // Bước 1: Kiểm tra xem người dùng đã được xác thực chưa.
-        // Nếu chưa, middleware 'auth:sanctum' đã xử lý và ném ra lỗi rồi,
-        // nhưng chúng ta vẫn nên kiểm tra để đảm bảo.
         if (!$request->user()) {
             throw new AuthenticationException();
         }
 
-        // Bước 2: Lấy đối tượng người dùng đã được xác thực.
         $user = $request->user();
 
-        // Bước 3: Nếu không có yêu cầu role/permission cụ thể nào, cho phép đi tiếp.
+        // ── Token version check (stateless revocation) ──────────────
+        // If request carries a JWT, compare ver/tv claim vs DB token_version.
+        // Mismatch => token revoked (logoutAll / password change).
+        try {
+            $token = JWTAuth::getToken();
+            // Fallback: try parse from header if not already set by JwtMiddleware
+            if (!$token) {
+                try { $token = JWTAuth::parseToken(); } catch (JWTException) { $token = null; }
+            }
+            if ($token) {
+                $payload = JWTAuth::getPayload($token) ?: JWTAuth::parseToken()->getPayload();
+                $ver = $payload->get('ver');
+                if ($ver === null) $ver = $payload->get('tv'); // alternate claim name
+                if ($ver !== null && isset($user->token_version) && (int) $ver !== (int) $user->token_version) {
+                    return response()->json(['message' => 'Token has been revoked'], 401);
+                }
+            }
+        } catch (\Throwable) {
+            // If JWT not present / invalid, let auth middleware handle; don't block rbac-only checks
+        }
+
+        // If no role/permission requirement, pass through (auth + version only)
         if (empty($rolesOrPermissions)) {
             return $next($request);
         }
 
-        // Bước 4: Sử dụng hàm có sẵn của Spatie để kiểm tra.
-        // hasAnyRole(): Kiểm tra xem user có BẤT KỲ vai trò nào trong danh sách không (OR logic).
-        // hasAnyPermission(): Kiểm tra xem user có BẤT KỲ quyền nào trong danh sách không (OR logic).
-        // hasAllRoles(): Kiểm tra xem user có TẤT CẢ các vai trò trong danh sách không (AND logic).
-        // hasAllPermissions(): Kiểm tra xem user có TẤT CẢ các quyền trong danh sách không (AND logic).
-
-        // Chúng ta sẽ dùng hasAnyRole và hasAnyPermission vì nó phù hợp với cách truyền tham số qua |
-        // Duyệt qua từng chuỗi yêu cầu được truyền vào.
-        // Ví dụ: middleware('access:admin', 'access:manage finances')
-        // Mỗi chuỗi này được coi là một nhóm điều kiện OR.
-        // Người dùng chỉ cần thỏa mãn MỘT trong các chuỗi này là được.
         foreach ($rolesOrPermissions as $requirementString) {
+            $requirementString = trim($requirementString);
+            if ($requirementString === '') continue;
 
-            // Kiểm tra xem chuỗi yêu cầu có chứa logic AND (&) hay không
             if (str_contains($requirementString, '&')) {
-                // LOGIC AND: Người dùng phải có TẤT CẢ các vai trò/quyền trong chuỗi
-                $andRequirements = explode('&', $requirementString);
-
-                // Sử dụng hàm hasAllRoles() hoặc hasAllPermissions() của Spatie
+                $andRequirements = array_map('trim', explode('&', $requirementString));
+                $andRequirements = array_filter($andRequirements);
+                // hasAllRoles/hasAllPermissions checks exact name; try both role and permission
                 if ($user->hasAllRoles($andRequirements) || $user->hasAllPermissions($andRequirements)) {
                     return $next($request);
                 }
+                // Mixed check: user must have ALL items either as role or permission
+                $allOk = true;
+                foreach ($andRequirements as $item) {
+                    if (!$user->hasRole($item) && !$user->can($item)) { $allOk = false; break; }
+                }
+                if ($allOk) return $next($request);
             } else {
-                // LOGIC OR: Người dùng chỉ cần có MỘT trong các vai trò/quyền trong chuỗi
-                // Hàm hasAnyRole() và hasAnyPermission() của Spatie đã tự động xử lý dấu '|'
+                // OR logic — Spatie handles '|' separator internally
                 if ($user->hasAnyRole($requirementString) || $user->hasAnyPermission($requirementString)) {
                     return $next($request);
                 }
+                // Fallback: mixed role-or-permission via can()
+                $orParts = array_map('trim', explode('|', $requirementString));
+                foreach ($orParts as $part) {
+                    if ($user->hasRole($part) || $user->can($part)) {
+                        return $next($request);
+                    }
+                }
             }
         }
-        // Nếu không thỏa mãn bất kỳ yêu cầu nào, ném ra lỗi AuthorizationException.
-        // Laravel sẽ tự động bắt lỗi này và trả về response 403 Forbidden.
+
         throw new AuthorizationException('This action is unauthorized.');
     }
 }

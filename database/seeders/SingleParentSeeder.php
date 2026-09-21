@@ -3,11 +3,11 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Profile;
-use App\Models\Student;
-use App\Models\StudentGuardian;
-use App\Models\SchoolClass;
+use App\Domains\Identity\Models\User;
+use App\Domains\Identity\Models\Profile;
+use App\Domains\School\Models\Student;
+use App\Domains\School\Models\StudentGuardian;
+use App\Domains\School\Models\SchoolClass;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 

@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
-            $table->foreignId('payer_user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('created_by_user_id')->comment('ID Kế toán')->constrained('users')->onDelete('cascade');
+            $table->foreignId('payer_user_id')->onDelete('cascade');
+            $table->foreignId('created_by_user_id')->comment('ID Kế toán')->onDelete('cascade');
             $table->decimal('amount_paid', 15, 2);
             $table->date('payment_date');
             $table->enum('payment_method', ['cash', 'banking']);

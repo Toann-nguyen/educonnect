@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Services\Auth;
 
-use App\Models\User;
+use App\Domains\Identity\Models\User;
 use App\Repositories\Contracts\AuthRepositoryInterface;
 use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
@@ -44,7 +44,7 @@ class EmailVerificationServiceTest extends TestCase
         $rawToken = 'valid-token';
         $tokenHash = hash('sha256', $rawToken);
         
-        $verification = new \App\Models\EmailVerification([
+        $verification = new \App\Domains\Identity\Models\EmailVerification([
             'user_id' => 10,
             'expires_at' => now()->addHour()
         ]);
@@ -94,7 +94,7 @@ class EmailVerificationServiceTest extends TestCase
         $rawToken = 'expired-token';
         $tokenHash = hash('sha256', $rawToken);
         
-        $verification = new \App\Models\EmailVerification([
+        $verification = new \App\Domains\Identity\Models\EmailVerification([
             'user_id' => 10,
             'expires_at' => now()->subHour() // Đã hết hạn
         ]);

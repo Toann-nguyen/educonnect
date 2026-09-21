@@ -5,68 +5,34 @@ namespace App\Providers;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use App\Repositories\Contracts\ConductScoreRepositoryInterface;
-use App\Repositories\Contracts\DisciplineRepositoryInterface;
-use App\Repositories\Contracts\DisciplineTypeRepositoryInterface;
-use App\Repositories\Contracts\FeeTypeRepositoryInterface;
-use App\Repositories\Contracts\GradeRepositoryInterface;
-use App\Repositories\Contracts\InvoiceRepositoryInterface;
-use App\Repositories\Contracts\PaymentRepositoryInterface;
-use App\Repositories\Contracts\PermissionRepositoryInterface;
-use App\Repositories\Contracts\RolePermissionRepositoryInterface;
-use App\Repositories\Contracts\RoleRepositoryInterface;
-use App\Repositories\Eloquent\ConductScoreRepository;
-use App\Repositories\Eloquent\DisciplineRepository;
-use App\Repositories\Eloquent\GradeRepository;
-use App\Repositories\Eloquent\InvoiceRepository;
-use App\Repositories\Eloquent\PaymentRepository;
-use App\Repositories\Eloquent\PermissionRepository;
-use App\Repositories\Eloquent\RolePermissionRepository;
-use App\Repositories\Eloquent\RoleRepository;
-use App\Repositories\Eloquent\UserRepository;
-use App\Services\AuthServices;
-use App\Services\DashBoardService;
-use App\Services\FeeTypeService;
-use App\Services\GradeService;
-use App\Services\Interface\DashBoardServiceInterface;
-use App\Services\Interface\AuthServicesInterface;
-use App\Services\AuthService;
-use App\Services\Interface\AuthServiceInterface;
-use App\Repositories\Contracts\UserRepositoryInterface;
-use App\Services\Interface\FeeTypeServiceInterface;
-use App\Services\Interface\GradeServiceInterface;
-use App\Services\Interface\InvoiceServiceInterface;
-use App\Services\Interface\PaymentServiceInterface;
-use App\Services\Interface\PermissionServiceInterface;
-use App\Services\Interface\StudentServiceInterface;
-use App\Services\Interface\UserServiceInterface;
-use App\Services\InvoiceService;
-use App\Services\PaymentService;
-use App\Models\User;
-use App\Observers\UserObserver;
-use App\Services\PermissionCacheService;
-use App\Services\RolePermissionService;
-use App\Services\StudentService;
-use App\Services\UserRoleService;
-use App\Services\UserService;
-use Illuminate\Cache\Repository;
 use Illuminate\Support\ServiceProvider;
-use App\Services\Interface\ScheduleServiceInterface;
-use App\Services\ScheduleService;
-use App\Repositories\Contracts\ScheduleRepositoryInterface;
-use App\Repositories\Eloquent\ScheduleRepository;
-use SebastianBergmann\CodeCoverage\Report\Html\Dashboard;
-use \App\Repositories\Eloquent\FeeTypeRepository;
-use App\Services\Interface\DisciplineServiceInterface;
-use App\Services\DisciplineService;
-use App\Services\Interface\ConductScoreServiceInterface;
-use App\Services\ConductScoreService;
-use App\Services\RoleService;
-use App\Services\PermissionService;
-use App\Repositories\Contracts\AuthRepositoryInterface;
-use App\Repositories\Contracts\EmailVerificationRepositoryInterface;
-use App\Repositories\Auth\AuthRepository;
-use App\Repositories\Auth\EmailVerificationRepository;
+use App\Domains\Identity\Models\User;
+use App\Observers\UserObserver;
+use Dedoc\Scramble\Scramble;
+
+// School Domain — Repository & Service contracts (canonical)
+use App\Domains\School\Repositories\Contracts\ScheduleRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\GradeRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\DisciplineRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\ConductScoreRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\DisciplineTypeRepositoryInterface;
+use App\Domains\School\Repositories\Eloquent\ScheduleRepository;
+use App\Domains\School\Repositories\Eloquent\GradeRepository;
+use App\Domains\School\Repositories\Eloquent\DisciplineRepository;
+use App\Domains\School\Repositories\Eloquent\ConductScoreRepository;
+use App\Domains\School\Repositories\Eloquent\DisciplineTypeRepository;
+use App\Domains\School\Services\Interface\ScheduleServiceInterface;
+use App\Domains\School\Services\Interface\GradeServiceInterface;
+use App\Domains\School\Services\Interface\DisciplineServiceInterface;
+use App\Domains\School\Services\Interface\ConductScoreServiceInterface;
+use App\Domains\School\Services\Interface\StudentServiceInterface;
+use App\Domains\School\Services\Interface\DashBoardServiceInterface;
+use App\Domains\School\Services\ScheduleService;
+use App\Domains\School\Services\GradeService;
+use App\Domains\School\Services\DisciplineService;
+use App\Domains\School\Services\ConductScoreService;
+use App\Domains\School\Services\StudentService;
+use App\Domains\School\Services\DashBoardService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -75,50 +41,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // bind Repository
-        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
-        $this->app->bind(InvoiceRepositoryInterface::class, InvoiceRepository::class);
+        // === School Domain Bindings (canonical, per-service DB) ===
         $this->app->bind(ScheduleRepositoryInterface::class, ScheduleRepository::class);
         $this->app->bind(GradeRepositoryInterface::class, GradeRepository::class);
-        $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
-        $this->app->bind(FeeTypeRepositoryInterface::class, FeeTypeRepository::class);
         $this->app->bind(DisciplineRepositoryInterface::class, DisciplineRepository::class);
-        $this->app->bind(DisciplineTypeRepositoryInterface::class, DisciplineRepository::class);
         $this->app->bind(ConductScoreRepositoryInterface::class, ConductScoreRepository::class);
-        $this->app->bind(RoleRepositoryInterface::class, RoleRepository::class);
-        $this->app->bind(PermissionRepositoryInterface::class, PermissionRepository::class);
-        $this->app->bind(RolePermissionRepositoryInterface::class, RolePermissionRepository::class);
-        $this->app->bind(AuthRepositoryInterface::class, AuthRepository::class);
-        $this->app->bind(EmailVerificationRepositoryInterface::class, EmailVerificationRepository::class);
-       
-        //bind service
-        $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
-        $this->app->bind(PermissionServiceInterface::class, PermissionService::class);
-        $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
-        $this->app->bind(UserServiceInterface::class, UserService::class);
-        $this->app->bind(AuthServiceInterface::class, AuthService::class);
-        $this->app->bind(DashBoardServiceInterface::class, DashBoardService::class);
+        $this->app->bind(DisciplineTypeRepositoryInterface::class, DisciplineTypeRepository::class);
+
         $this->app->bind(ScheduleServiceInterface::class, ScheduleService::class);
-        $this->app->bind(StudentServiceInterface::class, StudentService::class);
-        $this->app->bind(InvoiceServiceInterface::class, InvoiceService::class);
         $this->app->bind(GradeServiceInterface::class, GradeService::class);
-        $this->app->bind(PaymentServiceInterface::class, PaymentService::class);
-        $this->app->bind(FeeTypeServiceInterface::class, FeeTypeService::class);
-       // Role Service with dependencies
-        $this->app->bind(\App\Services\Interface\RoleServiceInterface::class, function ($app) {
-            return new \App\Services\RoleService(
-                $app->make(\App\Repositories\Contracts\RoleRepositoryInterface::class),
-                $app->make(\App\Repositories\Contracts\PermissionRepositoryInterface::class),
-                $app->make(\App\Repositories\Contracts\RolePermissionRepositoryInterface::class)
-            );
-        });
-        
-        // UserRole Service with dependencies
-        $this->app->bind(\App\Services\Interface\UserRoleServiceInterface::class, function ($app) {
-            return new \App\Services\UserRoleService(
-                $app->make(\App\Repositories\Contracts\RolePermissionRepositoryInterface::class)
-            );
-        });
+        $this->app->bind(DisciplineServiceInterface::class, DisciplineService::class);
+        $this->app->bind(ConductScoreServiceInterface::class, ConductScoreService::class);
+        $this->app->bind(StudentServiceInterface::class, StudentService::class);
+        $this->app->bind(DashBoardServiceInterface::class, DashBoardService::class);
+
+        // Finance via Go microservice — không bind repository/service trực tiếp
+        // Identity — T1.2: re-enable for feature/auth (gateway still proxies in prod)
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\AuthRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\AuthRepository::class);
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\EmailVerificationRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\EmailVerificationRepository::class);
+        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\UserRepositoryInterface::class, \App\Domains\Identity\Repositories\Eloquent\UserRepository::class);
+        $this->app->bind(\App\Domains\Identity\Services\Interface\AuthServiceInterface::class, \App\Domains\Identity\Services\AuthService::class);
     }
 
     /**
@@ -127,6 +69,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         User::observe(UserObserver::class);
+
+        Scramble::configure()->routes(
+            fn ($route) => str_starts_with($route->uri, 'api/')
+        );
 
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());

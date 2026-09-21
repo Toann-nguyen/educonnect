@@ -2,7 +2,11 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -23,8 +27,34 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
-        $this->reportable(function (Throwable $e) {
-            //
+        $this->renderable(function (ValidationException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors(),
+                    'code' => 'VALIDATION_ERROR',
+                ], 422);
+            }
+        });
+
+        $this->renderable(function (AuthenticationException $e, Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                    'code' => 'UNAUTHENTICATED',
+                ], 401);
+            }
+        });
+
+        $this->renderable(function (Throwable $e, Request $request) {
+            if ($request->expectsJson() && ! $this->isHttpException($e)) {
+                $status = $this->isHttpException($e) ? $e->getStatusCode() : 500;
+
+                return response()->json([
+                    'message' => $status >= 500 && ! config('app.debug') ? 'Server Error' : $e->getMessage(),
+                    'code' => $status >= 500 ? 'SERVER_ERROR' : 'ERROR',
+                ], $status);
+            }
         });
     }
 }

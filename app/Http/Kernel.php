@@ -39,8 +39,6 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ],
 
         'api' => [
@@ -71,11 +69,15 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'auth.jwt' => \App\Http\Middleware\JwtMiddleware::class,
+        'auth.jwt' => \App\Domains\Identity\Middleware\JwtMiddleware::class,
         //
         'role' => \App\Http\Middleware\JsonRoleMiddleware::class,
         'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        // T1.4 RBAC — CheckRoleAndPermission + token version check (ver/tv claim vs token_version)
+        'rbac' => \App\Http\Middleware\CheckRoleAndPermission::class,
+        'check.role.permission' => \App\Http\Middleware\CheckRoleAndPermission::class,
+        'check.role' => \App\Http\Middleware\CheckRoleAndPermission::class,
         // 'check.status' => \App\Http\Middleware\CheckUserStatus::class,
         // Custom middleware tối thiểu
         'validate.api' => \App\Http\Middleware\ValidateApiAccess::class,

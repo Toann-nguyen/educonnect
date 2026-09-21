@@ -6,7 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\LibraryTransaction>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Domains\School\Models\LibraryTransaction>
  */
 class LibraryTransactionFactory extends Factory
 {

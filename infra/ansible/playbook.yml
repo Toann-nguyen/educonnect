@@ -1,0 +1,11 @@
+---
+# Playbook deploy production educonnect.
+# Chỉ 'compose up' các container đang chạy — không provision mới,
+# không chạm .env hay data/*. Chạy --check trước, rồi chạy thật.
+- name: Deploy production educonnect (compose up only, no provision)
+  hosts: localhost
+  gather_facts: false
+  vars:
+    project_src: /home/robert/production/docker
+  roles:
+    - deploy

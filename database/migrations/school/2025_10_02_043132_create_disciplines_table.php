@@ -1,0 +1,49 @@
+<?php
+
+// DEPRECATED (Task 3.2): migrations đã move lên database/migrations/ gốc (Modular Monolith refactor).
+// Giữ file để không phá lịch sử migration cũ. KHÔNG dùng cho DB mới.
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('disciplines', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
+            $table->foreignId('discipline_type_id')->constrained('discipline_types')->onDelete('restrict');
+            $table->unsignedBigInteger('reporter_user_id')->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
+            $table->date('incident_date');
+            $table->string('incident_location')->nullable();
+            $table->text('description');
+            $table->integer('penalty_points')->default(0);
+            $table->enum('status', ['pending', 'confirmed', 'rejected', 'appealed'])->default('pending');
+            $table->unsignedBigInteger('reviewed_by_user_id')->nullable()->index()->comment('logical FK -> identity.users.id, no DB constraint cross-DB');
+            $table->timestamp('reviewed_at')->nullable();
+            $table->text('review_note')->nullable();
+            $table->boolean('parent_notified')->default(false);
+            $table->timestamp('parent_notified_at')->nullable();
+            $table->json('attachments')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+
+            // Indexes (reporter_user_id already indexed via ->index() above)
+            $table->index(['student_id', 'status']);
+            $table->index('incident_date');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('disciplines');
+    }
+};

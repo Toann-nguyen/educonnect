@@ -89,7 +89,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 15),
+    'ttl' => env('JWT_TTL', 10),
 
     /*
     |--------------------------------------------------------------------------
@@ -123,6 +123,23 @@ return [
     */
 
     'algo' => env('JWT_ALGO', 'RS256'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | JWT Issuer / Audience / Key ID
+    |--------------------------------------------------------------------------
+    | iss: token issuer (service identity) — validated by resource servers
+    | aud: intended audience — comma separated or single value
+    | kid: key identifier for JWKS key rotation
+    */
+    'iss' => env('JWT_ISS', env('APP_URL', 'https://educonnect.local')),
+    'aud' => env('JWT_AUD', 'educonnect-api'),
+    'kid' => env('JWT_KID', 'educonnect-rs256-1'),
+
+    'jwks_ttl' => env('JWT_JWKS_TTL', 3600),
+
+    // T1.3 — refresh rotation grace 10-30s (idempotent retry window)
+    'refresh_grace' => env('JWT_REFRESH_GRACE', 30),
 
     /*
     |--------------------------------------------------------------------------

@@ -36,17 +36,16 @@ RUN apk add --no-cache \
     $PHPIZE_DEPS
 
 # ── PHP extensions ───────────────────────────────────────────
+# Lưu ý: base php:8.2-fpm-alpine đã bundle sẵn mbstring, fileinfo, Zend OPcache
 RUN docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install -j$(nproc) \
+    && docker-php-ext-install -j2 \
     pdo_mysql \
-    mbstring \
     exif \
     pcntl \
     bcmath \
     gd \
     zip \
     intl \
-    opcache \
     sockets \
     xml
 
@@ -86,3 +85,25 @@ USER appuser
 EXPOSE 9000
 
 CMD ["php-fpm"]
+
+# ============================================================
+# Stage 2: Development — kế thừa production + Xdebug/pcov
+# Dùng cho docker-compose.yml (dev): bind-mount source, debug IDE
+# ============================================================
+FROM production AS development
+
+USER root
+
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug \
+    && pecl install pcov \
+    && docker-php-ext-enable pcov \
+    && { \
+         echo 'xdebug.mode=debug'; \
+         echo 'xdebug.start_with_request=yes'; \
+         echo 'xdebug.client_host=host.docker.internal'; \
+         echo 'xdebug.client_port=9003'; \
+         echo 'xdebug.log=/tmp/xdebug.log'; \
+       } >> "$PHP_INI_DIR/conf.d/docker-php-ext-xdebug.ini"
+
+USER appuser

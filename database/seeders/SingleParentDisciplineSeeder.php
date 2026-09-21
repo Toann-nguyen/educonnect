@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Student;
-use App\Models\Discipline;
-use App\Models\DisciplineType;
+use App\Domains\Identity\Models\User;
+use App\Domains\School\Models\Student;
+use App\Domains\School\Models\Discipline;
+use App\Domains\School\Models\DisciplineType;
 
 class SingleParentDisciplineSeeder extends Seeder
 {

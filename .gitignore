@@ -10,6 +10,8 @@ go.sum
 go.mod.bak
 
 # Build directories
+.terraform/
+# Build artifacts
 bin/
 _dist/
 dist/

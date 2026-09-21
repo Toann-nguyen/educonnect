@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/educonnect/educonnect/internal/pkg/proto/auth";
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// User role enum
+enum UserRole {
+    USER_ROLE_UNSPECIFIED = 0;
+    USER_ROLE_STUDENT = 1;
+    USER_ROLE_TEACHER = 2;
+    USER_ROLE_ADMIN = 3;
+    USER_ROLE_PARENT = 4;
+}
+
+// User status enum
+enum UserStatus {
+    USER_STATUS_UNSPECIFIED = 0;
+    USER_STATUS_ACTIVE = 1;
+    USER_STATUS_INACTIVE = 2;
+    USER_STATUS_SUSPENDED = 3;
+    USER_STATUS_DELETED = 4;
+}
+
+// User profile
+message UserProfile {
+    string id = 1;
+    string email = 2;
+    string full_name = 3;
+    string phone = 4;
+    string avatar_url = 5;
+    UserRole role = 6;
+    UserStatus status = 7;
+    google.protobuf.Timestamp last_login_at = 8;
+    google.protobuf.Timestamp created_at = 9;
+    google.protobuf.Timestamp updated_at = 10;
+}
+
+// Student profile (extends user)
+message StudentProfile {
+    UserProfile user = 1;
+    string student_code = 2;
+    string grade = 3;
+    string class_id = 4;
+    google.protobuf.Timestamp enrollment_date = 5;
+    google.protobuf.Timestamp graduation_date = 6;
+}
+
+// Teacher profile (extends user)
+message TeacherProfile {
+    UserProfile user = 1;
+    string teacher_code = 2;
+    repeated string subjects = 3;
+    string department = 4;
+    google.protobuf.Timestamp hire_date = 5;
+}
+
+// Authentication request
+message LoginRequest {
+    string email = 1;
+    string password = 2;
+}
+
+// Token response
+message TokenResponse {
+    string access_token = 1;
+    string refresh_token = 2;
+    int64 expires_in = 3; // Seconds
+    string token_type = 4; // "Bearer"
+}
+
+// Refresh token request
+message RefreshTokenRequest {
+    string refresh_token = 1;
+}
+
+// Validate token request
+message ValidateTokenRequest {
+    string access_token = 1;
+}
+
+// Validate token response
+message ValidateTokenResponse {
+    bool valid = 1;
+    UserProfile user = 2;
+    map<string, string> claims = 3;
+    string message = 4;
+}
+
+// Get user by ID request
+message GetUserRequest {
+    string id = 1;
+}
+
+// Get user by email request
+message GetUserByEmailRequest {
+    string email = 1;
+}
+
+// Get users by role request
+message GetUsersByRoleRequest {
+    UserRole role = 1;
+    common.PaginationRequest pagination = 2;
+    UserStatus status = 3;
+}
+
+// Create user request
+message CreateUserRequest {
+    string email = 1;
+    string password = 2;
+    string full_name = 3;
+    string phone = 4;
+    UserRole role = 5;
+}
+
+// Update user request
+message UpdateUserRequest {
+    string id = 1;
+    string full_name = 2;
+    string phone = 3;
+    string avatar_url = 4;
+}
+
+// Change password request
+message ChangePasswordRequest {
+    string user_id = 1;
+    string old_password = 2;
+    string new_password = 3;
+}
+
+// ============ RESPONSES ============
+
+message LoginResponse {
+    TokenResponse tokens = 1;
+    UserProfile user = 2;
+}
+
+message GetUserResponse {
+    UserProfile user = 1;
+}
+
+message GetUsersResponse {
+    repeated UserProfile users = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message CreateUserResponse {
+    UserProfile user = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message UpdateUserResponse {
+    UserProfile user = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message ChangePasswordResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message GetStudentProfileResponse {
+    StudentProfile profile = 1;
+}
+
+message GetTeacherProfileResponse {
+    TeacherProfile profile = 1;
+}
+
+// ============ SERVICE DEFINITION ============
+
+service AuthService {
+    // Login
+    rpc Login(LoginRequest) returns (LoginResponse);
+    
+    // Refresh token
+    rpc RefreshToken(RefreshTokenRequest) returns (TokenResponse);
+    
+    // Validate token
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    
+    // Logout (invalidate token)
+    rpc Logout(common.UUID) returns (common.Empty);
+}
+
+service UserService {
+    // Get user by ID
+    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    
+    // Get user by email
+    rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserResponse);
+    
+    // Get users by role
+    rpc GetUsersByRole(GetUsersByRoleRequest) returns (GetUsersResponse);
+    
+    // Create user
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+    
+    // Update user
+    rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+    
+    // Change password
+    rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+    
+    // Get student profile
+    rpc GetStudentProfile(GetUserRequest) returns (GetStudentProfileResponse);
+    
+    // Get teacher profile
+    rpc GetTeacherProfile(GetUserRequest) returns (GetTeacherProfileResponse);
+}

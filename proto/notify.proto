@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package notify;
+
+option go_package = "github.com/educonnect/educonnect/internal/pkg/proto/notify";
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Notification type enum
+enum NotificationType {
+    NOTIFICATION_TYPE_UNSPECIFIED = 0;
+    NOTIFICATION_TYPE_EMAIL = 1;
+    NOTIFICATION_TYPE_SMS = 2;
+    NOTIFICATION_TYPE_PUSH = 3;
+    NOTIFICATION_TYPE_IN_APP = 4;
+}
+
+// Notification priority enum
+enum NotificationPriority {
+    NOTIFICATION_PRIORITY_UNSPECIFIED = 0;
+    NOTIFICATION_PRIORITY_LOW = 1;
+    NOTIFICATION_PRIORITY_NORMAL = 2;
+    NOTIFICATION_PRIORITY_HIGH = 3;
+    NOTIFICATION_PRIORITY_URGENT = 4;
+}
+
+// Notification status enum
+enum NotificationStatus {
+    NOTIFICATION_STATUS_UNSPECIFIED = 0;
+    NOTIFICATION_STATUS_PENDING = 1;
+    NOTIFICATION_STATUS_SENT = 2;
+    NOTIFICATION_STATUS_DELIVERED = 3;
+    NOTIFICATION_STATUS_FAILED = 4;
+}
+
+// Notification template
+message NotificationTemplate {
+    string id = 1;
+    string name = 2;
+    string subject = 3;
+    string body = 4;
+    NotificationType type = 5;
+    map<string, string> variables = 6; // Key-value pairs for template substitution
+    bool is_active = 7;
+    google.protobuf.Timestamp created_at = 8;
+    google.protobuf.Timestamp updated_at = 9;
+}
+
+// Notification
+message Notification {
+    string id = 1;
+    string user_id = 2;
+    string email = 3;
+    string phone = 4;
+    string title = 5;
+    string message = 6;
+    NotificationType type = 7;
+    NotificationPriority priority = 8;
+    NotificationStatus status = 9;
+    map<string, string> metadata = 10; // Additional data
+    string template_id = 11;
+    int32 retry_count = 12;
+    string error_message = 13;
+    google.protobuf.Timestamp scheduled_at = 14;
+    google.protobuf.Timestamp sent_at = 15;
+    google.protobuf.Timestamp delivered_at = 16;
+    google.protobuf.Timestamp created_at = 17;
+}
+
+// Invoice payment event (for integration with Finance service)
+message InvoicePaymentEvent {
+    string invoice_id = 1;
+    string student_id = 2;
+    string user_id = 3;
+    common.Money amount = 4;
+    string payment_status = 5;
+    google.protobuf.Timestamp paid_at = 6;
+}
+
+// ============ REQUESTS ============
+
+// Send notification request
+message SendNotificationRequest {
+    string user_id = 1;
+    string email = 2;
+    string phone = 3;
+    string title = 4;
+    string message = 5;
+    NotificationType type = 6;
+    NotificationPriority priority = 7;
+    map<string, string> metadata = 8;
+}
+
+// Send notification using template
+message SendTemplateNotificationRequest {
+    string user_id = 1;
+    string email = 2;
+    string phone = 3;
+    string template_id = 4;
+    map<string, string> variables = 5; // Template variables
+    NotificationPriority priority = 6;
+}
+
+// Send bulk notifications
+message SendBulkNotificationsRequest {
+    repeated string user_ids = 1;
+    string title = 2;
+    string message = 3;
+    NotificationType type = 4;
+    NotificationPriority priority = 5;
+    map<string, string> metadata = 6;
+}
+
+// Get notification by ID
+message GetNotificationRequest {
+    string id = 1;
+}
+
+// Get notifications by user
+message GetNotificationsByUserRequest {
+    string user_id = 1;
+    common.PaginationRequest pagination = 2;
+    NotificationStatus status = 3;
+    NotificationType type = 4;
+}
+
+// Mark notification as read
+message MarkAsReadRequest {
+    string id = 1;
+}
+
+// Mark all notifications as read for a user
+message MarkAllAsReadRequest {
+    string user_id = 1;
+}
+
+// Process invoice payment event
+message ProcessInvoicePaymentEventRequest {
+    InvoicePaymentEvent event = 1;
+}
+
+// ============ RESPONSES ============
+
+message SendNotificationResponse {
+    Notification notification = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message SendBulkNotificationsResponse {
+    int32 total_sent = 1;
+    int32 total_failed = 2;
+    repeated string failed_user_ids = 3;
+}
+
+message GetNotificationResponse {
+    Notification notification = 1;
+}
+
+message GetNotificationsResponse {
+    repeated Notification notifications = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message MarkAsReadResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+message ProcessInvoicePaymentEventResponse {
+    bool success = 1;
+    string message = 2;
+    repeated Notification notifications = 3;
+}
+
+// ============ SERVICE DEFINITION ============
+
+service NotificationService {
+    // Send single notification
+    rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse);
+    
+    // Send notification using template
+    rpc SendTemplateNotification(SendTemplateNotificationRequest) returns (SendNotificationResponse);
+    
+    // Send bulk notifications
+    rpc SendBulkNotifications(SendBulkNotificationsRequest) returns (SendBulkNotificationsResponse);
+    
+    // Get notification by ID
+    rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse);
+    
+    // Get notifications by user
+    rpc GetNotificationsByUser(GetNotificationsByUserRequest) returns (GetNotificationsResponse);
+    
+    // Mark notification as read
+    rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+    
+    // Mark all notifications as read
+    rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAsReadResponse);
+}
+
+// Event-driven service for processing events from other services
+service NotificationEventService {
+    // Process invoice payment event
+    rpc ProcessInvoicePaymentEvent(ProcessInvoicePaymentEventRequest) returns (ProcessInvoicePaymentEventResponse);
+}

@@ -5,7 +5,9 @@ vendor/
 *.sum
 *.lock
 
-# Binaries
+# Build directories
+.terraform/
+# Build artifacts
 bin/
 
 # Logs and temp files

@@ -8,7 +8,7 @@
 vendor/
 go.mod
 go.sum
-
+.terraform/
 # Build artifacts
 bin/
 dist/

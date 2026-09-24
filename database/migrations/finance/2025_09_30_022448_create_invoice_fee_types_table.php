@@ -11,16 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoice_items', function (Blueprint $table) {
+        Schema::connection('finance')->create('invoice_fee_types', function (Blueprint $table) {
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
-            $table->foreignId('fee_type_id')->constrained('fee_types')->onDelete('restrict');
-            $table->string('description');
-            $table->decimal('unit_price', 15, 2);
-            $table->unsignedInteger('quantity')->default(1);
-            $table->decimal('total_amount', 15, 2);
+            $table->foreignId('fee_type_id')->constrained('fee_types')->onDelete('cascade');
+            $table->decimal('amount', 15, 2); // Số tiền cụ thể cho hóa đơn này
             $table->text('note')->nullable();
             $table->timestamps();
+            $table->softDeletes();
+            // Đảm bảo không trùng lặp
+            $table->unique(['invoice_id', 'fee_type_id']);
         });
     }
 
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoice_items');
+        Schema::connection('finance')->dropIfExists('invoice_fee_types');
     }
 };

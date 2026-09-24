@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Domains\School\Models\UsersReadModel;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -24,6 +25,7 @@ class ConsumeUserEvents extends Command
     protected $description = 'Consume user_events từ RabbitMQ và sync users_read_model';
 
     private const EXCHANGE = 'user_events';
+
     private const QUEUE = 'school_users_sync';
 
     public function handle(): int
@@ -52,12 +54,15 @@ class ConsumeUserEvents extends Command
                     false,
                     false,
                     [
+                        'x-queue-type' => ['S', 'quorum'],
                         'x-dead-letter-exchange' => ['S', 'educonnect.dlx'],
                     ]
                 );
                 $channel->queue_bind(self::QUEUE, self::EXCHANGE, 'user.#');
+                $channel->queue_declare(self::QUEUE.'.dlq', false, true, false, false, false, ['x-queue-type' => ['S', 'quorum']]);
+                $channel->queue_bind(self::QUEUE.'.dlq', 'educonnect.dlx', '');
 
-                $this->info("✅ Sẵn sàng consume trên queue: " . self::QUEUE . " (binding user.#)");
+                $this->info('✅ Sẵn sàng consume trên queue: '.self::QUEUE.' (binding user.#)');
 
                 $channel->basic_consume(self::QUEUE, 'school-users-worker', false, false, false, false, function (AMQPMessage $msg) {
                     $this->handleMessage($msg);
@@ -73,8 +78,8 @@ class ConsumeUserEvents extends Command
                 $channel->close();
                 $conn->close();
             } catch (\Throwable $e) {
-                Log::error('ConsumeUserEvents error: ' . $e->getMessage());
-                $this->error('RabbitMQ lỗi: ' . $e->getMessage() . ' — reconnect sau 5s');
+                Log::error('ConsumeUserEvents error: '.$e->getMessage());
+                $this->error('RabbitMQ lỗi: '.$e->getMessage().' — reconnect sau 5s');
                 sleep(5);
             }
         }
@@ -85,28 +90,48 @@ class ConsumeUserEvents extends Command
         try {
             $data = json_decode($msg->getBody(), true, 512, JSON_THROW_ON_ERROR);
             $corrId = $data['correlation_id'] ?? ($msg->has('application_headers') ? $msg->get('application_headers')->getNativeData()['x-correlation-id'] ?? '-' : '-');
+            $idemKey = $data['idempotency_key'] ?? $data['event_id'] ?? ($msg->has('message_id') ? $msg->get('message_id') : null);
+            if (! $idemKey && $msg->has('correlation_id')) {
+                $idemKey = $msg->get('correlation_id');
+            }
+            $idemKey = $idemKey ?: md5($msg->getBody());
 
-            if (isset($data['user']['id'])) {
-                $u = $data['user'];
-                UsersReadModel::updateOrCreate(
-                    ['id' => $u['id']],
-                    [
-                        'name'      => $u['name'] ?? '',
-                        'email'     => $u['email'] ?? '',
-                        'roles'     => $u['roles'] ?? [],
-                        'is_active' => $u['is_active'] ?? true,
-                    ]
-                );
-                Log::info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");
-                $this->info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");
-            } else {
-                Log::warning('User event thiếu user payload, drop: ' . $msg->getBody());
+            $reservationKey = "user:idempotency:{$idemKey}";
+            $alreadyProcessing = ! Redis::set($reservationKey, 'processing', 'EX', 3600, 'NX');
+            if ($alreadyProcessing) {
+                Log::info("[corr={$corrId}] user event duplicate idem={$idemKey} → ack (idempotent)");
+                $msg->ack();
+
+                return;
             }
 
+            if (! isset($data['user']['id'])) {
+                Log::warning("[corr={$corrId}] user event thiếu user payload, chuyển DLQ: ".$msg->getBody());
+                $msg->nack(false, false);
+
+                return;
+            }
+
+            $u = $data['user'];
+            UsersReadModel::updateOrCreate(
+                ['id' => $u['id']],
+                [
+                    'name' => $u['name'] ?? '',
+                    'email' => $u['email'] ?? '',
+                    'roles' => $u['roles'] ?? [],
+                    'is_active' => $u['is_active'] ?? true,
+                ]
+            );
+            Redis::set($reservationKey, 'completed', 'EX', 3600);
+            Log::info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");
+            $this->info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");
             $msg->ack();
         } catch (\Throwable $e) {
-            Log::error('handleMessage error: ' . $e->getMessage());
+            Log::error('handleMessage error: '.$e->getMessage());
             try {
+                if (isset($reservationKey)) {
+                    Redis::del($reservationKey);
+                }
                 $msg->nack(false, false); // → DLX
             } catch (\Throwable $ignore) {
             }

@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('fee_types', function (Blueprint $table) {
+        Schema::connection('finance')->create('fee_types', function (Blueprint $table) {
             $table->id();
             $table->string('code', 50)->unique(); // TUITION, BUS, MEAL, etc.
             $table->string('name');
@@ -28,7 +28,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoice_fee_types');
-        Schema::dropIfExists('fee_types');
+        Schema::connection('finance')->dropIfExists('invoice_fee_types');
+        Schema::connection('finance')->dropIfExists('fee_types');
     }
 };

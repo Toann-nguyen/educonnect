@@ -2,9 +2,8 @@ package grpcserver
 
 import (
 	"context"
-	"fmt"
-	"time"
 
+	"educonnect/finance/internal/pkg/proto/common"
 	"educonnect/finance/internal/pkg/proto/finance"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -123,7 +122,7 @@ func convertToProtoInvoice(invoice interface{}) *finance.Invoice {
 	return &finance.Invoice{}
 }
 
-func convertToProtoPagination(total int64, req *finance.PaginationRequest) *finance.PaginationResponse {
+func convertToProtoPagination(total int64, req *common.PaginationRequest) *common.PaginationResponse {
 	pageSize := int32(10)
 	if req != nil && req.PageSize > 0 {
 		pageSize = req.PageSize
@@ -135,7 +134,7 @@ func convertToProtoPagination(total int64, req *finance.PaginationRequest) *fina
 		currentPage = req.Page
 	}
 
-	return &finance.PaginationResponse{
+	return &common.PaginationResponse{
 		TotalItems:  int32(total),
 		TotalPages:  totalPages,
 		CurrentPage: currentPage,
@@ -200,7 +199,7 @@ func NewFinanceUserServiceServer() *FinanceUserServiceServer {
 }
 
 // GetUser retrieves user information for finance operations
-func (s *FinanceUserServiceServer) GetUser(ctx context.Context, req *finance.UUID) (*finance.UserRef, error) {
+func (s *FinanceUserServiceServer) GetUser(ctx context.Context, req *common.UUID) (*common.UserRef, error) {
 	if req.Value == "" {
 		return nil, status.Error(codes.InvalidArgument, "user ID is required")
 	}
@@ -208,7 +207,7 @@ func (s *FinanceUserServiceServer) GetUser(ctx context.Context, req *finance.UUI
 	// TODO: Call Auth service via gRPC to get user info
 	// userResp, err := s.userClient.GetUser(ctx, &auth.GetUserRequest{Id: req.Value})
 
-	return &finance.UserRef{}, status.Error(codes.Unimplemented, "GetUser is not yet implemented")
+	return &common.UserRef{}, status.Error(codes.Unimplemented, "GetUser is not yet implemented")
 }
 
 // RegisterServices registers all finance gRPC services with the server
@@ -220,11 +219,4 @@ func RegisterServices(grpcServer *grpc.Server) {
 	finance.RegisterInvoiceServiceServer(grpcServer, invoiceService)
 	finance.RegisterPaymentServiceServer(grpcServer, paymentService)
 	finance.RegisterFinanceUserServiceServer(grpcServer, userService)
-}
-
-// Health check for gRPC server
-func (s *InvoiceServiceServer) Check(ctx context.Context, req *finance.Empty) (*finance.HealthCheckResponse, error) {
-	return &finance.HealthCheckResponse{
-		Status: finance.HealthCheckResponse_SERVING,
-	}, nil
 }

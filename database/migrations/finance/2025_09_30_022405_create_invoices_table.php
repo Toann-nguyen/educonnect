@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoices', function (Blueprint $table) {
+        Schema::connection('finance')->create('invoices', function (Blueprint $table) {
             $table->id();
             $table->string('invoice_number', 50)->unique();
             $table->foreignId('student_id')->onDelete('cascade');
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoices');
+        Schema::connection('finance')->dropIfExists('invoices');
     }
 };

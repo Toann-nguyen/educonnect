@@ -11,16 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoice_fee_types', function (Blueprint $table) {
+        Schema::connection('finance')->create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('invoice_id')->constrained('invoices')->onDelete('cascade');
-            $table->foreignId('fee_type_id')->constrained('fee_types')->onDelete('cascade');
-            $table->decimal('amount', 15, 2); // Số tiền cụ thể cho hóa đơn này
+            $table->foreignId('payer_user_id')->onDelete('cascade');
+            $table->foreignId('created_by_user_id')->comment('ID Kế toán')->onDelete('cascade');
+            $table->decimal('amount_paid', 15, 2);
+            $table->date('payment_date');
+            $table->enum('payment_method', ['cash', 'banking']);
+            $table->string('transaction_code')->nullable();
             $table->text('note')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            // Đảm bảo không trùng lặp
-            $table->unique(['invoice_id', 'fee_type_id']);
         });
     }
 
@@ -29,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoice_fee_types');
+        Schema::connection('finance')->dropIfExists('payments');
     }
 };

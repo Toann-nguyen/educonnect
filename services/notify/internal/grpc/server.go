@@ -2,30 +2,39 @@ package grpc
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/smtp"
 	"os"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
-	"educonnect/notify/internal/template"
+	common "educonnect/internal/pkg/proto/common"
 	pb "educonnect/internal/pkg/proto/notify"
+	"educonnect/notify/internal/template"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Server implements pb.NotifyServiceServer
 type Server struct {
-	pb.UnimplementedNotifyServiceServer
+	pb.UnimplementedNotificationServiceServer
+	pb.UnimplementedNotificationEventServiceServer
 	templateStore *template.Store
 	mailHost      string
 	mailPort      string
 	mailUser      string
 	mailPass      string
 	mailFrom      string
+
+	mu            sync.Mutex
+	sequence      atomic.Uint64
+	notifications map[string]*pb.Notification
+	order         []string
 }
 
-// NewServer creates a new Notify gRPC server
 func NewServer(store *template.Store) *Server {
 	return &Server{
 		templateStore: store,
@@ -34,6 +43,7 @@ func NewServer(store *template.Store) *Server {
 		mailUser:      getEnv("MAIL_USERNAME", ""),
 		mailPass:      getEnv("MAIL_PASSWORD", ""),
 		mailFrom:      getEnv("MAIL_FROM", "noreply@educonnect.com"),
+		notifications: make(map[string]*pb.Notification),
 	}
 }
 
@@ -44,330 +54,344 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// SendEmail sends an email via gRPC
-func (s *Server) SendEmail(ctx context.Context, req *pb.SendEmailRequest) (*pb.SendEmailResponse, error) {
-	log.Printf("[gRPC] SendEmail request: to=%s, subject=%s", req.To, req.Subject)
+func (s *Server) nextID() string {
+	return fmt.Sprintf("ntf-%d", s.sequence.Add(1))
+}
 
-	if req.To == "" {
-		return nil, status.Error(codes.InvalidArgument, "recipient email is required")
+func (s *Server) record(notification *pb.Notification) *pb.Notification {
+	now := timestamppb.Now()
+	notification.Id = s.nextID()
+	notification.CreatedAt = now
+	if notification.Metadata == nil {
+		notification.Metadata = make(map[string]string)
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.notifications[notification.Id] = notification
+	s.order = append(s.order, notification.Id)
+	return notification
+}
 
-	if req.Body == "" && req.TemplateId != "" {
-		// Load template from store
-		tmpl, err := s.templateStore.Get(req.TemplateId)
-		if err != nil {
-			return nil, status.Errorf(codes.NotFound, "template not found: %v", err)
-		}
-		req.Body = tmpl.Content
-		if req.Subject == "" {
-			req.Subject = tmpl.Subject
-		}
+func (s *Server) deliverEmail(to, subject, body string) error {
+	if to == "" {
+		return status.Error(codes.InvalidArgument, "recipient email is required")
 	}
-
-	if req.Body == "" {
-		return nil, status.Error(codes.InvalidArgument, "email body or template_id is required")
+	if body == "" {
+		return status.Error(codes.InvalidArgument, "email body is required")
 	}
-
-	// Build email message
-	msg := []byte(fmt.Sprintf(
+	message := []byte(fmt.Sprintf(
 		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n%s",
-		s.mailFrom, req.To, req.Subject, req.Body,
+		s.mailFrom, to, subject, body,
 	))
+	address := fmt.Sprintf("%s:%s", s.mailHost, s.mailPort)
+	if err := smtp.SendMail(address, smtp.PlainAuth("", s.mailUser, s.mailPass, s.mailHost), s.mailFrom, []string{to}, message); err != nil {
+		return status.Errorf(codes.Internal, "failed to send email: %v", err)
+	}
+	return nil
+}
 
-	addr := fmt.Sprintf("%s:%s", s.mailHost, s.mailPort)
-	auth := smtp.PlainAuth("", s.mailUser, s.mailPass, s.mailHost)
+func renderTemplate(body string, variables map[string]string) string {
+	for key, value := range variables {
+		body = strings.ReplaceAll(body, "{{"+key+"}}", value)
+	}
+	return body
+}
 
-	err := smtp.SendMail(addr, auth, s.mailFrom, []string{req.To}, msg)
+func (s *Server) deliver(req *pb.SendNotificationRequest) (*pb.Notification, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "notification request is required")
+	}
+	if req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+
+	notification := &pb.Notification{
+		UserId:   req.UserId,
+		Email:    req.Email,
+		Phone:    req.Phone,
+		Title:    req.Title,
+		Message:  req.Message,
+		Type:     req.Type,
+		Priority: req.Priority,
+		Metadata: req.Metadata,
+		Status:   pb.NotificationStatus_NOTIFICATION_STATUS_PENDING,
+	}
+
+	switch req.Type {
+	case pb.NotificationType_NOTIFICATION_TYPE_EMAIL:
+		if err := s.deliverEmail(req.Email, req.Title, req.Message); err != nil {
+			notification.Status = pb.NotificationStatus_NOTIFICATION_STATUS_FAILED
+			notification.ErrorMessage = err.Error()
+			s.record(notification)
+			return nil, err
+		}
+		notification.Status = pb.NotificationStatus_NOTIFICATION_STATUS_SENT
+		notification.SentAt = timestamppb.Now()
+		return s.record(notification), nil
+	case pb.NotificationType_NOTIFICATION_TYPE_SMS:
+		if req.Phone == "" {
+			return nil, status.Error(codes.InvalidArgument, "recipient phone number is required")
+		}
+		if req.Message == "" {
+			return nil, status.Error(codes.InvalidArgument, "message content is required")
+		}
+		log.Printf("[gRPC] SMS queued for delivery (simulated): to=%s", req.Phone)
+		notification.Status = pb.NotificationStatus_NOTIFICATION_STATUS_SENT
+		notification.SentAt = timestamppb.Now()
+		notification.ErrorMessage = "SMS provider integration pending; delivery simulated"
+		return s.record(notification), nil
+	case pb.NotificationType_NOTIFICATION_TYPE_PUSH, pb.NotificationType_NOTIFICATION_TYPE_IN_APP:
+		return s.record(notification), nil
+	default:
+		return nil, status.Error(codes.InvalidArgument, "supported notification type is required")
+	}
+}
+
+func (s *Server) SendNotification(_ context.Context, req *pb.SendNotificationRequest) (*pb.SendNotificationResponse, error) {
+	notification, err := s.deliver(req)
 	if err != nil {
-		log.Printf("[gRPC] SendEmail failed: %v", err)
-		return nil, status.Errorf(codes.Internal, "failed to send email: %v", err)
+		return nil, err
 	}
-
-	log.Printf("[gRPC] SendEmail success: to=%s", req.To)
-	return &pb.SendEmailResponse{
-		Success: true,
-		Message: "Email sent successfully",
-	}, nil
-}
-
-// SendSMS sends an SMS via gRPC (placeholder - integrate with SMS provider)
-func (s *Server) SendSMS(ctx context.Context, req *pb.SendSMSRequest) (*pb.SendSMSResponse, error) {
-	log.Printf("[gRPC] SendSMS request: to=%s, message=%s", req.To, req.Message)
-
-	if req.To == "" {
-		return nil, status.Error(codes.InvalidArgument, "recipient phone number is required")
-	}
-
-	if req.Message == "" {
-		return nil, status.Error(codes.InvalidArgument, "message content is required")
-	}
-
-	// TODO: Integrate with actual SMS provider (Twilio, Vonage, etc.)
-	// For now, log and return success
-	log.Printf("[gRPC] SendSMS simulated: to=%s", req.To)
-
-	return &pb.SendSMSResponse{
-		Success: true,
-		Message: "SMS queued for delivery (simulated)",
-	}, nil
-}
-
-// SendNotification sends a generic notification (email or SMS)
-func (s *Server) SendNotification(ctx context.Context, req *pb.SendNotificationRequest) (*pb.SendNotificationResponse, error) {
-	log.Printf("[gRPC] SendNotification request: user_id=%d, type=%s", req.UserId, req.Type)
-
-	var emailSuccess, smsSuccess bool
-	var messages []string
-
-	// Send email if requested
-	if req.Type == pb.NotificationType_NOTIFICATION_TYPE_EMAIL || req.Type == pb.NotificationType_NOTIFICATION_TYPE_BOTH {
-		if req.Email != "" {
-			emailReq := &pb.SendEmailRequest{
-				To:         req.Email,
-				Subject:    req.Subject,
-				Body:       req.Body,
-				TemplateId: req.TemplateId,
-				Metadata:   req.Metadata,
-			}
-			emailRes, err := s.SendEmail(ctx, emailReq)
-			if err != nil {
-				messages = append(messages, fmt.Sprintf("Email failed: %v", err))
-			} else {
-				emailSuccess = true
-				messages = append(messages, emailRes.Message)
-			}
-		}
-	}
-
-	// Send SMS if requested
-	if req.Type == pb.NotificationType_NOTIFICATION_TYPE_SMS || req.Type == pb.NotificationType_NOTIFICATION_TYPE_BOTH {
-		if req.Phone != "" {
-			smsReq := &pb.SendSMSRequest{
-				To:      req.Phone,
-				Message: req.Body,
-			}
-			smsRes, err := s.SendSMS(ctx, smsReq)
-			if err != nil {
-				messages = append(messages, fmt.Sprintf("SMS failed: %v", err))
-			} else {
-				smsSuccess = true
-				messages = append(messages, smsRes.Message)
-			}
-		}
-	}
-
-	if !emailSuccess && !smsSuccess {
-		return nil, status.Errorf(codes.FailedPrecondition, "all notification channels failed: %v", messages)
-	}
-
 	return &pb.SendNotificationResponse{
+		Notification: notification,
 		Success:      true,
-		EmailSent:    emailSuccess,
-		SmsSent:      smsSuccess,
-		Messages:     messages,
-		Notification: req,
+		Message:      "Notification processed successfully",
 	}, nil
 }
 
-// BroadcastNotification sends notifications to multiple users
-func (s *Server) BroadcastNotification(ctx context.Context, req *pb.BroadcastNotificationRequest) (*pb.BroadcastNotificationResponse, error) {
-	log.Printf("[gRPC] BroadcastNotification request: %d recipients", len(req.Recipients))
-
-	results := make([]*pb.NotificationResult, 0, len(req.Recipients))
-	successCount := 0
-	failCount := 0
-
-	for _, recipient := range req.Recipients {
-		notifyReq := &pb.SendNotificationRequest{
-			UserId:     recipient.UserId,
-			Email:      recipient.Email,
-			Phone:      recipient.Phone,
-			Type:       req.Type,
-			Subject:    req.Subject,
-			Body:       req.Body,
-			TemplateId: req.TemplateId,
-			Metadata:   req.Metadata,
-		}
-
-		res, err := s.SendNotification(ctx, notifyReq)
-		if err != nil {
-			failCount++
-			results = append(results, &pb.NotificationResult{
-				UserId:  recipient.UserId,
-				Success: false,
-				Error:   err.Error(),
-			})
-		} else {
-			successCount++
-			results = append(results, &pb.NotificationResult{
-				UserId:     recipient.UserId,
-				Success:    true,
-				EmailSent:  res.EmailSent,
-				SmsSent:    res.SmsSent,
-				Message:    res.Messages[0],
-			})
-		}
+func (s *Server) SendTemplateNotification(ctx context.Context, req *pb.SendTemplateNotificationRequest) (*pb.SendNotificationResponse, error) {
+	if req == nil || req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
-
-	log.Printf("[gRPC] BroadcastNotification completed: success=%d, failed=%d", successCount, failCount)
-
-	return &pb.BroadcastNotificationResponse{
-		TotalRecipients: int32(len(req.Recipients)),
-		SuccessCount:    int32(successCount),
-		FailCount:       int32(failCount),
-		Results:         results,
-	}, nil
-}
-
-// GetTemplate retrieves a notification template
-func (s *Server) GetTemplate(ctx context.Context, req *pb.GetTemplateRequest) (*pb.GetTemplateResponse, error) {
-	log.Printf("[gRPC] GetTemplate request: id=%s", req.Id)
-
-	tmpl, err := s.templateStore.Get(req.Id)
+	if req.TemplateId == "" {
+		return nil, status.Error(codes.InvalidArgument, "template id is required")
+	}
+	tmpl, err := s.templateStore.Get(ctx, req.TemplateId)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "template not found: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to load template: %v", err)
+	}
+	if tmpl == nil {
+		return nil, status.Errorf(codes.NotFound, "template not found: %s", req.TemplateId)
 	}
 
-	return &pb.GetTemplateResponse{
-		Template: &pb.NotificationTemplate{
-			Id:        tmpl.ID,
-			Name:      tmpl.Name,
-			Type:      tmpl.Type,
-			Subject:   tmpl.Subject,
-			Content:   tmpl.Content,
-			Variables: tmpl.Variables,
-			CreatedAt: tmpl.CreatedAt,
-			UpdatedAt: tmpl.UpdatedAt,
-		},
+	notificationType := pb.NotificationType_NOTIFICATION_TYPE_EMAIL
+	channels := make(map[string]bool, len(tmpl.Channels))
+	for _, channel := range tmpl.Channels {
+		channels[strings.ToLower(channel)] = true
+	}
+	switch {
+	case channels["email"] && channels["sms"] && req.Email == "":
+		notificationType = pb.NotificationType_NOTIFICATION_TYPE_SMS
+	case channels["email"] || (req.Email != "" && req.Phone == ""):
+		notificationType = pb.NotificationType_NOTIFICATION_TYPE_EMAIL
+	case channels["sms"]:
+		notificationType = pb.NotificationType_NOTIFICATION_TYPE_SMS
+	case req.Phone != "" && req.Email == "":
+		notificationType = pb.NotificationType_NOTIFICATION_TYPE_SMS
+	}
+
+	delivery, err := s.deliver(&pb.SendNotificationRequest{
+		UserId:   req.UserId,
+		Email:    req.Email,
+		Phone:    req.Phone,
+		Title:    tmpl.Subject,
+		Message:  renderTemplate(tmpl.Body, req.Variables),
+		Type:     notificationType,
+		Priority: req.Priority,
+		Metadata: req.Variables,
+	})
+	if err != nil {
+		return nil, err
+	}
+	delivery.TemplateId = req.TemplateId
+	return &pb.SendNotificationResponse{
+		Notification: delivery,
+		Success:      true,
+		Message:      "Template notification processed successfully",
 	}, nil
 }
 
-// ListTemplates lists all notification templates
-func (s *Server) ListTemplates(ctx context.Context, req *pb.ListTemplatesRequest) (*pb.ListTemplatesResponse, error) {
-	log.Printf("[gRPC] ListTemplates request")
-
-	templates := s.templateStore.List()
-	pbTemplates := make([]*pb.NotificationTemplate, 0, len(templates))
-
-	for _, tmpl := range templates {
-		pbTemplates = append(pbTemplates, &pb.NotificationTemplate{
-			Id:        tmpl.ID,
-			Name:      tmpl.Name,
-			Type:      tmpl.Type,
-			Subject:   tmpl.Subject,
-			Content:   tmpl.Content,
-			Variables: tmpl.Variables,
-			CreatedAt: tmpl.CreatedAt,
-			UpdatedAt: tmpl.UpdatedAt,
+func (s *Server) SendBulkNotifications(_ context.Context, req *pb.SendBulkNotificationsRequest) (*pb.SendBulkNotificationsResponse, error) {
+	if req == nil || len(req.UserIds) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one user id is required")
+	}
+	response := &pb.SendBulkNotificationsResponse{}
+	for _, userID := range req.UserIds {
+		_, err := s.deliver(&pb.SendNotificationRequest{
+			UserId:   userID,
+			Title:    req.Title,
+			Message:  req.Message,
+			Type:     req.Type,
+			Priority: req.Priority,
+			Metadata: req.Metadata,
 		})
+		if err != nil {
+			response.TotalFailed++
+			response.FailedUserIds = append(response.FailedUserIds, userID)
+		} else {
+			response.TotalSent++
+		}
 	}
-
-	return &pb.ListTemplatesResponse{
-		Templates: pbTemplates,
-		Total:     int32(len(templates)),
-	}, nil
+	return response, nil
 }
 
-// CreateTemplate creates a new notification template
-func (s *Server) CreateTemplate(ctx context.Context, req *pb.CreateTemplateRequest) (*pb.CreateTemplateResponse, error) {
-	log.Printf("[gRPC] CreateTemplate request: name=%s", req.Name)
+func (s *Server) GetNotification(_ context.Context, req *pb.GetNotificationRequest) (*pb.GetNotificationResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "notification id is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	notification, ok := s.notifications[req.Id]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "notification not found: %s", req.Id)
+	}
+	return &pb.GetNotificationResponse{Notification: notification}, nil
+}
 
-	tmpl := &template.NotificationTemplate{
-		ID:        req.Name, // Use name as ID for simplicity
-		Name:      req.Name,
-		Type:      req.Type,
-		Subject:   req.Subject,
-		Content:   req.Content,
-		Variables: req.Variables,
+func (s *Server) GetNotificationsByUser(_ context.Context, req *pb.GetNotificationsByUserRequest) (*pb.GetNotificationsResponse, error) {
+	if req == nil || req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	page := int(req.GetPagination().GetPage())
+	if page < 1 {
+		page = 1
+	}
+	pageSize := int(req.GetPagination().GetPageSize())
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
 	}
 
-	if err := s.templateStore.Save(tmpl); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to save template: %v", err)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var filtered []*pb.Notification
+	for _, id := range s.order {
+		notification := s.notifications[id]
+		if notification.UserId != req.UserId {
+			continue
+		}
+		if req.Status != pb.NotificationStatus_NOTIFICATION_STATUS_UNSPECIFIED && notification.Status != req.Status {
+			continue
+		}
+		if req.Type != pb.NotificationType_NOTIFICATION_TYPE_UNSPECIFIED && notification.Type != req.Type {
+			continue
+		}
+		filtered = append(filtered, notification)
 	}
 
-	log.Printf("[gRPC] CreateTemplate success: id=%s", tmpl.ID)
-
-	return &pb.CreateTemplateResponse{
-		Template: &pb.NotificationTemplate{
-			Id:        tmpl.ID,
-			Name:      tmpl.Name,
-			Type:      tmpl.Type,
-			Subject:   tmpl.Subject,
-			Content:   tmpl.Content,
-			Variables: tmpl.Variables,
-			CreatedAt: tmpl.CreatedAt,
-			UpdatedAt: tmpl.UpdatedAt,
+	total := len(filtered)
+	start := (page - 1) * pageSize
+	if start > total {
+		start = total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + pageSize - 1) / pageSize
+	}
+	return &pb.GetNotificationsResponse{
+		Notifications: filtered[start:end],
+		Pagination: &common.PaginationResponse{
+			TotalItems:  int32(total),
+			TotalPages:  int32(totalPages),
+			CurrentPage: int32(page),
+			PageSize:    int32(pageSize),
+			HasNext:     page < totalPages,
+			HasPrev:     page > 1,
 		},
 	}, nil
 }
 
-// UpdateTemplate updates an existing notification template
-func (s *Server) UpdateTemplate(ctx context.Context, req *pb.UpdateTemplateRequest) (*pb.UpdateTemplateResponse, error) {
-	log.Printf("[gRPC] UpdateTemplate request: id=%s", req.Id)
+func (s *Server) markRead(userID, id string) (*pb.Notification, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id != "" {
+		notification, ok := s.notifications[id]
+		if !ok {
+			return nil, status.Errorf(codes.NotFound, "notification not found: %s", id)
+		}
+		if userID != "" && notification.UserId != userID {
+			return nil, status.Error(codes.PermissionDenied, "notification does not belong to user")
+		}
+		if notification.Metadata == nil {
+			notification.Metadata = make(map[string]string)
+		}
+		notification.Metadata["read"] = "true"
+		notification.Metadata["read_at"] = time.Now().UTC().Format(time.RFC3339)
+		return notification, nil
+	}
+	marked := 0
+	for _, notificationID := range s.order {
+		notification := s.notifications[notificationID]
+		if notification.UserId != userID {
+			continue
+		}
+		if notification.Metadata == nil {
+			notification.Metadata = make(map[string]string)
+		}
+		notification.Metadata["read"] = "true"
+		notification.Metadata["read_at"] = time.Now().UTC().Format(time.RFC3339)
+		marked++
+	}
+	if marked == 0 {
+		return nil, status.Errorf(codes.NotFound, "no notifications found for user: %s", userID)
+	}
+	return &pb.Notification{UserId: userID}, nil
+}
 
-	tmpl, err := s.templateStore.Get(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "template not found: %v", err)
+func (s *Server) MarkAsRead(_ context.Context, req *pb.MarkAsReadRequest) (*pb.MarkAsReadResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "notification id is required")
 	}
+	if _, err := s.markRead("", req.Id); err != nil {
+		return nil, err
+	}
+	return &pb.MarkAsReadResponse{Success: true, Message: "Notification marked as read"}, nil
+}
 
-	// Update fields
-	if req.Name != "" {
-		tmpl.Name = req.Name
+func (s *Server) MarkAllAsRead(_ context.Context, req *pb.MarkAllAsReadRequest) (*pb.MarkAsReadResponse, error) {
+	if req == nil || req.UserId == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
-	if req.Type != "" {
-		tmpl.Type = req.Type
+	if _, err := s.markRead(req.UserId, ""); err != nil {
+		return nil, err
 	}
-	if req.Subject != "" {
-		tmpl.Subject = req.Subject
-	}
-	if req.Content != "" {
-		tmpl.Content = req.Content
-	}
-	if len(req.Variables) > 0 {
-		tmpl.Variables = req.Variables
-	}
+	return &pb.MarkAsReadResponse{Success: true, Message: "Notifications marked as read"}, nil
+}
 
-	if err := s.templateStore.Save(tmpl); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update template: %v", err)
+func (s *Server) ProcessInvoicePaymentEvent(_ context.Context, req *pb.ProcessInvoicePaymentEventRequest) (*pb.ProcessInvoicePaymentEventResponse, error) {
+	if req == nil || req.Event == nil {
+		return nil, status.Error(codes.InvalidArgument, "invoice payment event is required")
 	}
-
-	log.Printf("[gRPC] UpdateTemplate success: id=%s", tmpl.ID)
-
-	return &pb.UpdateTemplateResponse{
-		Template: &pb.NotificationTemplate{
-			Id:        tmpl.ID,
-			Name:      tmpl.Name,
-			Type:      tmpl.Type,
-			Subject:   tmpl.Subject,
-			Content:   tmpl.Content,
-			Variables: tmpl.Variables,
-			CreatedAt: tmpl.CreatedAt,
-			UpdatedAt: tmpl.UpdatedAt,
+	event := req.Event
+	if event.UserId == "" || event.InvoiceId == "" {
+		return nil, status.Error(codes.InvalidArgument, "invoice and user ids are required")
+	}
+	amount := ""
+	if event.Amount != nil {
+		amount = fmt.Sprintf("%d %s", event.Amount.Amount, event.Amount.Currency)
+	}
+	notification := s.record(&pb.Notification{
+		UserId:  event.UserId,
+		Title:   "Invoice payment received",
+		Message: fmt.Sprintf("Invoice %s payment %s: %s", event.InvoiceId, event.PaymentStatus, strings.TrimSpace(amount)),
+		Type:    pb.NotificationType_NOTIFICATION_TYPE_IN_APP,
+		Status:  pb.NotificationStatus_NOTIFICATION_STATUS_SENT,
+		Metadata: map[string]string{
+			"invoice_id":     event.InvoiceId,
+			"student_id":     event.StudentId,
+			"payment_status": event.PaymentStatus,
 		},
-	}, nil
-}
-
-// DeleteTemplate deletes a notification template
-func (s *Server) DeleteTemplate(ctx context.Context, req *pb.DeleteTemplateRequest) (*pb.DeleteTemplateResponse, error) {
-	log.Printf("[gRPC] DeleteTemplate request: id=%s", req.Id)
-
-	if err := s.templateStore.Delete(req.Id); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete template: %v", err)
-	}
-
-	log.Printf("[gRPC] DeleteTemplate success: id=%s", req.Id)
-
-	return &pb.DeleteTemplateResponse{
-		Success: true,
-		Message: "Template deleted successfully",
-	}, nil
-}
-
-// HealthCheck returns the health status of the Notify service
-func (s *Server) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	return &pb.HealthCheckResponse{
-		Status:  "SERVING",
-		Service: "notify-service",
-		Version: "1.0.0",
+		SentAt: timestamppb.Now(),
+	})
+	return &pb.ProcessInvoicePaymentEventResponse{
+		Success:       true,
+		Message:       "Invoice payment event processed",
+		Notifications: []*pb.Notification{notification},
 	}, nil
 }

@@ -7,7 +7,7 @@
 package school
 
 import (
-	common "github.com/educonnect/educonnect/internal/pkg/proto/common"
+	common "educonnect/internal/pkg/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"

@@ -70,6 +70,11 @@ services:
       DB_IDENTITY_USERNAME: identity_user
       DB_IDENTITY_PASSWORD: ${IDENTITY_DB_PASSWORD}
       DB_SCHOOL_DATABASE: school_db
+      DB_FINANCE_HOST: mysql-finance
+      DB_FINANCE_PORT: 3306
+      DB_FINANCE_DATABASE: finance_db
+      DB_FINANCE_USERNAME: finance_user
+      DB_FINANCE_PASSWORD: ${FINANCE_DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       CACHE_DRIVER: redis

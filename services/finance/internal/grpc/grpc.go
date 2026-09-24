@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 
-	"educonnect/finance/internal/pkg/proto/finance"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

@@ -12,18 +12,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/gin-gonic/gin"
 	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 
+	pb "educonnect/internal/pkg/proto/notify"
 	"educonnect/notify/internal/auth"
-	"educonnect/notify/internal/grpc"
+	grpcserver "educonnect/notify/internal/grpc"
 	"educonnect/notify/internal/router"
 	"educonnect/notify/internal/template"
-	pb "educonnect/internal/pkg/proto/notify"
 )
 
 // ─── Broker topology (khớp docker/rabbitmq/definitions.json) ──
@@ -95,8 +98,8 @@ func declareTopology(ch *amqp.Channel) error {
 		}
 	}
 	if _, err := ch.QueueDeclare(queueNotify, true, false, false, false, amqp.Table{
-		"x-queue-type":             "quorum",
-		"x-dead-letter-exchange":   "educonnect.dlx",
+		"x-queue-type":           "quorum",
+		"x-dead-letter-exchange": "educonnect.dlx",
 	}); err != nil {
 		return fmt.Errorf("declare queue: %w", err)
 	}
@@ -181,8 +184,13 @@ func setupGRPC(port string, store *template.Store) *grpc.Server {
 	}
 
 	grpcServer := grpc.NewServer()
-	notifyServer := grpc.NewServer(store)
-	pb.RegisterNotifyServiceServer(grpcServer, notifyServer)
+	notifyServer := grpcserver.NewServer(store)
+	pb.RegisterNotificationServiceServer(grpcServer, notifyServer)
+	pb.RegisterNotificationEventServiceServer(grpcServer, notifyServer)
+	healthServer := health.NewServer()
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+	reflection.Register(grpcServer)
 
 	log.Printf("[gRPC] Notify service listening on port %s", port)
 

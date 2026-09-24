@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,13 +12,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/gin-gonic/gin"
 	"github.com/go-fuego/fuego"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
@@ -164,9 +162,11 @@ func main() {
 		httpPort = "8080"
 	}
 
-	grpcPort := os.Getenv("GRPC_PORT")
-	if grpcPort == "" {
-		grpcPort = "8082"
+	grpcPort := 8082
+	if gp := os.Getenv("GRPC_PORT"); gp != "" {
+		if port, err := strconv.Atoi(gp); err == nil {
+			grpcPort = port
+		}
 	}
 
 	// JWKS cache (RS256) — MicahParks/keyfunc, tự refresh 15m, kiểm tra iss/aud/exp/kid/tv/sid
@@ -174,7 +174,6 @@ func main() {
 	auth.MustInitJWKS(ctx)
 	defer auth.CloseJWKS()
 	log.Println("JWKS RS256 cache ready")
-
 
 	// Kết nối finance_db
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -255,16 +254,9 @@ func main() {
 
 	// ─── Start gRPC Server ─────────────────────────────────────────────────────
 	grpcServerConfig := grpcserver.Config{
-		Port:           8082, // Will be overridden by env var below
+		Port:           grpcPort,
 		MaxRecvMsgSize: 10 << 20, // 10 MB
 		MaxSendMsgSize: 10 << 20, // 10 MB
-	}
-
-	// Override port from environment variable
-	if gp := os.Getenv("GRPC_PORT"); gp != "" {
-		if port, err := strconv.Atoi(gp); err == nil {
-			grpcServerConfig.Port = port
-		}
 	}
 
 	grpcServer := grpcserver.NewServer(grpcServerConfig, logger)

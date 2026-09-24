@@ -22,6 +22,7 @@ import (
 	"gorm.io/gorm"
 
 	"educonnect/finance/internal/auth"
+	"educonnect/finance/internal/events"
 	grpcserver "educonnect/finance/internal/grpc"
 	"educonnect/finance/internal/model"
 	"educonnect/finance/internal/router"
@@ -190,7 +191,7 @@ func main() {
 	}
 
 	// Auto-migrate tables (gồm users_read_model)
-	db.AutoMigrate(&model.FeeType{}, &model.Invoice{}, &model.Payment{}, &model.UserReadModel{})
+	db.AutoMigrate(&model.FeeType{}, &model.Invoice{}, &model.InvoiceItem{}, &model.Payment{}, &model.UserReadModel{})
 	log.Println("finance_db connected and migrated")
 
 	// User sync consumer (RabbitMQ — không block main)
@@ -259,8 +260,9 @@ func main() {
 		MaxSendMsgSize: 10 << 20, // 10 MB
 	}
 
+	publisher := events.NewAMQPPublisher(os.Getenv("RABBITMQ_URL"))
 	grpcServer := grpcserver.NewServer(grpcServerConfig, logger)
-	grpcServer.RegisterServices()
+	grpcServer.RegisterServices(db, publisher)
 
 	go func() {
 		if err := grpcServer.Start(); err != nil {

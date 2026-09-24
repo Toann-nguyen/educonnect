@@ -7,32 +7,51 @@ type FeeType struct {
 	Name        string    `json:"name" example:"Học phí"`
 	Description string    `json:"description" example:"Học phí học kỳ 1"`
 	Amount      float64   `json:"amount" example:"1000000"`
+	Currency    string    `json:"currency" gorm:"size:3;default:VND" example:"VND"`
 	IsActive    bool      `json:"is_active" example:"true"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Invoice struct {
-	ID        uint       `json:"id" gorm:"primaryKey" example:"1"`
-	StudentID uint       `json:"student_id" example:"10"`
-	FeeTypeID uint       `json:"fee_type_id" example:"3"`
-	Amount    float64    `json:"amount" example:"1000000"`
-	Status    string     `json:"status" example:"pending"`
-	DueDate   time.Time  `json:"due_date"`
-	PaidAt    *time.Time `json:"paid_at,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID          uint       `json:"id" gorm:"primaryKey" example:"1"`
+	StudentID   uint       `json:"student_id" example:"10"`
+	UserID      uint       `json:"user_id" example:"5"`
+	FeeTypeID   uint       `json:"fee_type_id" example:"3"`
+	Amount      float64    `json:"amount" example:"1000000"`
+	Currency    string     `json:"currency" gorm:"size:3;default:VND" example:"VND"`
+	Status      string     `json:"status" example:"pending"`
+	Description string     `json:"description"`
+	DueDate     time.Time  `json:"due_date"`
+	PaidAt      *time.Time `json:"paid_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type InvoiceItem struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	InvoiceID   uint      `json:"invoice_id;index"`
+	FeeTypeID   uint      `json:"fee_type_id"`
+	Description string    `json:"description"`
+	Amount      float64   `json:"amount"`
+	Quantity    int32     `json:"quantity;default:1"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Payment struct {
-	ID        uint      `json:"id" gorm:"primaryKey" example:"1"`
-	InvoiceID uint      `json:"invoice_id" example:"1"`
-	Amount    float64   `json:"amount" example:"1000000"`
-	Method    string    `json:"method" example:"cash"`
-	Note      string    `json:"note" example:"Thanh toán học phí"`
-	PaidBy    uint      `json:"paid_by" example:"5"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            uint      `json:"id" gorm:"primaryKey" example:"1"`
+	InvoiceID     uint      `json:"invoice_id" example:"1"`
+	Amount        float64   `json:"amount" example:"1000000"`
+	Currency      string    `json:"currency" gorm:"size:3;default:VND" example:"VND"`
+	Method        string    `json:"method" example:"cash"`
+	Status        string    `json:"status" gorm:"default:completed" example:"completed"`
+	TransactionID string    `json:"transaction_id"`
+	Gateway       string    `json:"gateway"`
+	Note          string    `json:"note" example:"Thanh toán học phí"`
+	PaidBy        uint      `json:"paid_by" example:"5"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // UserReadModel — read model sync từ Identity qua user_events.

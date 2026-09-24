@@ -1,0 +1,21 @@
+{{- range .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ .name }}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ .name }}
+  ports:
+    - name: grpc
+      port: {{ .grpcPort }}
+      targetPort: grpc
+    - name: health
+      port: {{ .healthPort }}
+      targetPort: health
+{{- end }}

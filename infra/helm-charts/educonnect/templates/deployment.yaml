@@ -1,0 +1,47 @@
+{{- range .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ .name }}
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: "{{ .image }}"
+          ports:
+            - name: grpc
+              containerPort: {{ .grpcPort }}
+            - name: health
+              containerPort: {{ .healthPort }}
+          env:
+            - name: GRPC_PORT
+              value: "{{ .grpcPort }}"
+            - name: HEALTH_PORT
+              value: "{{ .healthPort }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml .resources | nindent 12 }}
+{{- end }}

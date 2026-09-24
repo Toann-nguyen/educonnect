@@ -2,37 +2,52 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Illuminate\Support\ServiceProvider;
 use App\Domains\Identity\Models\User;
+use App\Domains\Identity\Repositories\Auth\AuthRepository;
+use App\Domains\Identity\Repositories\Auth\EmailVerificationRepository;
+use App\Domains\Identity\Repositories\Contracts\AuthRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\EmailVerificationRepositoryInterface;
+use App\Domains\Identity\Repositories\Contracts\UserRepositoryInterface;
+use App\Domains\Identity\Repositories\Eloquent\UserRepository;
+// School Domain — Repository & Service contracts (canonical)
+use App\Domains\Identity\Services\AuthService;
+use App\Domains\Identity\Services\Interface\AuthServiceInterface;
+use App\Domains\School\Application\Grades\Commands\CreateGradeCommand;
+use App\Domains\School\Application\Grades\Commands\CreateGradeCommandHandler;
+use App\Domains\School\Application\Grades\Queries\GetMyGradesQuery;
+use App\Domains\School\Application\Grades\Queries\GetMyGradesQueryHandler;
+use App\Domains\School\Repositories\Contracts\ConductScoreRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\DisciplineRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\DisciplineTypeRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\GradeRepositoryInterface;
+use App\Domains\School\Repositories\Contracts\ScheduleRepositoryInterface;
+use App\Domains\School\Repositories\Eloquent\ConductScoreRepository;
+use App\Domains\School\Repositories\Eloquent\DisciplineRepository;
+use App\Domains\School\Repositories\Eloquent\DisciplineTypeRepository;
+use App\Domains\School\Repositories\Eloquent\GradeRepository;
+use App\Domains\School\Repositories\Eloquent\ScheduleRepository;
+use App\Domains\School\Services\ConductScoreService;
+use App\Domains\School\Services\DashBoardService;
+use App\Domains\School\Services\DisciplineService;
+use App\Domains\School\Services\GradeService;
+use App\Domains\School\Services\Interface\ConductScoreServiceInterface;
+use App\Domains\School\Services\Interface\DashBoardServiceInterface;
+use App\Domains\School\Services\Interface\DisciplineServiceInterface;
+use App\Domains\School\Services\Interface\GradeServiceInterface;
+use App\Domains\School\Services\Interface\ScheduleServiceInterface;
+use App\Domains\School\Services\Interface\StudentServiceInterface;
+use App\Domains\School\Services\ScheduleService;
+use App\Domains\School\Services\StudentService;
+use App\Domains\Shared\Bus\CommandBus;
+use App\Domains\Shared\Bus\InMemoryCommandBus;
+use App\Domains\Shared\Bus\InMemoryQueryBus;
+use App\Domains\Shared\Bus\QueryBus;
 use App\Observers\UserObserver;
 use Dedoc\Scramble\Scramble;
-
-// School Domain — Repository & Service contracts (canonical)
-use App\Domains\School\Repositories\Contracts\ScheduleRepositoryInterface;
-use App\Domains\School\Repositories\Contracts\GradeRepositoryInterface;
-use App\Domains\School\Repositories\Contracts\DisciplineRepositoryInterface;
-use App\Domains\School\Repositories\Contracts\ConductScoreRepositoryInterface;
-use App\Domains\School\Repositories\Contracts\DisciplineTypeRepositoryInterface;
-use App\Domains\School\Repositories\Eloquent\ScheduleRepository;
-use App\Domains\School\Repositories\Eloquent\GradeRepository;
-use App\Domains\School\Repositories\Eloquent\DisciplineRepository;
-use App\Domains\School\Repositories\Eloquent\ConductScoreRepository;
-use App\Domains\School\Repositories\Eloquent\DisciplineTypeRepository;
-use App\Domains\School\Services\Interface\ScheduleServiceInterface;
-use App\Domains\School\Services\Interface\GradeServiceInterface;
-use App\Domains\School\Services\Interface\DisciplineServiceInterface;
-use App\Domains\School\Services\Interface\ConductScoreServiceInterface;
-use App\Domains\School\Services\Interface\StudentServiceInterface;
-use App\Domains\School\Services\Interface\DashBoardServiceInterface;
-use App\Domains\School\Services\ScheduleService;
-use App\Domains\School\Services\GradeService;
-use App\Domains\School\Services\DisciplineService;
-use App\Domains\School\Services\ConductScoreService;
-use App\Domains\School\Services\StudentService;
-use App\Domains\School\Services\DashBoardService;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -57,10 +72,24 @@ class AppServiceProvider extends ServiceProvider
 
         // Finance via Go microservice — không bind repository/service trực tiếp
         // Identity — T1.2: re-enable for feature/auth (gateway still proxies in prod)
-        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\AuthRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\AuthRepository::class);
-        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\EmailVerificationRepositoryInterface::class, \App\Domains\Identity\Repositories\Auth\EmailVerificationRepository::class);
-        $this->app->bind(\App\Domains\Identity\Repositories\Contracts\UserRepositoryInterface::class, \App\Domains\Identity\Repositories\Eloquent\UserRepository::class);
-        $this->app->bind(\App\Domains\Identity\Services\Interface\AuthServiceInterface::class, \App\Domains\Identity\Services\AuthService::class);
+        $this->app->bind(AuthRepositoryInterface::class, AuthRepository::class);
+        $this->app->bind(EmailVerificationRepositoryInterface::class, EmailVerificationRepository::class);
+        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+        $this->app->bind(AuthServiceInterface::class, AuthService::class);
+
+        // === CQRS pilot: School grades (Phase 3) ===
+        $this->app->singleton(CommandBus::class, function ($app) {
+            $bus = new InMemoryCommandBus;
+            $bus->register(CreateGradeCommand::class, fn (CreateGradeCommand $command) => $app->make(CreateGradeCommandHandler::class)->handle($command));
+
+            return $bus;
+        });
+        $this->app->singleton(QueryBus::class, function ($app) {
+            $bus = new InMemoryQueryBus;
+            $bus->register(GetMyGradesQuery::class, fn (GetMyGradesQuery $query) => $app->make(GetMyGradesQueryHandler::class)->handle($query));
+
+            return $bus;
+        });
     }
 
     /**

@@ -8,6 +8,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gorm.io/gorm"
+
+	"educonnect/finance/internal/events"
 )
 
 // Config holds gRPC server configuration
@@ -44,9 +47,9 @@ func NewServer(config Config, logger *zap.Logger) *Server {
 }
 
 // RegisterServices registers all gRPC services
-func (s *Server) RegisterServices() {
+func (s *Server) RegisterServices(db *gorm.DB, publisher events.Publisher) {
 	// Register finance services
-	RegisterServices(s.server)
+	RegisterServices(s.server, db, publisher)
 
 	// Enable reflection for tools like grpcurl
 	reflection.Register(s.server)

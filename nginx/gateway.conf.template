@@ -24,6 +24,10 @@ upstream school_svc   { server php:9000;       keepalive 32; }
 upstream finance_svc  { server finance:8080;   keepalive 32; }
 upstream notify_svc   { server notify:8081;    keepalive 32; }
 upstream realtime_svc { server realtime:3000;  keepalive 32; }
+upstream identity_grpc { server identity-grpc:50051; keepalive 32; }
+upstream school_grpc   { server school-grpc:50053;   keepalive 32; }
+upstream finance_grpc  { server finance:8082;        keepalive 32; }
+upstream notify_grpc   { server notify:50052;        keepalive 32; }
 
 # ── Log format riêng cho gateway (kèm correlation_id) ────────
 log_format json_gateway escape=json
@@ -87,6 +91,18 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Correlation-ID $correlation_id;
     }
+    location = /health/identity-grpc {
+        access_log off;
+        proxy_pass http://identity-grpc:8080/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+    }
+    location = /health/school-grpc {
+        access_log off;
+        proxy_pass http://school-grpc:8080/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Correlation-ID $correlation_id;
+    }
     location = /health/realtime {
         access_log off;
         proxy_pass http://realtime_svc/health;
@@ -108,6 +124,50 @@ server {
         fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
         fastcgi_param REQUEST_URI      /api/health;
         fastcgi_pass school_svc;
+    }
+
+    # ── gRPC (internal Go services, auth enforced per RPC) ───
+    location = /auth.AuthService/Login {
+        limit_req zone=gw_auth burst=10 nodelay;
+        grpc_pass grpc://identity_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location = /auth.AuthService/RefreshToken {
+        limit_req zone=gw_auth burst=10 nodelay;
+        grpc_pass grpc://identity_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location = /auth.AuthService/Logout {
+        limit_req zone=gw_auth burst=10 nodelay;
+        grpc_pass grpc://identity_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location /auth. {
+        limit_req zone=gw_api burst=30 nodelay;
+        grpc_pass grpc://identity_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location /school. {
+        limit_req zone=gw_api burst=30 nodelay;
+        grpc_pass grpc://school_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location /finance. {
+        limit_req zone=gw_api burst=30 nodelay;
+        grpc_pass grpc://finance_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
+    }
+    location /notify. {
+        limit_req zone=gw_api burst=30 nodelay;
+        grpc_pass grpc://notify_grpc;
+        grpc_set_header Authorization $http_authorization;
+        grpc_set_header x-correlation-id $correlation_id;
     }
 
     # ── WebSocket (Socket.IO realtime) ───────────────────────

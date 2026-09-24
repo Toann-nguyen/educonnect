@@ -2,27 +2,37 @@
 
 namespace App\Domains\School\Http\Controllers;
 
+use App\Domains\School\Application\Grades\Commands\CreateGradeCommand;
+use App\Domains\School\Application\Grades\Queries\GetMyGradesQuery;
+use App\Domains\School\Models\Grade;
+use App\Domains\School\Services\Interface\GradeServiceInterface;
+use App\Domains\Shared\Bus\CommandBus;
+use App\Domains\Shared\Bus\QueryBus;
 use App\Http\Requests\StoreGradeRequest;
 use App\Http\Requests\UpdateGradeRequest;
 use App\Http\Resources\GradeResource;
-use App\Domains\School\Models\Grade;
-use App\Domains\School\Services\Interface\GradeServiceInterface;
-use App\Domains\School\Services\Interface\StudentServiceInterface;
 use Illuminate\Http\Request;
 
 class GradeController extends Controller
 {
     protected $gradeService;
-    public function __construct(GradeServiceInterface $gradeService)
+
+    protected $commandBus;
+
+    protected $queryBus;
+
+    public function __construct(GradeServiceInterface $gradeService, CommandBus $commandBus, QueryBus $queryBus)
     {
         $this->gradeService = $gradeService;
+        $this->commandBus = $commandBus;
+        $this->queryBus = $queryBus;
         // Áp dụng middleware cho các hàm khác nếu cần
     }
 
     public function myGrades(Request $request)
     {
         $user = $request->user();
-        $personalGradesData = $this->gradeService->getPersonalGrades($user);
+        $personalGradesData = $this->queryBus->dispatch(new GetMyGradesQuery($user));
         // Kiểm tra nếu không có dữ liệu trả về (ví dụ: user là student nhưng chưa có record student)
         if (is_null($personalGradesData) || empty($personalGradesData)) {
             return response()->json(['data' => []]); // Trả về mảng rỗng
@@ -47,27 +57,30 @@ class GradeController extends Controller
                     'data' => GradeResource::collection($childData['grades']),
                 ];
             }
+
             return response()->json($formattedData);
         }
 
         return response()->json([]);
     }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $grades = $this->gradeService->getAllGrades($request->all(), $request->user());
+
         return $grades;
     }
-
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(StoreGradeRequest $request)
     {
-        $grade = $this->gradeService->createGrade($request->validated(), $request->user());
+        $grade = $this->commandBus->dispatch(new CreateGradeCommand($request->validated(), $request->user()));
+
         return (new GradeResource($grade))
             ->response()
             ->setStatusCode(201);
@@ -79,6 +92,7 @@ class GradeController extends Controller
     public function show(Request $request, Grade $grade)
     {
         $this->gradeService->checkViewPermission($grade, $request->user());
+
         return new GradeResource($grade->load(['student.user.profile', 'subject', 'teacher.profile']));
     }
 
@@ -88,6 +102,7 @@ class GradeController extends Controller
     public function update(UpdateGradeRequest $request, Grade $grade)
     {
         $updatedGrade = $this->gradeService->updateGrade($grade, $request->validated(), $request->user());
+
         return new GradeResource($updatedGrade);
     }
 
@@ -97,8 +112,9 @@ class GradeController extends Controller
     public function destroy(Request $request, Grade $grade)
     {
         $this->gradeService->deleteGrade($grade, $request->user());
+
         return response()->json([
-            'message' => 'Grade deleted successfully'
+            'message' => 'Grade deleted successfully',
         ]);
     }
 
@@ -108,6 +124,7 @@ class GradeController extends Controller
     public function getByClass(Request $request, $classId)
     {
         $grades = $this->gradeService->getGradesByClass($classId, $request->all(), $request->user());
+
         return GradeResource::collection($grades);
     }
 
@@ -117,6 +134,7 @@ class GradeController extends Controller
     public function getStudentStats(Request $request, $studentId)
     {
         $stats = $this->gradeService->getStudentGradeStats($studentId, $request->user());
+
         return response()->json($stats);
     }
 }

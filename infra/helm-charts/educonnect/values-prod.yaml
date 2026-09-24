@@ -1,0 +1,39 @@
+# Production values for the Go gRPC microservices.
+# Images are built from ~/educonnect/services/* on branch chore/infra-devops.
+# Secrets (DB passwords, mail credentials) must exist in the release namespace.
+
+namespace: educonnect-prod
+
+services:
+  - name: identity-grpc
+    image: "educonnect/identity-grpc:chore-infra-devops"
+    replicas: 2
+    grpcPort: 50051
+    healthPort: 8080
+    resources:
+      limits: { cpu: "500m", memory: "256Mi" }
+      requests: { cpu: "100m", memory: "64Mi" }
+  - name: school-grpc
+    image: "educonnect/school-grpc:chore-infra-devops"
+    replicas: 2
+    grpcPort: 50053
+    healthPort: 8080
+    resources:
+      limits: { cpu: "500m", memory: "256Mi" }
+      requests: { cpu: "100m", memory: "64Mi" }
+  - name: finance
+    image: "educonnect/finance:chore-infra-devops"
+    replicas: 2
+    grpcPort: 8082
+    healthPort: 8080
+    resources:
+      limits: { cpu: "500m", memory: "256Mi" }
+      requests: { cpu: "100m", memory: "64Mi" }
+  - name: notify
+    image: "educonnect/notify:chore-infra-devops"
+    replicas: 2
+    grpcPort: 50052
+    healthPort: 8081
+    resources:
+      limits: { cpu: "500m", memory: "256Mi" }
+      requests: { cpu: "100m", memory: "64Mi" }

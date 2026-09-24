@@ -30,6 +30,10 @@ services:
         condition: service_healthy
       identity:
         condition: service_healthy
+      identity-grpc:
+        condition: service_healthy
+      school-grpc:
+        condition: service_healthy
       finance:
         condition: service_started
       notify:
@@ -168,12 +172,73 @@ services:
       retries: 3
       start_period: 30s
 
+  # ── Identity gRPC (Go — internal only) ────────────────────
+  identity-grpc:
+    build:
+      context: .
+      dockerfile: services/identity-grpc/Dockerfile
+    restart: unless-stopped
+    environment:
+      GRPC_PORT: "50051"
+      HEALTH_PORT: "8080"
+      DB_IDENTITY_HOST: mysql-identity
+      DB_IDENTITY_PORT: "3306"
+      DB_IDENTITY_DATABASE: identity_db
+      DB_IDENTITY_USERNAME: identity_user
+      DB_IDENTITY_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      IDENTITY_HTTP_URL: http://identity:9000
+      SCHOOL_GRPC_ADDR: school-grpc:50053
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+    depends_on:
+      mysql-identity:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      school-grpc:
+        condition: service_started
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── School gRPC (Go — internal only) ──────────────────────
+  school-grpc:
+    build:
+      context: .
+      dockerfile: services/school-grpc/Dockerfile
+    restart: unless-stopped
+    environment:
+      GRPC_PORT: "50053"
+      HEALTH_PORT: "8080"
+      DB_SCHOOL_HOST: mysql-school
+      DB_SCHOOL_PORT: "3306"
+      DB_SCHOOL_DATABASE: school_db
+      DB_SCHOOL_USERNAME: school_user
+      DB_SCHOOL_PASSWORD: ${SCHOOL_DB_PASSWORD}
+      IDENTITY_HTTP_URL: http://identity:9000
+    depends_on:
+      mysql-school:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+    networks:
+      - educonnect
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # ── Finance Service (Go) ──────────────────────────────────
   finance:
     build: ./services/finance
     restart: unless-stopped
     environment:
       PORT: "8080"
+      GRPC_PORT: "8082"
       DB_FINANCE_HOST: mysql-finance
       DB_FINANCE_PORT: "3306"
       DB_FINANCE_DATABASE: finance_db
@@ -205,6 +270,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "8081"
+      GRPC_PORT: "50052"
       AUTH_ISSUER: ${JWT_ISS:-http://localhost}
       AUTH_AUDIENCE: ${JWT_AUD:-educonnect-api}
       AUTH_JWKS_URL: ${AUTH_JWKS_URL:-http://gateway/.well-known/jwks.json}

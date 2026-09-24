@@ -95,6 +95,17 @@ message Attendance {
     google.protobuf.Timestamp created_at = 7;
 }
 
+message Teacher {
+    string id = 1;
+    string user_id = 2;
+    string teacher_code = 3;
+    string department = 4;
+    repeated string subjects = 5;
+    google.protobuf.Timestamp hire_date = 6;
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+}
+
 // ============ Requests ============
 
 message GetStudentRequest {
@@ -146,6 +157,10 @@ message CreateGradeRequest {
     double score = 4;
     GradeType type = 5;
     int32 semester = 6;
+}
+
+message GetTeacherByUserIdRequest {
+    string user_id = 1;
 }
 
 message GetScheduleRequest {
@@ -201,6 +216,10 @@ message CreateGradeResponse {
     string message = 3;
 }
 
+message GetTeacherResponse {
+    Teacher teacher = 1;
+}
+
 message GetScheduleResponse {
     Schedule schedule = 1;
 }
@@ -233,4 +252,8 @@ service GradeService {
 service ScheduleService {
     rpc GetSchedule(GetScheduleRequest) returns (GetScheduleResponse);
     rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+}
+
+service TeacherService {
+    rpc GetTeacherByUserId(GetTeacherByUserIdRequest) returns (GetTeacherResponse);
 }

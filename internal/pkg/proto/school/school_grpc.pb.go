@@ -691,3 +691,105 @@ var ScheduleService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "school.proto",
 }
+
+const (
+	TeacherService_GetTeacherByUserId_FullMethodName = "/school.TeacherService/GetTeacherByUserId"
+)
+
+// TeacherServiceClient is the client API for TeacherService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type TeacherServiceClient interface {
+	GetTeacherByUserId(ctx context.Context, in *GetTeacherByUserIdRequest, opts ...grpc.CallOption) (*GetTeacherResponse, error)
+}
+
+type teacherServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewTeacherServiceClient(cc grpc.ClientConnInterface) TeacherServiceClient {
+	return &teacherServiceClient{cc}
+}
+
+func (c *teacherServiceClient) GetTeacherByUserId(ctx context.Context, in *GetTeacherByUserIdRequest, opts ...grpc.CallOption) (*GetTeacherResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTeacherResponse)
+	err := c.cc.Invoke(ctx, TeacherService_GetTeacherByUserId_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// TeacherServiceServer is the server API for TeacherService service.
+// All implementations must embed UnimplementedTeacherServiceServer
+// for forward compatibility.
+type TeacherServiceServer interface {
+	GetTeacherByUserId(context.Context, *GetTeacherByUserIdRequest) (*GetTeacherResponse, error)
+	mustEmbedUnimplementedTeacherServiceServer()
+}
+
+// UnimplementedTeacherServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedTeacherServiceServer struct{}
+
+func (UnimplementedTeacherServiceServer) GetTeacherByUserId(context.Context, *GetTeacherByUserIdRequest) (*GetTeacherResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTeacherByUserId not implemented")
+}
+func (UnimplementedTeacherServiceServer) mustEmbedUnimplementedTeacherServiceServer() {}
+func (UnimplementedTeacherServiceServer) testEmbeddedByValue()                        {}
+
+// UnsafeTeacherServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to TeacherServiceServer will
+// result in compilation errors.
+type UnsafeTeacherServiceServer interface {
+	mustEmbedUnimplementedTeacherServiceServer()
+}
+
+func RegisterTeacherServiceServer(s grpc.ServiceRegistrar, srv TeacherServiceServer) {
+	// If the following call panics, it indicates UnimplementedTeacherServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&TeacherService_ServiceDesc, srv)
+}
+
+func _TeacherService_GetTeacherByUserId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTeacherByUserIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeacherServiceServer).GetTeacherByUserId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeacherService_GetTeacherByUserId_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeacherServiceServer).GetTeacherByUserId(ctx, req.(*GetTeacherByUserIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// TeacherService_ServiceDesc is the grpc.ServiceDesc for TeacherService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var TeacherService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "school.TeacherService",
+	HandlerType: (*TeacherServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetTeacherByUserId",
+			Handler:    _TeacherService_GetTeacherByUserId_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "school.proto",
+}

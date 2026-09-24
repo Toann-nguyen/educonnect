@@ -45,7 +45,7 @@ func openDB() *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to connect to school_db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Student{}, &model.SchoolClass{}, &model.Subject{}, &model.Grade{}, &model.Schedule{}, &model.StudentGuardian{}); err != nil {
+	if err := db.AutoMigrate(&model.Student{}, &model.SchoolClass{}, &model.Subject{}, &model.Grade{}, &model.Schedule{}, &model.Teacher{}, &model.StudentGuardian{}); err != nil {
 		log.Fatalf("Failed to migrate school read models: %v", err)
 	}
 	return db
@@ -65,6 +65,7 @@ func main() {
 	school.RegisterClassServiceServer(grpcServer, svc)
 	school.RegisterGradeServiceServer(grpcServer, svc)
 	school.RegisterScheduleServiceServer(grpcServer, svc)
+	school.RegisterTeacherServiceServer(grpcServer, svc)
 	healthServer := health.NewServer()
 	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 	healthpb.RegisterHealthServer(grpcServer, healthServer)

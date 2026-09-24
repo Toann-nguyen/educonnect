@@ -71,6 +71,7 @@ func (h PaymentHandler) Create(c fuego.ContextWithBody[dto.CreatePaymentRequest]
 	p2 := model.Payment{
 		InvoiceID: body.InvoiceID,
 		Amount:    body.Amount,
+		Currency:  dto.NormalizeCurrency(body.Currency),
 		Method:    body.Method,
 		Note:      body.Note,
 		PaidBy:    body.PaidBy,

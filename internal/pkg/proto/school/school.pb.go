@@ -740,6 +740,106 @@ func (x *Attendance) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type Teacher struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	TeacherCode   string                 `protobuf:"bytes,3,opt,name=teacher_code,json=teacherCode,proto3" json:"teacher_code,omitempty"`
+	Department    string                 `protobuf:"bytes,4,opt,name=department,proto3" json:"department,omitempty"`
+	Subjects      []string               `protobuf:"bytes,5,rep,name=subjects,proto3" json:"subjects,omitempty"`
+	HireDate      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=hire_date,json=hireDate,proto3" json:"hire_date,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Teacher) Reset() {
+	*x = Teacher{}
+	mi := &file_school_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Teacher) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Teacher) ProtoMessage() {}
+
+func (x *Teacher) ProtoReflect() protoreflect.Message {
+	mi := &file_school_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Teacher.ProtoReflect.Descriptor instead.
+func (*Teacher) Descriptor() ([]byte, []int) {
+	return file_school_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Teacher) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Teacher) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Teacher) GetTeacherCode() string {
+	if x != nil {
+		return x.TeacherCode
+	}
+	return ""
+}
+
+func (x *Teacher) GetDepartment() string {
+	if x != nil {
+		return x.Department
+	}
+	return ""
+}
+
+func (x *Teacher) GetSubjects() []string {
+	if x != nil {
+		return x.Subjects
+	}
+	return nil
+}
+
+func (x *Teacher) GetHireDate() *timestamppb.Timestamp {
+	if x != nil {
+		return x.HireDate
+	}
+	return nil
+}
+
+func (x *Teacher) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Teacher) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
 type GetStudentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -749,7 +849,7 @@ type GetStudentRequest struct {
 
 func (x *GetStudentRequest) Reset() {
 	*x = GetStudentRequest{}
-	mi := &file_school_proto_msgTypes[6]
+	mi := &file_school_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -761,7 +861,7 @@ func (x *GetStudentRequest) String() string {
 func (*GetStudentRequest) ProtoMessage() {}
 
 func (x *GetStudentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[6]
+	mi := &file_school_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -774,7 +874,7 @@ func (x *GetStudentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStudentRequest.ProtoReflect.Descriptor instead.
 func (*GetStudentRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{6}
+	return file_school_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *GetStudentRequest) GetId() string {
@@ -793,7 +893,7 @@ type GetStudentByUserIdRequest struct {
 
 func (x *GetStudentByUserIdRequest) Reset() {
 	*x = GetStudentByUserIdRequest{}
-	mi := &file_school_proto_msgTypes[7]
+	mi := &file_school_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -805,7 +905,7 @@ func (x *GetStudentByUserIdRequest) String() string {
 func (*GetStudentByUserIdRequest) ProtoMessage() {}
 
 func (x *GetStudentByUserIdRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[7]
+	mi := &file_school_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -818,7 +918,7 @@ func (x *GetStudentByUserIdRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStudentByUserIdRequest.ProtoReflect.Descriptor instead.
 func (*GetStudentByUserIdRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{7}
+	return file_school_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetStudentByUserIdRequest) GetUserId() string {
@@ -839,7 +939,7 @@ type ListStudentsRequest struct {
 
 func (x *ListStudentsRequest) Reset() {
 	*x = ListStudentsRequest{}
-	mi := &file_school_proto_msgTypes[8]
+	mi := &file_school_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -851,7 +951,7 @@ func (x *ListStudentsRequest) String() string {
 func (*ListStudentsRequest) ProtoMessage() {}
 
 func (x *ListStudentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[8]
+	mi := &file_school_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -864,7 +964,7 @@ func (x *ListStudentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStudentsRequest.ProtoReflect.Descriptor instead.
 func (*ListStudentsRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{8}
+	return file_school_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListStudentsRequest) GetClassId() string {
@@ -899,7 +999,7 @@ type CreateStudentRequest struct {
 
 func (x *CreateStudentRequest) Reset() {
 	*x = CreateStudentRequest{}
-	mi := &file_school_proto_msgTypes[9]
+	mi := &file_school_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -911,7 +1011,7 @@ func (x *CreateStudentRequest) String() string {
 func (*CreateStudentRequest) ProtoMessage() {}
 
 func (x *CreateStudentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[9]
+	mi := &file_school_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -924,7 +1024,7 @@ func (x *CreateStudentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStudentRequest.ProtoReflect.Descriptor instead.
 func (*CreateStudentRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{9}
+	return file_school_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *CreateStudentRequest) GetUserId() string {
@@ -959,7 +1059,7 @@ type UpdateStudentRequest struct {
 
 func (x *UpdateStudentRequest) Reset() {
 	*x = UpdateStudentRequest{}
-	mi := &file_school_proto_msgTypes[10]
+	mi := &file_school_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -971,7 +1071,7 @@ func (x *UpdateStudentRequest) String() string {
 func (*UpdateStudentRequest) ProtoMessage() {}
 
 func (x *UpdateStudentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[10]
+	mi := &file_school_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -984,7 +1084,7 @@ func (x *UpdateStudentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateStudentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateStudentRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{10}
+	return file_school_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateStudentRequest) GetId() string {
@@ -1017,7 +1117,7 @@ type GetClassRequest struct {
 
 func (x *GetClassRequest) Reset() {
 	*x = GetClassRequest{}
-	mi := &file_school_proto_msgTypes[11]
+	mi := &file_school_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1029,7 +1129,7 @@ func (x *GetClassRequest) String() string {
 func (*GetClassRequest) ProtoMessage() {}
 
 func (x *GetClassRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[11]
+	mi := &file_school_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1042,7 +1142,7 @@ func (x *GetClassRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClassRequest.ProtoReflect.Descriptor instead.
 func (*GetClassRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{11}
+	return file_school_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetClassRequest) GetId() string {
@@ -1062,7 +1162,7 @@ type ListClassesRequest struct {
 
 func (x *ListClassesRequest) Reset() {
 	*x = ListClassesRequest{}
-	mi := &file_school_proto_msgTypes[12]
+	mi := &file_school_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1074,7 +1174,7 @@ func (x *ListClassesRequest) String() string {
 func (*ListClassesRequest) ProtoMessage() {}
 
 func (x *ListClassesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[12]
+	mi := &file_school_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,7 +1187,7 @@ func (x *ListClassesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClassesRequest.ProtoReflect.Descriptor instead.
 func (*ListClassesRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{12}
+	return file_school_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListClassesRequest) GetAcademicYearId() string {
@@ -1116,7 +1216,7 @@ type GetGradesRequest struct {
 
 func (x *GetGradesRequest) Reset() {
 	*x = GetGradesRequest{}
-	mi := &file_school_proto_msgTypes[13]
+	mi := &file_school_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1128,7 +1228,7 @@ func (x *GetGradesRequest) String() string {
 func (*GetGradesRequest) ProtoMessage() {}
 
 func (x *GetGradesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[13]
+	mi := &file_school_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1141,7 +1241,7 @@ func (x *GetGradesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGradesRequest.ProtoReflect.Descriptor instead.
 func (*GetGradesRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{13}
+	return file_school_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetGradesRequest) GetStudentId() string {
@@ -1186,7 +1286,7 @@ type CreateGradeRequest struct {
 
 func (x *CreateGradeRequest) Reset() {
 	*x = CreateGradeRequest{}
-	mi := &file_school_proto_msgTypes[14]
+	mi := &file_school_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1198,7 +1298,7 @@ func (x *CreateGradeRequest) String() string {
 func (*CreateGradeRequest) ProtoMessage() {}
 
 func (x *CreateGradeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[14]
+	mi := &file_school_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1211,7 +1311,7 @@ func (x *CreateGradeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGradeRequest.ProtoReflect.Descriptor instead.
 func (*CreateGradeRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{14}
+	return file_school_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CreateGradeRequest) GetStudentId() string {
@@ -1256,6 +1356,50 @@ func (x *CreateGradeRequest) GetSemester() int32 {
 	return 0
 }
 
+type GetTeacherByUserIdRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeacherByUserIdRequest) Reset() {
+	*x = GetTeacherByUserIdRequest{}
+	mi := &file_school_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeacherByUserIdRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeacherByUserIdRequest) ProtoMessage() {}
+
+func (x *GetTeacherByUserIdRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_school_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeacherByUserIdRequest.ProtoReflect.Descriptor instead.
+func (*GetTeacherByUserIdRequest) Descriptor() ([]byte, []int) {
+	return file_school_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetTeacherByUserIdRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
 type GetScheduleRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1265,7 +1409,7 @@ type GetScheduleRequest struct {
 
 func (x *GetScheduleRequest) Reset() {
 	*x = GetScheduleRequest{}
-	mi := &file_school_proto_msgTypes[15]
+	mi := &file_school_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1277,7 +1421,7 @@ func (x *GetScheduleRequest) String() string {
 func (*GetScheduleRequest) ProtoMessage() {}
 
 func (x *GetScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[15]
+	mi := &file_school_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1290,7 +1434,7 @@ func (x *GetScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetScheduleRequest.ProtoReflect.Descriptor instead.
 func (*GetScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{15}
+	return file_school_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetScheduleRequest) GetId() string {
@@ -1311,7 +1455,7 @@ type ListSchedulesRequest struct {
 
 func (x *ListSchedulesRequest) Reset() {
 	*x = ListSchedulesRequest{}
-	mi := &file_school_proto_msgTypes[16]
+	mi := &file_school_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1323,7 +1467,7 @@ func (x *ListSchedulesRequest) String() string {
 func (*ListSchedulesRequest) ProtoMessage() {}
 
 func (x *ListSchedulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[16]
+	mi := &file_school_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1336,7 +1480,7 @@ func (x *ListSchedulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSchedulesRequest.ProtoReflect.Descriptor instead.
 func (*ListSchedulesRequest) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{16}
+	return file_school_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListSchedulesRequest) GetClassId() string {
@@ -1369,7 +1513,7 @@ type GetStudentResponse struct {
 
 func (x *GetStudentResponse) Reset() {
 	*x = GetStudentResponse{}
-	mi := &file_school_proto_msgTypes[17]
+	mi := &file_school_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1381,7 +1525,7 @@ func (x *GetStudentResponse) String() string {
 func (*GetStudentResponse) ProtoMessage() {}
 
 func (x *GetStudentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[17]
+	mi := &file_school_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1394,7 +1538,7 @@ func (x *GetStudentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStudentResponse.ProtoReflect.Descriptor instead.
 func (*GetStudentResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{17}
+	return file_school_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetStudentResponse) GetStudent() *Student {
@@ -1414,7 +1558,7 @@ type ListStudentsResponse struct {
 
 func (x *ListStudentsResponse) Reset() {
 	*x = ListStudentsResponse{}
-	mi := &file_school_proto_msgTypes[18]
+	mi := &file_school_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1426,7 +1570,7 @@ func (x *ListStudentsResponse) String() string {
 func (*ListStudentsResponse) ProtoMessage() {}
 
 func (x *ListStudentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[18]
+	mi := &file_school_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1439,7 +1583,7 @@ func (x *ListStudentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStudentsResponse.ProtoReflect.Descriptor instead.
 func (*ListStudentsResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{18}
+	return file_school_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListStudentsResponse) GetStudents() []*Student {
@@ -1467,7 +1611,7 @@ type CreateStudentResponse struct {
 
 func (x *CreateStudentResponse) Reset() {
 	*x = CreateStudentResponse{}
-	mi := &file_school_proto_msgTypes[19]
+	mi := &file_school_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1479,7 +1623,7 @@ func (x *CreateStudentResponse) String() string {
 func (*CreateStudentResponse) ProtoMessage() {}
 
 func (x *CreateStudentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[19]
+	mi := &file_school_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1492,7 +1636,7 @@ func (x *CreateStudentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStudentResponse.ProtoReflect.Descriptor instead.
 func (*CreateStudentResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{19}
+	return file_school_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *CreateStudentResponse) GetStudent() *Student {
@@ -1527,7 +1671,7 @@ type UpdateStudentResponse struct {
 
 func (x *UpdateStudentResponse) Reset() {
 	*x = UpdateStudentResponse{}
-	mi := &file_school_proto_msgTypes[20]
+	mi := &file_school_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1539,7 +1683,7 @@ func (x *UpdateStudentResponse) String() string {
 func (*UpdateStudentResponse) ProtoMessage() {}
 
 func (x *UpdateStudentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[20]
+	mi := &file_school_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1552,7 +1696,7 @@ func (x *UpdateStudentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateStudentResponse.ProtoReflect.Descriptor instead.
 func (*UpdateStudentResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{20}
+	return file_school_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdateStudentResponse) GetStudent() *Student {
@@ -1585,7 +1729,7 @@ type GetClassResponse struct {
 
 func (x *GetClassResponse) Reset() {
 	*x = GetClassResponse{}
-	mi := &file_school_proto_msgTypes[21]
+	mi := &file_school_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1597,7 +1741,7 @@ func (x *GetClassResponse) String() string {
 func (*GetClassResponse) ProtoMessage() {}
 
 func (x *GetClassResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[21]
+	mi := &file_school_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1610,7 +1754,7 @@ func (x *GetClassResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClassResponse.ProtoReflect.Descriptor instead.
 func (*GetClassResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{21}
+	return file_school_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetClassResponse) GetClass() *SchoolClass {
@@ -1630,7 +1774,7 @@ type ListClassesResponse struct {
 
 func (x *ListClassesResponse) Reset() {
 	*x = ListClassesResponse{}
-	mi := &file_school_proto_msgTypes[22]
+	mi := &file_school_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1642,7 +1786,7 @@ func (x *ListClassesResponse) String() string {
 func (*ListClassesResponse) ProtoMessage() {}
 
 func (x *ListClassesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[22]
+	mi := &file_school_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1655,7 +1799,7 @@ func (x *ListClassesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClassesResponse.ProtoReflect.Descriptor instead.
 func (*ListClassesResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{22}
+	return file_school_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListClassesResponse) GetClasses() []*SchoolClass {
@@ -1682,7 +1826,7 @@ type GetGradesResponse struct {
 
 func (x *GetGradesResponse) Reset() {
 	*x = GetGradesResponse{}
-	mi := &file_school_proto_msgTypes[23]
+	mi := &file_school_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1694,7 +1838,7 @@ func (x *GetGradesResponse) String() string {
 func (*GetGradesResponse) ProtoMessage() {}
 
 func (x *GetGradesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[23]
+	mi := &file_school_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1707,7 +1851,7 @@ func (x *GetGradesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGradesResponse.ProtoReflect.Descriptor instead.
 func (*GetGradesResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{23}
+	return file_school_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *GetGradesResponse) GetGrades() []*Grade {
@@ -1735,7 +1879,7 @@ type CreateGradeResponse struct {
 
 func (x *CreateGradeResponse) Reset() {
 	*x = CreateGradeResponse{}
-	mi := &file_school_proto_msgTypes[24]
+	mi := &file_school_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1747,7 +1891,7 @@ func (x *CreateGradeResponse) String() string {
 func (*CreateGradeResponse) ProtoMessage() {}
 
 func (x *CreateGradeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[24]
+	mi := &file_school_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1760,7 +1904,7 @@ func (x *CreateGradeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGradeResponse.ProtoReflect.Descriptor instead.
 func (*CreateGradeResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{24}
+	return file_school_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CreateGradeResponse) GetGrade() *Grade {
@@ -1784,6 +1928,50 @@ func (x *CreateGradeResponse) GetMessage() string {
 	return ""
 }
 
+type GetTeacherResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Teacher       *Teacher               `protobuf:"bytes,1,opt,name=teacher,proto3" json:"teacher,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeacherResponse) Reset() {
+	*x = GetTeacherResponse{}
+	mi := &file_school_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeacherResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeacherResponse) ProtoMessage() {}
+
+func (x *GetTeacherResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_school_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeacherResponse.ProtoReflect.Descriptor instead.
+func (*GetTeacherResponse) Descriptor() ([]byte, []int) {
+	return file_school_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetTeacherResponse) GetTeacher() *Teacher {
+	if x != nil {
+		return x.Teacher
+	}
+	return nil
+}
+
 type GetScheduleResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Schedule      *Schedule              `protobuf:"bytes,1,opt,name=schedule,proto3" json:"schedule,omitempty"`
@@ -1793,7 +1981,7 @@ type GetScheduleResponse struct {
 
 func (x *GetScheduleResponse) Reset() {
 	*x = GetScheduleResponse{}
-	mi := &file_school_proto_msgTypes[25]
+	mi := &file_school_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1805,7 +1993,7 @@ func (x *GetScheduleResponse) String() string {
 func (*GetScheduleResponse) ProtoMessage() {}
 
 func (x *GetScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[25]
+	mi := &file_school_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1818,7 +2006,7 @@ func (x *GetScheduleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetScheduleResponse.ProtoReflect.Descriptor instead.
 func (*GetScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{25}
+	return file_school_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *GetScheduleResponse) GetSchedule() *Schedule {
@@ -1838,7 +2026,7 @@ type ListSchedulesResponse struct {
 
 func (x *ListSchedulesResponse) Reset() {
 	*x = ListSchedulesResponse{}
-	mi := &file_school_proto_msgTypes[26]
+	mi := &file_school_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1850,7 +2038,7 @@ func (x *ListSchedulesResponse) String() string {
 func (*ListSchedulesResponse) ProtoMessage() {}
 
 func (x *ListSchedulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_school_proto_msgTypes[26]
+	mi := &file_school_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1863,7 +2051,7 @@ func (x *ListSchedulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSchedulesResponse.ProtoReflect.Descriptor instead.
 func (*ListSchedulesResponse) Descriptor() ([]byte, []int) {
-	return file_school_proto_rawDescGZIP(), []int{26}
+	return file_school_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListSchedulesResponse) GetSchedules() []*Schedule {
@@ -1949,7 +2137,20 @@ const file_school_proto_rawDesc = "" +
 	"\x06status\x18\x05 \x01(\x0e2\x18.school.AttendanceStatusR\x06status\x12\x12\n" +
 	"\x04note\x18\x06 \x01(\tR\x04note\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"#\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xc0\x02\n" +
+	"\aTeacher\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fteacher_code\x18\x03 \x01(\tR\vteacherCode\x12\x1e\n" +
+	"\n" +
+	"department\x18\x04 \x01(\tR\n" +
+	"department\x12\x1a\n" +
+	"\bsubjects\x18\x05 \x03(\tR\bsubjects\x127\n" +
+	"\thire_date\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\bhireDate\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"#\n" +
 	"\x11GetStudentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"4\n" +
 	"\x19GetStudentByUserIdRequest\x12\x17\n" +
@@ -1993,7 +2194,9 @@ const file_school_proto_rawDesc = "" +
 	"teacher_id\x18\x03 \x01(\tR\tteacherId\x12\x14\n" +
 	"\x05score\x18\x04 \x01(\x01R\x05score\x12%\n" +
 	"\x04type\x18\x05 \x01(\x0e2\x11.school.GradeTypeR\x04type\x12\x1a\n" +
-	"\bsemester\x18\x06 \x01(\x05R\bsemester\"$\n" +
+	"\bsemester\x18\x06 \x01(\x05R\bsemester\"4\n" +
+	"\x19GetTeacherByUserIdRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"$\n" +
 	"\x12GetScheduleRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x8b\x01\n" +
 	"\x14ListSchedulesRequest\x12\x19\n" +
@@ -2033,7 +2236,9 @@ const file_school_proto_rawDesc = "" +
 	"\x13CreateGradeResponse\x12#\n" +
 	"\x05grade\x18\x01 \x01(\v2\r.school.GradeR\x05grade\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"C\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"?\n" +
+	"\x12GetTeacherResponse\x12)\n" +
+	"\ateacher\x18\x01 \x01(\v2\x0f.school.TeacherR\ateacher\"C\n" +
 	"\x13GetScheduleResponse\x12,\n" +
 	"\bschedule\x18\x01 \x01(\v2\x10.school.ScheduleR\bschedule\"\x83\x01\n" +
 	"\x15ListSchedulesResponse\x12.\n" +
@@ -2074,7 +2279,9 @@ const file_school_proto_rawDesc = "" +
 	"\vCreateGrade\x12\x1a.school.CreateGradeRequest\x1a\x1b.school.CreateGradeResponse2\xa7\x01\n" +
 	"\x0fScheduleService\x12F\n" +
 	"\vGetSchedule\x12\x1a.school.GetScheduleRequest\x1a\x1b.school.GetScheduleResponse\x12L\n" +
-	"\rListSchedules\x12\x1c.school.ListSchedulesRequest\x1a\x1d.school.ListSchedulesResponseB<Z:github.com/educonnect/educonnect/internal/pkg/proto/schoolb\x06proto3"
+	"\rListSchedules\x12\x1c.school.ListSchedulesRequest\x1a\x1d.school.ListSchedulesResponse2e\n" +
+	"\x0eTeacherService\x12S\n" +
+	"\x12GetTeacherByUserId\x12!.school.GetTeacherByUserIdRequest\x1a\x1a.school.GetTeacherResponseB<Z:github.com/educonnect/educonnect/internal/pkg/proto/schoolb\x06proto3"
 
 var (
 	file_school_proto_rawDescOnce sync.Once
@@ -2089,7 +2296,7 @@ func file_school_proto_rawDescGZIP() []byte {
 }
 
 var file_school_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_school_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_school_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_school_proto_goTypes = []any{
 	(StudentStatus)(0),                // 0: school.StudentStatus
 	(GradeType)(0),                    // 1: school.GradeType
@@ -2100,94 +2307,103 @@ var file_school_proto_goTypes = []any{
 	(*Grade)(nil),                     // 6: school.Grade
 	(*Schedule)(nil),                  // 7: school.Schedule
 	(*Attendance)(nil),                // 8: school.Attendance
-	(*GetStudentRequest)(nil),         // 9: school.GetStudentRequest
-	(*GetStudentByUserIdRequest)(nil), // 10: school.GetStudentByUserIdRequest
-	(*ListStudentsRequest)(nil),       // 11: school.ListStudentsRequest
-	(*CreateStudentRequest)(nil),      // 12: school.CreateStudentRequest
-	(*UpdateStudentRequest)(nil),      // 13: school.UpdateStudentRequest
-	(*GetClassRequest)(nil),           // 14: school.GetClassRequest
-	(*ListClassesRequest)(nil),        // 15: school.ListClassesRequest
-	(*GetGradesRequest)(nil),          // 16: school.GetGradesRequest
-	(*CreateGradeRequest)(nil),        // 17: school.CreateGradeRequest
-	(*GetScheduleRequest)(nil),        // 18: school.GetScheduleRequest
-	(*ListSchedulesRequest)(nil),      // 19: school.ListSchedulesRequest
-	(*GetStudentResponse)(nil),        // 20: school.GetStudentResponse
-	(*ListStudentsResponse)(nil),      // 21: school.ListStudentsResponse
-	(*CreateStudentResponse)(nil),     // 22: school.CreateStudentResponse
-	(*UpdateStudentResponse)(nil),     // 23: school.UpdateStudentResponse
-	(*GetClassResponse)(nil),          // 24: school.GetClassResponse
-	(*ListClassesResponse)(nil),       // 25: school.ListClassesResponse
-	(*GetGradesResponse)(nil),         // 26: school.GetGradesResponse
-	(*CreateGradeResponse)(nil),       // 27: school.CreateGradeResponse
-	(*GetScheduleResponse)(nil),       // 28: school.GetScheduleResponse
-	(*ListSchedulesResponse)(nil),     // 29: school.ListSchedulesResponse
-	(*common.UserRef)(nil),            // 30: common.UserRef
-	(*timestamppb.Timestamp)(nil),     // 31: google.protobuf.Timestamp
-	(*common.PaginationRequest)(nil),  // 32: common.PaginationRequest
-	(*common.PaginationResponse)(nil), // 33: common.PaginationResponse
+	(*Teacher)(nil),                   // 9: school.Teacher
+	(*GetStudentRequest)(nil),         // 10: school.GetStudentRequest
+	(*GetStudentByUserIdRequest)(nil), // 11: school.GetStudentByUserIdRequest
+	(*ListStudentsRequest)(nil),       // 12: school.ListStudentsRequest
+	(*CreateStudentRequest)(nil),      // 13: school.CreateStudentRequest
+	(*UpdateStudentRequest)(nil),      // 14: school.UpdateStudentRequest
+	(*GetClassRequest)(nil),           // 15: school.GetClassRequest
+	(*ListClassesRequest)(nil),        // 16: school.ListClassesRequest
+	(*GetGradesRequest)(nil),          // 17: school.GetGradesRequest
+	(*CreateGradeRequest)(nil),        // 18: school.CreateGradeRequest
+	(*GetTeacherByUserIdRequest)(nil), // 19: school.GetTeacherByUserIdRequest
+	(*GetScheduleRequest)(nil),        // 20: school.GetScheduleRequest
+	(*ListSchedulesRequest)(nil),      // 21: school.ListSchedulesRequest
+	(*GetStudentResponse)(nil),        // 22: school.GetStudentResponse
+	(*ListStudentsResponse)(nil),      // 23: school.ListStudentsResponse
+	(*CreateStudentResponse)(nil),     // 24: school.CreateStudentResponse
+	(*UpdateStudentResponse)(nil),     // 25: school.UpdateStudentResponse
+	(*GetClassResponse)(nil),          // 26: school.GetClassResponse
+	(*ListClassesResponse)(nil),       // 27: school.ListClassesResponse
+	(*GetGradesResponse)(nil),         // 28: school.GetGradesResponse
+	(*CreateGradeResponse)(nil),       // 29: school.CreateGradeResponse
+	(*GetTeacherResponse)(nil),        // 30: school.GetTeacherResponse
+	(*GetScheduleResponse)(nil),       // 31: school.GetScheduleResponse
+	(*ListSchedulesResponse)(nil),     // 32: school.ListSchedulesResponse
+	(*common.UserRef)(nil),            // 33: common.UserRef
+	(*timestamppb.Timestamp)(nil),     // 34: google.protobuf.Timestamp
+	(*common.PaginationRequest)(nil),  // 35: common.PaginationRequest
+	(*common.PaginationResponse)(nil), // 36: common.PaginationResponse
 }
 var file_school_proto_depIdxs = []int32{
 	0,  // 0: school.Student.status:type_name -> school.StudentStatus
-	30, // 1: school.Student.user:type_name -> common.UserRef
-	31, // 2: school.Student.created_at:type_name -> google.protobuf.Timestamp
-	31, // 3: school.Student.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 4: school.SchoolClass.created_at:type_name -> google.protobuf.Timestamp
-	31, // 5: school.SchoolClass.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 6: school.Subject.created_at:type_name -> google.protobuf.Timestamp
+	33, // 1: school.Student.user:type_name -> common.UserRef
+	34, // 2: school.Student.created_at:type_name -> google.protobuf.Timestamp
+	34, // 3: school.Student.updated_at:type_name -> google.protobuf.Timestamp
+	34, // 4: school.SchoolClass.created_at:type_name -> google.protobuf.Timestamp
+	34, // 5: school.SchoolClass.updated_at:type_name -> google.protobuf.Timestamp
+	34, // 6: school.Subject.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 7: school.Grade.type:type_name -> school.GradeType
-	31, // 8: school.Grade.created_at:type_name -> google.protobuf.Timestamp
-	31, // 9: school.Grade.updated_at:type_name -> google.protobuf.Timestamp
-	31, // 10: school.Schedule.created_at:type_name -> google.protobuf.Timestamp
+	34, // 8: school.Grade.created_at:type_name -> google.protobuf.Timestamp
+	34, // 9: school.Grade.updated_at:type_name -> google.protobuf.Timestamp
+	34, // 10: school.Schedule.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 11: school.Attendance.status:type_name -> school.AttendanceStatus
-	31, // 12: school.Attendance.created_at:type_name -> google.protobuf.Timestamp
-	32, // 13: school.ListStudentsRequest.pagination:type_name -> common.PaginationRequest
-	0,  // 14: school.ListStudentsRequest.status:type_name -> school.StudentStatus
-	0,  // 15: school.UpdateStudentRequest.status:type_name -> school.StudentStatus
-	32, // 16: school.ListClassesRequest.pagination:type_name -> common.PaginationRequest
-	32, // 17: school.GetGradesRequest.pagination:type_name -> common.PaginationRequest
-	1,  // 18: school.CreateGradeRequest.type:type_name -> school.GradeType
-	32, // 19: school.ListSchedulesRequest.pagination:type_name -> common.PaginationRequest
-	3,  // 20: school.GetStudentResponse.student:type_name -> school.Student
-	3,  // 21: school.ListStudentsResponse.students:type_name -> school.Student
-	33, // 22: school.ListStudentsResponse.pagination:type_name -> common.PaginationResponse
-	3,  // 23: school.CreateStudentResponse.student:type_name -> school.Student
-	3,  // 24: school.UpdateStudentResponse.student:type_name -> school.Student
-	4,  // 25: school.GetClassResponse.class:type_name -> school.SchoolClass
-	4,  // 26: school.ListClassesResponse.classes:type_name -> school.SchoolClass
-	33, // 27: school.ListClassesResponse.pagination:type_name -> common.PaginationResponse
-	6,  // 28: school.GetGradesResponse.grades:type_name -> school.Grade
-	33, // 29: school.GetGradesResponse.pagination:type_name -> common.PaginationResponse
-	6,  // 30: school.CreateGradeResponse.grade:type_name -> school.Grade
-	7,  // 31: school.GetScheduleResponse.schedule:type_name -> school.Schedule
-	7,  // 32: school.ListSchedulesResponse.schedules:type_name -> school.Schedule
-	33, // 33: school.ListSchedulesResponse.pagination:type_name -> common.PaginationResponse
-	9,  // 34: school.StudentService.GetStudent:input_type -> school.GetStudentRequest
-	10, // 35: school.StudentService.GetStudentByUserId:input_type -> school.GetStudentByUserIdRequest
-	11, // 36: school.StudentService.ListStudents:input_type -> school.ListStudentsRequest
-	12, // 37: school.StudentService.CreateStudent:input_type -> school.CreateStudentRequest
-	13, // 38: school.StudentService.UpdateStudent:input_type -> school.UpdateStudentRequest
-	14, // 39: school.ClassService.GetClass:input_type -> school.GetClassRequest
-	15, // 40: school.ClassService.ListClasses:input_type -> school.ListClassesRequest
-	16, // 41: school.GradeService.GetGrades:input_type -> school.GetGradesRequest
-	17, // 42: school.GradeService.CreateGrade:input_type -> school.CreateGradeRequest
-	18, // 43: school.ScheduleService.GetSchedule:input_type -> school.GetScheduleRequest
-	19, // 44: school.ScheduleService.ListSchedules:input_type -> school.ListSchedulesRequest
-	20, // 45: school.StudentService.GetStudent:output_type -> school.GetStudentResponse
-	20, // 46: school.StudentService.GetStudentByUserId:output_type -> school.GetStudentResponse
-	21, // 47: school.StudentService.ListStudents:output_type -> school.ListStudentsResponse
-	22, // 48: school.StudentService.CreateStudent:output_type -> school.CreateStudentResponse
-	23, // 49: school.StudentService.UpdateStudent:output_type -> school.UpdateStudentResponse
-	24, // 50: school.ClassService.GetClass:output_type -> school.GetClassResponse
-	25, // 51: school.ClassService.ListClasses:output_type -> school.ListClassesResponse
-	26, // 52: school.GradeService.GetGrades:output_type -> school.GetGradesResponse
-	27, // 53: school.GradeService.CreateGrade:output_type -> school.CreateGradeResponse
-	28, // 54: school.ScheduleService.GetSchedule:output_type -> school.GetScheduleResponse
-	29, // 55: school.ScheduleService.ListSchedules:output_type -> school.ListSchedulesResponse
-	45, // [45:56] is the sub-list for method output_type
-	34, // [34:45] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	34, // 12: school.Attendance.created_at:type_name -> google.protobuf.Timestamp
+	34, // 13: school.Teacher.hire_date:type_name -> google.protobuf.Timestamp
+	34, // 14: school.Teacher.created_at:type_name -> google.protobuf.Timestamp
+	34, // 15: school.Teacher.updated_at:type_name -> google.protobuf.Timestamp
+	35, // 16: school.ListStudentsRequest.pagination:type_name -> common.PaginationRequest
+	0,  // 17: school.ListStudentsRequest.status:type_name -> school.StudentStatus
+	0,  // 18: school.UpdateStudentRequest.status:type_name -> school.StudentStatus
+	35, // 19: school.ListClassesRequest.pagination:type_name -> common.PaginationRequest
+	35, // 20: school.GetGradesRequest.pagination:type_name -> common.PaginationRequest
+	1,  // 21: school.CreateGradeRequest.type:type_name -> school.GradeType
+	35, // 22: school.ListSchedulesRequest.pagination:type_name -> common.PaginationRequest
+	3,  // 23: school.GetStudentResponse.student:type_name -> school.Student
+	3,  // 24: school.ListStudentsResponse.students:type_name -> school.Student
+	36, // 25: school.ListStudentsResponse.pagination:type_name -> common.PaginationResponse
+	3,  // 26: school.CreateStudentResponse.student:type_name -> school.Student
+	3,  // 27: school.UpdateStudentResponse.student:type_name -> school.Student
+	4,  // 28: school.GetClassResponse.class:type_name -> school.SchoolClass
+	4,  // 29: school.ListClassesResponse.classes:type_name -> school.SchoolClass
+	36, // 30: school.ListClassesResponse.pagination:type_name -> common.PaginationResponse
+	6,  // 31: school.GetGradesResponse.grades:type_name -> school.Grade
+	36, // 32: school.GetGradesResponse.pagination:type_name -> common.PaginationResponse
+	6,  // 33: school.CreateGradeResponse.grade:type_name -> school.Grade
+	9,  // 34: school.GetTeacherResponse.teacher:type_name -> school.Teacher
+	7,  // 35: school.GetScheduleResponse.schedule:type_name -> school.Schedule
+	7,  // 36: school.ListSchedulesResponse.schedules:type_name -> school.Schedule
+	36, // 37: school.ListSchedulesResponse.pagination:type_name -> common.PaginationResponse
+	10, // 38: school.StudentService.GetStudent:input_type -> school.GetStudentRequest
+	11, // 39: school.StudentService.GetStudentByUserId:input_type -> school.GetStudentByUserIdRequest
+	12, // 40: school.StudentService.ListStudents:input_type -> school.ListStudentsRequest
+	13, // 41: school.StudentService.CreateStudent:input_type -> school.CreateStudentRequest
+	14, // 42: school.StudentService.UpdateStudent:input_type -> school.UpdateStudentRequest
+	15, // 43: school.ClassService.GetClass:input_type -> school.GetClassRequest
+	16, // 44: school.ClassService.ListClasses:input_type -> school.ListClassesRequest
+	17, // 45: school.GradeService.GetGrades:input_type -> school.GetGradesRequest
+	18, // 46: school.GradeService.CreateGrade:input_type -> school.CreateGradeRequest
+	20, // 47: school.ScheduleService.GetSchedule:input_type -> school.GetScheduleRequest
+	21, // 48: school.ScheduleService.ListSchedules:input_type -> school.ListSchedulesRequest
+	19, // 49: school.TeacherService.GetTeacherByUserId:input_type -> school.GetTeacherByUserIdRequest
+	22, // 50: school.StudentService.GetStudent:output_type -> school.GetStudentResponse
+	22, // 51: school.StudentService.GetStudentByUserId:output_type -> school.GetStudentResponse
+	23, // 52: school.StudentService.ListStudents:output_type -> school.ListStudentsResponse
+	24, // 53: school.StudentService.CreateStudent:output_type -> school.CreateStudentResponse
+	25, // 54: school.StudentService.UpdateStudent:output_type -> school.UpdateStudentResponse
+	26, // 55: school.ClassService.GetClass:output_type -> school.GetClassResponse
+	27, // 56: school.ClassService.ListClasses:output_type -> school.ListClassesResponse
+	28, // 57: school.GradeService.GetGrades:output_type -> school.GetGradesResponse
+	29, // 58: school.GradeService.CreateGrade:output_type -> school.CreateGradeResponse
+	31, // 59: school.ScheduleService.GetSchedule:output_type -> school.GetScheduleResponse
+	32, // 60: school.ScheduleService.ListSchedules:output_type -> school.ListSchedulesResponse
+	30, // 61: school.TeacherService.GetTeacherByUserId:output_type -> school.GetTeacherResponse
+	50, // [50:62] is the sub-list for method output_type
+	38, // [38:50] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_school_proto_init() }
@@ -2201,9 +2417,9 @@ func file_school_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_school_proto_rawDesc), len(file_school_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   27,
+			NumMessages:   30,
 			NumExtensions: 0,
-			NumServices:   4,
+			NumServices:   5,
 		},
 		GoTypes:           file_school_proto_goTypes,
 		DependencyIndexes: file_school_proto_depIdxs,

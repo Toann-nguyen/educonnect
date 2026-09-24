@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ type Server struct {
 	school.UnimplementedClassServiceServer
 	school.UnimplementedGradeServiceServer
 	school.UnimplementedScheduleServiceServer
+	school.UnimplementedTeacherServiceServer
 	db *gorm.DB
 }
 
@@ -539,6 +541,43 @@ func (s *Server) CreateGrade(ctx context.Context, req *school.CreateGradeRequest
 		CreatedAt: timestamp(grade.CreatedAt),
 		UpdatedAt: timestamp(grade.UpdatedAt),
 	}, Success: true, Message: "Grade created"}, nil
+}
+
+func (s *Server) GetTeacherByUserId(ctx context.Context, req *school.GetTeacherByUserIdRequest) (*school.GetTeacherResponse, error) {
+	if _, err := authclient.Authenticate(ctx); err != nil {
+		return nil, err
+	}
+	userID, err := parseID(req.GetUserId(), "user ID")
+	if err != nil {
+		return nil, err
+	}
+	var teacher model.Teacher
+	if err := s.db.Where("user_id = ?", userID).First(&teacher).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, status.Error(codes.NotFound, "teacher not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to load teacher")
+	}
+	var subjects []string
+	if strings.TrimSpace(teacher.Subjects) != "" {
+		if err := json.Unmarshal([]byte(teacher.Subjects), &subjects); err != nil {
+			subjects = nil
+		}
+	}
+	var hireDate *timestamppb.Timestamp
+	if teacher.HireDate != nil {
+		hireDate = timestamp(*teacher.HireDate)
+	}
+	return &school.GetTeacherResponse{Teacher: &school.Teacher{
+		Id:          strconv.FormatUint(uint64(teacher.ID), 10),
+		UserId:      strconv.FormatUint(uint64(teacher.UserID), 10),
+		TeacherCode: teacher.TeacherCode,
+		Department:  teacher.Department,
+		Subjects:    subjects,
+		HireDate:    hireDate,
+		CreatedAt:   timestamp(teacher.CreatedAt),
+		UpdatedAt:   timestamp(teacher.UpdatedAt),
+	}}, nil
 }
 
 func (s *Server) GetSchedule(ctx context.Context, req *school.GetScheduleRequest) (*school.GetScheduleResponse, error) {

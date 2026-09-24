@@ -56,10 +56,12 @@ func (h FeeTypeHandler) Create(c fuego.ContextWithBody[dto.CreateFeeTypeRequest]
 	if err != nil {
 		return model.FeeType{}, err
 	}
+	currency := dto.NormalizeCurrency(body.Currency)
 	ft := model.FeeType{
 		Name:        body.Name,
 		Description: body.Description,
 		Amount:      body.Amount,
+		Currency:    currency,
 		IsActive:    body.IsActive,
 	}
 	if err := h.DB.Create(&ft).Error; err != nil {

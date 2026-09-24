@@ -595,6 +595,32 @@ func (s *Servers) GetStudentProfile(ctx context.Context, req *auth.GetUserReques
 	}}, nil
 }
 
-func (s *Servers) GetTeacherProfile(context.Context, *auth.GetUserRequest) (*auth.GetTeacherProfileResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "teacher directory is not implemented")
+func (s *Servers) GetTeacherProfile(ctx context.Context, req *auth.GetUserRequest) (*auth.GetTeacherProfileResponse, error) {
+	if _, err := s.authorize(ctx); err != nil {
+		return nil, err
+	}
+	id, err := parseID(req.GetId(), "user ID")
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.loadUser(id)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.NewClient(schoolGRPCAddress(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, "school service is unavailable")
+	}
+	defer conn.Close()
+	teacher, err := school.NewTeacherServiceClient(conn).GetTeacherByUserId(ctx, &school.GetTeacherByUserIdRequest{UserId: strconv.FormatUint(uint64(id), 10)})
+	if err != nil {
+		return nil, err
+	}
+	return &auth.GetTeacherProfileResponse{Profile: &auth.TeacherProfile{
+		User:        s.protoUser(user),
+		TeacherCode: teacher.GetTeacher().GetTeacherCode(),
+		Subjects:    teacher.GetTeacher().GetSubjects(),
+		Department:  teacher.GetTeacher().GetDepartment(),
+		HireDate:    teacher.GetTeacher().GetHireDate(),
+	}}, nil
 }

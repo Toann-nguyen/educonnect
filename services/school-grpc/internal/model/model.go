@@ -68,6 +68,19 @@ type Schedule struct {
 
 func (Schedule) TableName() string { return "schedules" }
 
+type Teacher struct {
+	ID          uint    `gorm:"primaryKey"`
+	UserID      uint    `gorm:"uniqueIndex"`
+	TeacherCode string  `gorm:"uniqueIndex"`
+	Department  string
+	Subjects    string
+	HireDate    *time.Time `gorm:"type:date"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (Teacher) TableName() string { return "teachers" }
+
 type StudentGuardian struct {
 	ID             uint `gorm:"primaryKey"`
 	StudentID      uint `gorm:"index"`

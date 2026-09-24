@@ -104,6 +104,7 @@ func (h InvoiceHandler) Create(c fuego.ContextWithBody[dto.CreateInvoiceRequest]
 		StudentID: body.StudentID,
 		FeeTypeID: body.FeeTypeID,
 		Amount:    body.Amount,
+		Currency:  dto.NormalizeCurrency(body.Currency),
 		Status:    "pending",
 	}
 	if err := h.DB.Create(&inv).Error; err != nil {

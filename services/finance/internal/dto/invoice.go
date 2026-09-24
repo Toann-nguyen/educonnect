@@ -11,6 +11,7 @@ type CreateInvoiceRequest struct {
 	StudentID uint    `json:"student_id" validate:"required,gt=0" example:"10"`
 	FeeTypeID uint    `json:"fee_type_id" validate:"required,gt=0" example:"3"`
 	Amount    float64 `json:"amount" validate:"required,gt=0" example:"1000000"`
+	Currency  string  `json:"currency" validate:"omitempty,len=3" example:"VND"`
 }
 
 type UpdateInvoiceRequest struct {

@@ -8,11 +8,16 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
+# Shared protobuf module (go.mod replace ../../internal/pkg/proto)
+COPY internal/pkg/proto /src/internal/pkg/proto
+
 # Cache layer dependencies trước (chỉ copy go.mod/go.sum)
-COPY go.mod go.sum ./
+COPY services/finance/go.mod services/finance/go.sum /src/services/finance/
+
+WORKDIR /src/services/finance
 RUN go mod download
 
-COPY . .
+COPY services/finance/. .
 
 # Static binary: CGO off, trimpath, strip symbols
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
@@ -32,7 +37,7 @@ COPY --from=builder /out/main .
 # Non-root — security best practice
 USER app
 
-EXPOSE 8080
+EXPOSE 8080 8082
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1 || exit 1

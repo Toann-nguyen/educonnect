@@ -234,7 +234,9 @@ services:
 
   # ── Finance Service (Go) ──────────────────────────────────
   finance:
-    build: ./services/finance
+    build:
+      context: .
+      dockerfile: services/finance/Dockerfile
     restart: unless-stopped
     environment:
       PORT: "8080"
@@ -266,7 +268,9 @@ services:
 
   # ── Notify Service (Go — RabbitMQ consumer) ───────────────
   notify:
-    build: ./services/notify
+    build:
+      context: .
+      dockerfile: services/notify/Dockerfile
     restart: unless-stopped
     environment:
       PORT: "8081"

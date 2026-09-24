@@ -6,7 +6,7 @@ COPY services/identity-grpc/go.mod services/identity-grpc/go.sum /src/services/i
 
 WORKDIR /src/services/identity-grpc
 RUN go mod download
-COPY . .
+COPY services/identity-grpc/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/main .
 
 FROM alpine:3.21

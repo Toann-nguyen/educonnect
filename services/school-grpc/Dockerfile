@@ -6,7 +6,7 @@ COPY services/school-grpc/go.mod services/school-grpc/go.sum /src/services/schoo
 
 WORKDIR /src/services/school-grpc
 RUN go mod download
-COPY . .
+COPY services/school-grpc/. .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/main .
 
 FROM alpine:3.21

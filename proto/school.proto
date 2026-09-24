@@ -1,0 +1,236 @@
+syntax = "proto3";
+
+package school;
+
+option go_package = "github.com/educonnect/educonnect/internal/pkg/proto/school";
+
+import "common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============ Enums ============
+
+enum StudentStatus {
+    STUDENT_STATUS_UNSPECIFIED = 0;
+    STUDENT_STATUS_ACTIVE = 1;
+    STUDENT_STATUS_INACTIVE = 2;
+    STUDENT_STATUS_GRADUATED = 3;
+    STUDENT_STATUS_SUSPENDED = 4;
+}
+
+enum GradeType {
+    GRADE_TYPE_UNSPECIFIED = 0;
+    GRADE_TYPE_MIDTERM = 1;
+    GRADE_TYPE_FINAL = 2;
+    GRADE_TYPE_ASSIGNMENT = 3;
+    GRADE_TYPE_QUIZ = 4;
+}
+
+enum AttendanceStatus {
+    ATTENDANCE_STATUS_UNSPECIFIED = 0;
+    ATTENDANCE_STATUS_PRESENT = 1;
+    ATTENDANCE_STATUS_ABSENT = 2;
+    ATTENDANCE_STATUS_LATE = 3;
+    ATTENDANCE_STATUS_EXCUSED = 4;
+}
+
+// ============ Messages ============
+
+message Student {
+    string id = 1;
+    string user_id = 2;
+    string class_id = 3;
+    string student_code = 4;
+    StudentStatus status = 5;
+    common.UserRef user = 6;
+    google.protobuf.Timestamp created_at = 7;
+    google.protobuf.Timestamp updated_at = 8;
+}
+
+message SchoolClass {
+    string id = 1;
+    string name = 2;
+    string academic_year_id = 3;
+    string homeroom_teacher_id = 4;
+    google.protobuf.Timestamp created_at = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+message Subject {
+    string id = 1;
+    string name = 2;
+    string subject_code = 3;
+    google.protobuf.Timestamp created_at = 4;
+}
+
+message Grade {
+    string id = 1;
+    string student_id = 2;
+    string subject_id = 3;
+    string teacher_id = 4;
+    double score = 5;
+    GradeType type = 6;
+    int32 semester = 7;
+    google.protobuf.Timestamp created_at = 8;
+    google.protobuf.Timestamp updated_at = 9;
+}
+
+message Schedule {
+    string id = 1;
+    string class_id = 2;
+    string subject_id = 3;
+    string teacher_id = 4;
+    int32 day_of_week = 5;
+    int32 period = 6;
+    string room = 7;
+    google.protobuf.Timestamp created_at = 8;
+}
+
+message Attendance {
+    string id = 1;
+    string student_id = 2;
+    string schedule_id = 3;
+    string date = 4;
+    AttendanceStatus status = 5;
+    string note = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+// ============ Requests ============
+
+message GetStudentRequest {
+    string id = 1;
+}
+
+message GetStudentByUserIdRequest {
+    string user_id = 1;
+}
+
+message ListStudentsRequest {
+    string class_id = 1;
+    common.PaginationRequest pagination = 2;
+    StudentStatus status = 3;
+}
+
+message CreateStudentRequest {
+    string user_id = 1;
+    string class_id = 2;
+    string student_code = 3;
+}
+
+message UpdateStudentRequest {
+    string id = 1;
+    string class_id = 2;
+    StudentStatus status = 3;
+}
+
+message GetClassRequest {
+    string id = 1;
+}
+
+message ListClassesRequest {
+    string academic_year_id = 1;
+    common.PaginationRequest pagination = 2;
+}
+
+message GetGradesRequest {
+    string student_id = 1;
+    string subject_id = 2;
+    int32 semester = 3;
+    common.PaginationRequest pagination = 4;
+}
+
+message CreateGradeRequest {
+    string student_id = 1;
+    string subject_id = 2;
+    string teacher_id = 3;
+    double score = 4;
+    GradeType type = 5;
+    int32 semester = 6;
+}
+
+message GetScheduleRequest {
+    string id = 1;
+}
+
+message ListSchedulesRequest {
+    string class_id = 1;
+    string teacher_id = 2;
+    common.PaginationRequest pagination = 3;
+}
+
+// ============ Responses ============
+
+message GetStudentResponse {
+    Student student = 1;
+}
+
+message ListStudentsResponse {
+    repeated Student students = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message CreateStudentResponse {
+    Student student = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message UpdateStudentResponse {
+    Student student = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message GetClassResponse {
+    SchoolClass class = 1;
+}
+
+message ListClassesResponse {
+    repeated SchoolClass classes = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message GetGradesResponse {
+    repeated Grade grades = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+message CreateGradeResponse {
+    Grade grade = 1;
+    bool success = 2;
+    string message = 3;
+}
+
+message GetScheduleResponse {
+    Schedule schedule = 1;
+}
+
+message ListSchedulesResponse {
+    repeated Schedule schedules = 1;
+    common.PaginationResponse pagination = 2;
+}
+
+// ============ Services ============
+
+service StudentService {
+    rpc GetStudent(GetStudentRequest) returns (GetStudentResponse);
+    rpc GetStudentByUserId(GetStudentByUserIdRequest) returns (GetStudentResponse);
+    rpc ListStudents(ListStudentsRequest) returns (ListStudentsResponse);
+    rpc CreateStudent(CreateStudentRequest) returns (CreateStudentResponse);
+    rpc UpdateStudent(UpdateStudentRequest) returns (UpdateStudentResponse);
+}
+
+service ClassService {
+    rpc GetClass(GetClassRequest) returns (GetClassResponse);
+    rpc ListClasses(ListClassesRequest) returns (ListClassesResponse);
+}
+
+service GradeService {
+    rpc GetGrades(GetGradesRequest) returns (GetGradesResponse);
+    rpc CreateGrade(CreateGradeRequest) returns (CreateGradeResponse);
+}
+
+service ScheduleService {
+    rpc GetSchedule(GetScheduleRequest) returns (GetScheduleResponse);
+    rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse);
+}

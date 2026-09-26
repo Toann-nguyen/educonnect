@@ -22,6 +22,7 @@
         "pragmarx/google2fa-laravel": "^3.0",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.25",
+        "symfony/css-selector": "^7.0",
         "tightenco/ziggy": "^2.0",
         "twilio/sdk": "^8.11"
     },

@@ -2,10 +2,9 @@
 
 namespace App\Domains\School\Services;
 
-use DB;
 use Illuminate\Http\Request;
 
-class ActivityLogServices
+class ActivityLogService
 {
     public function log(int $userId, string $action, string $description, Request $request, array $metadata = []): void
     {
@@ -13,7 +12,7 @@ class ActivityLogServices
             'user_id' => $userId,
             'action' => $action,
             'description' => $description,
-            'metadata' => $metadata
+            'metadata' => $metadata,
         ];
 
         if ($request) {

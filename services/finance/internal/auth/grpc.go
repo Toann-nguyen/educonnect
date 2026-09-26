@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -98,7 +99,7 @@ func checkRevocation(claims jwt.MapClaims, userID uint) error {
 	return nil
 }
 
-func AuthorizeGRPC(ctx context.Context, permissions ...string) (*GRPCClaims, error) {
+func AuthorizeGRPC(ctx context.Context, db *gorm.DB, permissions ...string) (*GRPCClaims, error) {
 	token, err := tokenFromMetadata(ctx)
 	if err != nil {
 		return nil, err
@@ -114,10 +115,34 @@ func AuthorizeGRPC(ctx context.Context, permissions ...string) (*GRPCClaims, err
 	if err := checkRevocation(claims, userID); err != nil {
 		return nil, err
 	}
+	roles := rolesFromClaims(claims)
+	if len(roles) == 0 && db != nil {
+		// Token legacy không mang roles — lấy từ users_read_model đã sync qua user_events.
+		roles = rolesFromReadModel(db, userID)
+		if len(roles) > 0 {
+			raw := make([]any, len(roles))
+			for i, role := range roles {
+				raw[i] = role
+			}
+			claims["roles"] = raw
+		}
+	}
 	if len(permissions) > 0 && !HasPermission(claims, permissions...) {
 		return nil, status.Error(codes.PermissionDenied, "insufficient permission")
 	}
-	return &GRPCClaims{UserID: userID, Roles: rolesFromClaims(claims), Claims: claims}, nil
+	return &GRPCClaims{UserID: userID, Roles: roles, Claims: claims}, nil
+}
+
+func rolesFromReadModel(db *gorm.DB, userID uint) []string {
+	var user model.UserReadModel
+	if err := db.Where("id = ?", userID).First(&user).Error; err != nil {
+		return nil
+	}
+	var roles []string
+	if err := json.Unmarshal([]byte(user.Roles), &roles); err != nil {
+		return nil
+	}
+	return roles
 }
 
 func isAllAccessRoles(roles []string) bool {

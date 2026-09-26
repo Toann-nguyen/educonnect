@@ -220,6 +220,28 @@ server {
         fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
     }
 
+    # ── OIDC discovery / JWKS (Laravel php service) ─────────
+    # finance/notify Go services verify RS256 qua AUTH_JWKS_URL.
+    location /.well-known/ {
+        limit_req zone=gw_api burst=30 nodelay;
+
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/html/public/index.php;
+        fastcgi_pass school_svc;
+        fastcgi_keep_conn on;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        fastcgi_connect_timeout 10s;
+        fastcgi_send_timeout 60s;
+        fastcgi_read_timeout 60s;
+        fastcgi_hide_header Access-Control-Allow-Origin;
+        fastcgi_hide_header Access-Control-Allow-Credentials;
+        fastcgi_param HTTP_X_CORRELATION_ID $correlation_id;
+        fastcgi_param HTTP_X_REAL_IP        $remote_addr;
+        fastcgi_param HTTP_X_FORWARDED_FOR  $proxy_add_x_forwarded_for;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $scheme;
+    }
+
     # ── Finance service (Go): /api/finance/* ─────────────────
     location /api/finance/ {
         limit_req zone=gw_api burst=30 nodelay;

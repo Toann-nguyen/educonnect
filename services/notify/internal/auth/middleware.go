@@ -99,12 +99,42 @@ func waitForKeys() error {
 	return nil
 }
 
-// verifyToken — parse + verify RS256 + kiểm tra iss/aud/exp/kid/tv/sid.
+// strictClaims — AUTH_STRICT_CLAIMS=true bắt iss/aud/sid đầy đủ (new auth flow).
+// Mặc định false để tương thích token legacy (iss=request URL, không aud/sid);
+// chữ ký RS256 + exp + tv/ver revoke vẫn luôn được kiểm tra.
+func strictClaims() bool {
+	return strings.EqualFold(os.Getenv("AUTH_STRICT_CLAIMS"), "true")
+}
+
+// verificationKey — chọn key theo kid; token legacy không có kid thì dùng
+// key JWKS duy nhất khớp alg (hiện chỉ có 1 RSA key cho RS256).
+func verificationKey(token *jwt.Token) (any, error) {
+	if kid, _ := token.Header["kid"].(string); kid != "" {
+		return jwks.Keyfunc(token)
+	}
+	keys, err := jwks.Storage().KeyReadAll(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	var candidates []any
+	for _, key := range keys {
+		if string(key.Marshal().ALG) == token.Method.Alg() {
+			candidates = append(candidates, key.Key())
+		}
+	}
+	if len(candidates) != 1 {
+		return nil, fmt.Errorf("ambiguous JWKS key for kid-less token")
+	}
+	return candidates[0], nil
+}
+
+// verifyToken — parse + verify RS256 + kiểm tra exp/tv/ver (luôn luôn);
+// iss/aud/sid chỉ bắt buộc khi AUTH_STRICT_CLAIMS=true.
 func verifyToken(tokenStr string) (jwt.MapClaims, error) {
 	if jwks == nil {
 		return nil, fmt.Errorf("JWKS chưa khởi tạo")
 	}
-	token, err := jwt.Parse(tokenStr, jwks.Keyfunc, jwt.WithValidMethods([]string{"RS256"}))
+	token, err := jwt.Parse(tokenStr, verificationKey, jwt.WithValidMethods([]string{"RS256"}))
 	if err != nil || !token.Valid {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
@@ -113,10 +143,7 @@ func verifyToken(tokenStr string) (jwt.MapClaims, error) {
 		return nil, fmt.Errorf("invalid claims type")
 	}
 
-	if kid, _ := token.Header["kid"].(string); kid == "" {
-		return nil, fmt.Errorf("kid missing")
-	}
-	if iss, _ := claims["iss"].(string); iss != issuer {
+	if iss, _ := claims["iss"].(string); iss != issuer && strictClaims() {
 		return nil, fmt.Errorf("invalid iss: %s", claims["iss"])
 	}
 	audValid := false
@@ -138,7 +165,9 @@ func verifyToken(tokenStr string) (jwt.MapClaims, error) {
 			}
 		}
 	}
-	if !audValid {
+	if _, present := claims["aud"]; !present && !strictClaims() {
+		// Token legacy không có aud — bỏ qua khi không ở strict mode.
+	} else if !audValid {
 		return nil, fmt.Errorf("invalid aud: %v", claims["aud"])
 	}
 	if exp, ok := claims["exp"]; !ok || exp == nil {
@@ -149,7 +178,7 @@ func verifyToken(tokenStr string) (jwt.MapClaims, error) {
 			return nil, fmt.Errorf("tv/ver missing")
 		}
 	}
-	if sid, ok := claims["sid"]; !ok || sid == nil || sid == "" {
+	if sid, ok := claims["sid"]; (!ok || sid == nil || sid == "") && strictClaims() {
 		return nil, fmt.Errorf("sid missing")
 	}
 	return claims, nil

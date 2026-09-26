@@ -218,7 +218,7 @@ func protoInvoice(invoice model.Invoice, items []model.InvoiceItem, paid float64
 }
 
 func (s *InvoiceServiceServer) GetInvoice(ctx context.Context, req *finance.GetInvoiceRequest) (*finance.GetInvoiceResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermViewInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +285,7 @@ func (s *InvoiceServiceServer) listInvoices(ctx context.Context, query *gorm.DB,
 }
 
 func (s *InvoiceServiceServer) GetInvoicesByStudent(ctx context.Context, req *finance.GetInvoicesByStudentRequest) (*finance.GetInvoicesResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermViewInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ func (s *InvoiceServiceServer) GetInvoicesByStudent(ctx context.Context, req *fi
 }
 
 func (s *InvoiceServiceServer) GetInvoicesByUser(ctx context.Context, req *finance.GetInvoicesByUserRequest) (*finance.GetInvoicesResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermViewInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +311,7 @@ func (s *InvoiceServiceServer) GetInvoicesByUser(ctx context.Context, req *finan
 }
 
 func (s *InvoiceServiceServer) CreateInvoice(ctx context.Context, req *finance.CreateInvoiceRequest) (*finance.CreateInvoiceResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermManageInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermManageInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +419,7 @@ func (s *InvoiceServiceServer) CreateInvoice(ctx context.Context, req *finance.C
 }
 
 func (s *InvoiceServiceServer) UpdateInvoiceStatus(ctx context.Context, req *finance.UpdateInvoiceStatusRequest) (*finance.UpdateInvoiceStatusResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermManageInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermManageInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +469,7 @@ func (s *InvoiceServiceServer) UpdateInvoiceStatus(ctx context.Context, req *fin
 }
 
 func (s *InvoiceServiceServer) GetFeeTypes(ctx context.Context, req *finance.GetFeeTypesRequest) (*finance.GetFeeTypesResponse, error) {
-	if _, err := auth.AuthorizeGRPC(ctx, auth.PermViewInvoices); err != nil {
+	if _, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewInvoices); err != nil {
 		return nil, err
 	}
 	query := s.db.Model(&model.FeeType{})
@@ -532,7 +532,7 @@ func protoPayment(payment model.Payment) *finance.Payment {
 }
 
 func (s *PaymentServiceServer) CreatePayment(ctx context.Context, req *finance.CreatePaymentRequest) (*finance.CreatePaymentResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermManagePayments)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermManagePayments)
 	if err != nil {
 		return nil, err
 	}
@@ -627,7 +627,7 @@ func (s *PaymentServiceServer) loadInvoiceForPayment(id uint) (model.Invoice, []
 }
 
 func (s *PaymentServiceServer) GetPaymentsByInvoice(ctx context.Context, req *finance.GetPaymentsByInvoiceRequest) (*finance.GetPaymentsResponse, error) {
-	claims, err := auth.AuthorizeGRPC(ctx, auth.PermViewInvoices)
+	claims, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewInvoices)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +666,7 @@ func NewFinanceUserServiceServer(db *gorm.DB) *FinanceUserServiceServer {
 }
 
 func (s *FinanceUserServiceServer) GetUser(ctx context.Context, req *common.UUID) (*common.UserRef, error) {
-	if _, err := auth.AuthorizeGRPC(ctx, auth.PermViewUsers); err != nil {
+	if _, err := auth.AuthorizeGRPC(ctx, s.db, auth.PermViewUsers); err != nil {
 		return nil, err
 	}
 	id, err := parseID(req.GetValue(), "user ID")

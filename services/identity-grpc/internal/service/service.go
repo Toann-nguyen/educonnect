@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -197,12 +198,16 @@ func appendEvent(tx *gorm.DB, aggregateID uint, eventType string, payload map[st
 	if err := tx.Table("event_store").Where("aggregate_type = ? AND aggregate_id = ?", "user", aggregateID).Select("COALESCE(MAX(version), 0)").Clauses(clause.Locking{Strength: "UPDATE"}).Scan(&current).Error; err != nil {
 		return err
 	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
 	return tx.Table("event_store").Create(map[string]any{
 		"aggregate_type": "user",
 		"aggregate_id":   aggregateID,
 		"version":        current + 1,
 		"event_type":     eventType,
-		"payload":        payload,
+		"payload":        string(encoded),
 		"occurred_at":    time.Now().UTC(),
 	}).Error
 }

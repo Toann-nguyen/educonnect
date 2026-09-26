@@ -22,7 +22,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"educonnect/school-grpc/internal/model"
 	"educonnect/school-grpc/internal/server"
 )
 
@@ -45,9 +44,8 @@ func openDB() *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to connect to school_db: %v", err)
 	}
-	if err := db.AutoMigrate(&model.Student{}, &model.SchoolClass{}, &model.Subject{}, &model.Grade{}, &model.Schedule{}, &model.Teacher{}, &model.StudentGuardian{}); err != nil {
-		log.Fatalf("Failed to migrate school read models: %v", err)
-	}
+	// Schema school_db do Laravel migrations sở hữu — Go service không AutoMigrate
+	// để tránh xung đột kiểu cột (ví dụ unique index trên TEXT).
 	return db
 }
 

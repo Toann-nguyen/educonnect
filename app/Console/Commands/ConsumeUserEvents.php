@@ -113,15 +113,19 @@ class ConsumeUserEvents extends Command
             }
 
             $u = $data['user'];
-            UsersReadModel::updateOrCreate(
-                ['id' => $u['id']],
-                [
-                    'name' => $u['name'] ?? '',
-                    'email' => $u['email'] ?? '',
-                    'roles' => $u['roles'] ?? [],
-                    'is_active' => $u['is_active'] ?? true,
-                ]
-            );
+            // Partial update: chỉ ghi đè field có giá trị, tránh event thiếu
+            // field (ví dụ password_changed chỉ có id) xóa dữ liệu read model.
+            $attributes = ['is_active' => $u['is_active'] ?? true];
+            if (! empty($u['name'])) {
+                $attributes['name'] = $u['name'];
+            }
+            if (! empty($u['email'])) {
+                $attributes['email'] = $u['email'];
+            }
+            if (! empty($u['roles'])) {
+                $attributes['roles'] = $u['roles'];
+            }
+            UsersReadModel::updateOrCreate(['id' => $u['id']], $attributes);
             Redis::set($reservationKey, 'completed', 'EX', 3600);
             Log::info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");
             $this->info("[corr={$corrId}] sync {$data['event']} → users_read_model id={$u['id']} ({$u['email']})");

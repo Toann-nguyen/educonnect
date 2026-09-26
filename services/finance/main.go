@@ -127,7 +127,11 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 	if corrID == "" {
 		corrID = ev.CorrelationID
 	}
-	rolesJSON, _ := json.Marshal(ev.User.Roles)
+	roles := ev.User.Roles
+	if roles == nil {
+		roles = []string{}
+	}
+	rolesJSON, _ := json.Marshal(roles)
 
 	u := model.UserReadModel{
 		ID:       ev.User.ID,
@@ -146,13 +150,21 @@ func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {
 		}
 	} else {
 		u.CreatedAt = existing.CreatedAt
-		if err := db.Model(&model.UserReadModel{}).Where("id = ?", ev.User.ID).Updates(map[string]interface{}{
-			"name":       ev.User.Name,
-			"email":      ev.User.Email,
-			"roles":      string(rolesJSON),
+		// Partial update: không ghi đè các field bị thiếu trong event (tránh mất dữ liệu).
+		updates := map[string]interface{}{
 			"is_active":  ev.User.IsActive,
 			"updated_at": time.Now(),
-		}).Error; err != nil {
+		}
+		if ev.User.Name != "" {
+			updates["name"] = ev.User.Name
+		}
+		if ev.User.Email != "" {
+			updates["email"] = ev.User.Email
+		}
+		if len(ev.User.Roles) > 0 {
+			updates["roles"] = string(rolesJSON)
+		}
+		if err := db.Model(&model.UserReadModel{}).Where("id = ?", ev.User.ID).Updates(updates).Error; err != nil {
 			log.Printf("❌ update users_read_model id=%d: %v", ev.User.ID, err)
 			ch.Nack(msg.DeliveryTag, false, false)
 			return

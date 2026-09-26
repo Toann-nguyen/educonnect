@@ -212,6 +212,12 @@ func appendEvent(tx *gorm.DB, aggregateID uint, eventType string, payload map[st
 	}).Error
 }
 
+func (s *Servers) userRoleNames(userID uint) []string {
+	var roles []string
+	s.db.Table("roles").Select("roles.name").Joins("JOIN model_has_roles ON model_has_roles.role_id = roles.id").Where("model_has_roles.model_type = ? AND model_has_roles.model_id = ?", userModelType, userID).Order("roles.name").Pluck("name", &roles)
+	return roles
+}
+
 func userPayload(user model.User, roles []string) map[string]any {
 	return map[string]any{
 		"event": "user",
@@ -512,7 +518,7 @@ func (s *Servers) UpdateUser(ctx context.Context, req *auth.UpdateUserRequest) (
 	if err != nil {
 		return nil, err
 	}
-	s.publish(ctx, "user.updated", userPayload(updated, nil))
+	s.publish(ctx, "user.updated", userPayload(updated, s.userRoleNames(id)))
 	return &auth.UpdateUserResponse{User: s.protoUser(updated), Success: true, Message: "User updated"}, nil
 }
 
@@ -561,7 +567,11 @@ func (s *Servers) ChangePassword(ctx context.Context, req *auth.ChangePasswordRe
 	}); err != nil {
 		return nil, err
 	}
-	s.publish(ctx, "user.updated", map[string]any{"event": "user.updated", "user": map[string]any{"id": id}})
+	changed, err := s.loadUser(id)
+	if err != nil {
+		return nil, err
+	}
+	s.publish(ctx, "user.updated", userPayload(changed, s.userRoleNames(id)))
 	return &auth.ChangePasswordResponse{Success: true, Message: "Password changed"}, nil
 }
 

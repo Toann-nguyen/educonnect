@@ -186,7 +186,7 @@ services:
       DB_IDENTITY_DATABASE: identity_db
       DB_IDENTITY_USERNAME: identity_user
       DB_IDENTITY_PASSWORD: ${IDENTITY_DB_PASSWORD}
-      IDENTITY_HTTP_URL: http://identity:9000
+      IDENTITY_HTTP_URL: http://gateway
       SCHOOL_GRPC_ADDR: school-grpc:50053
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
     depends_on:
@@ -218,7 +218,7 @@ services:
       DB_SCHOOL_DATABASE: school_db
       DB_SCHOOL_USERNAME: school_user
       DB_SCHOOL_PASSWORD: ${SCHOOL_DB_PASSWORD}
-      IDENTITY_HTTP_URL: http://identity:9000
+      IDENTITY_HTTP_URL: http://gateway
     depends_on:
       mysql-school:
         condition: service_healthy

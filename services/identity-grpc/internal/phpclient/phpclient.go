@@ -30,7 +30,7 @@ type Client struct {
 func New() *Client {
 	base := os.Getenv("IDENTITY_HTTP_URL")
 	if base == "" {
-		base = "http://identity:9000"
+		base = "http://gateway"
 	}
 	return &Client{baseURL: strings.TrimSuffix(base, "/"), client: &http.Client{Timeout: 10 * time.Second}}
 }

@@ -579,6 +579,11 @@ func (s *Servers) GetStudentProfile(ctx context.Context, req *auth.GetUserReques
 	if err != nil {
 		return nil, err
 	}
+	token, err := tokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
 	conn, err := grpc.NewClient(schoolGRPCAddress(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "school service is unavailable")
@@ -607,6 +612,11 @@ func (s *Servers) GetTeacherProfile(ctx context.Context, req *auth.GetUserReques
 	if err != nil {
 		return nil, err
 	}
+	token, err := tokenFromMetadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+token)
 	conn, err := grpc.NewClient(schoolGRPCAddress(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, status.Error(codes.Unavailable, "school service is unavailable")

@@ -30,7 +30,7 @@ func baseURL() string {
 	if base := os.Getenv("IDENTITY_HTTP_URL"); base != "" {
 		return strings.TrimSuffix(base, "/")
 	}
-	return "http://identity:9000"
+	return "http://gateway"
 }
 
 func tokenFromMetadata(ctx context.Context) (string, error) {

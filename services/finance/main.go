@@ -99,10 +99,21 @@ func declareTopology(ch *amqp.Channel) error {
 	if err := ch.ExchangeDeclare(userEventsExchange, "topic", true, false, false, false, nil); err != nil {
 		return err
 	}
-	if _, err := ch.QueueDeclare(financeUsersQueue, true, false, false, false, nil); err != nil {
+	if _, err := ch.QueueDeclare(financeUsersQueue, true, false, false, false, amqp.Table{
+		"x-queue-type":           "quorum",
+		"x-dead-letter-exchange": "educonnect.dlx",
+	}); err != nil {
 		return err
 	}
-	return ch.QueueBind(financeUsersQueue, "user.#", userEventsExchange, false, nil)
+	if err := ch.QueueBind(financeUsersQueue, "user.#", userEventsExchange, false, nil); err != nil {
+		return err
+	}
+	if _, err := ch.QueueDeclare(financeUsersQueue+".dlq", true, false, false, false, amqp.Table{
+		"x-queue-type": "quorum",
+	}); err != nil {
+		return err
+	}
+	return ch.QueueBind(financeUsersQueue+".dlq", "", "educonnect.dlx", false, nil)
 }
 
 func handleUserEvent(db *gorm.DB, ch *amqp.Channel, msg amqp.Delivery) {

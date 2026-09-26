@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -63,8 +64,41 @@ func MustInitJWKS(ctx context.Context) {
 			time.Sleep(5 * time.Second)
 			continue
 		}
+		if err := waitForKeys(); err != nil {
+			log.Printf("JWKS chưa có keys (%v) — retry 5s", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
 		return
 	}
+}
+
+// waitForKeys — keyfunc khởi tạo thành công ngay cả khi fetch ban đầu lỗi;
+// phải xác nhận endpoint JWKS trả về ít nhất 1 key trước khi serve traffic.
+func waitForKeys() error {
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest(http.MethodGet, jwksURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("jwks status %d", resp.StatusCode)
+	}
+	var body struct {
+		Keys []json.RawMessage `json:"keys"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return err
+	}
+	if len(body.Keys) == 0 {
+		return fmt.Errorf("jwks has no keys")
+	}
+	return nil
 }
 
 // verifyToken — parse + verify RS256 + kiểm tra iss/aud/exp/kid/tv/sid.

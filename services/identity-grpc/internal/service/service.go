@@ -119,7 +119,7 @@ func statusToProto(user model.User) auth.UserStatus {
 
 func (s *Servers) roleName(userID uint) string {
 	var name string
-	s.db.Table("roles").Select("roles.name").Joins("JOIN model_has_roles ON model_has_roles.role_id = roles.id").Where("model_has_roles.model_type = ? AND model_has_roles.model_id = ?", userModelType, userID).Order("roles.name").Limit(1).Scan(&name)
+	s.db.Table("roles").Select("roles.name").Joins("JOIN model_has_roles ON model_has_roles.role_id = roles.id").Where("model_has_roles.model_type IN ? AND model_has_roles.model_id = ?", []string{userModelType, "App\\Models\\User"}, userID).Order("roles.name").Limit(1).Scan(&name)
 	return name
 }
 
@@ -214,7 +214,9 @@ func appendEvent(tx *gorm.DB, aggregateID uint, eventType string, payload map[st
 
 func (s *Servers) userRoleNames(userID uint) []string {
 	var roles []string
-	s.db.Table("roles").Select("roles.name").Joins("JOIN model_has_roles ON model_has_roles.role_id = roles.id").Where("model_has_roles.model_type = ? AND model_has_roles.model_id = ?", userModelType, userID).Order("roles.name").Pluck("name", &roles)
+	// Legacy identity app lưu model_type App\Models\User, code mới dùng
+	// App\Domains\Identity\Models\User — chấp nhận cả hai.
+	s.db.Table("roles").Select("roles.name").Joins("JOIN model_has_roles ON model_has_roles.role_id = roles.id").Where("model_has_roles.model_type IN ? AND model_has_roles.model_id = ?", []string{userModelType, "App\\Models\\User"}, userID).Order("roles.name").Pluck("name", &roles)
 	return roles
 }
 
@@ -357,7 +359,7 @@ func (s *Servers) GetUsersByRole(ctx context.Context, req *auth.GetUsersByRoleRe
 	if err != nil {
 		return nil, err
 	}
-	query := s.db.Table("users").Select("users.*").Joins("JOIN model_has_roles ON model_has_roles.model_id = users.id AND model_has_roles.model_type = ?", userModelType).Joins("JOIN roles ON roles.id = model_has_roles.role_id").Where("roles.name = ? AND roles.guard_name = ?", roleName, "api")
+	query := s.db.Table("users").Select("users.*").Joins("JOIN model_has_roles ON model_has_roles.model_id = users.id AND model_has_roles.model_type IN ?", []string{userModelType, "App\\Models\\User"}).Joins("JOIN roles ON roles.id = model_has_roles.role_id").Where("roles.name = ? AND roles.guard_name = ?", roleName, "api")
 	switch req.GetStatus() {
 	case auth.UserStatus_USER_STATUS_ACTIVE:
 		query = query.Where("users.is_active = ? AND users.is_locked = ?", true, false)
